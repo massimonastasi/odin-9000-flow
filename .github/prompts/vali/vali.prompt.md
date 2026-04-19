@@ -253,6 +253,7 @@ If yes, add `annotate` ops at the end of the `OPS` array — one per renamed fra
 | Homogeneous = pattern | If all direct children are the same component family, it is always `pattern` |
 | Broken pattern = wrap first | Wrap contiguous same-type runs before classifying the parent |
 | Annotations — ask first | Always ask the user before creating annotations |
+| Annotation property types | Valid `properties[].type` values: `padding`, `fills`, `strokes`, `effects`, `cornerRadius`, `strokeWeight`, `layoutMode`, `itemSpacing`, `alignItems`, `opacity`, `mainComponent`, `fontSize`, `fontWeight`, `lineHeight`, `letterSpacing`, `textAlignHorizontal`, `fontFamily`, `fontStyle`, `textStyleId`, `width`, `height`, `maxWidth`, `minWidth`, `maxHeight`, `minHeight`, `gridRowGap`, `gridColumnGap`, etc. — **NOT** `paddingTop`/`paddingBottom` (use `padding`). `strokes` is invalid if the node has no strokes assigned — wrap in try/catch with fallback omitting `strokes`. |
 | Single-instance wrappers | Detect FRAME with 1 child + no padding + no fill → ungroup BEFORE classifying |
 | Preserve sizing on every move | Capture `layoutSizingHorizontal` + `layoutSizingVertical` before move; restore after |
 | Script load-once | Read scripts once per session; cache content; prepend injection constants on reuse |
