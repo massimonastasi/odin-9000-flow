@@ -1,0 +1,10 @@
+{
+  "servers": {
+    "beads": {
+      "command": "/Users/kama10/.local/bin/beads-mcp",
+      "env": {
+        "BEADS_PATH": "/Users/kama10/bin/bd"
+      }
+    }
+  }
+}

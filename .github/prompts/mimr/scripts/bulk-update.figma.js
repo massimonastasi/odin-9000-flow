@@ -1,0 +1,338 @@
+/**
+ * bulk-update.figma.js — Phase 3
+ *
+ * Applies Token Studio and/or native variable bindings to matched nodes.
+ * Agent generates the ROOT_ID and RULES array from:
+ *   - data/mapping-rules.md   (parsed YAML rule blocks)
+ *   - Phase 2 audit output    (confirmed node context)
+ *
+ * ── Injected by agent before execution ──────────────────────────────────────
+ *
+ *   const ROOT_ID = "21774:64113";    // audited frame (colon format)
+ *   const RULES   = [ ... ];          // generated from mapping-rules.md
+ *
+ * ── Rule shape ───────────────────────────────────────────────────────────────
+ *
+ *   {
+ *     id:           string,               // rule.id from mapping-rules.md
+ *     layerPattern: string,               // rule.layer_pattern
+ *     matchType:    "exact"|"contains"|"regex",
+ *     writes: [
+ *       { type: "ts", key: string, value: string, rawValue?: string },
+ *       // type "nv" is a manual override only — auto-NV resolution handles
+ *       // the common case; explicit nv entries are still respected.
+ *       { type: "nv", prop: string, varId: string },
+ *     ]
+ *   }
+ *
+ * ── Auto NV resolution (per TS write) ────────────────────────────────────────
+ *
+ *   After each "ts" write the script:
+ *   1. Converts the TS dot-path to NV slash-name (e.g. "a.b.c" → "a/b/c")
+ *   2. Searches getLocalVariablesAsync() for an exact name match
+ *   3. If found  → calls setBoundVariable for every prop in TS_TO_BIND_PROPS
+ *                  (e.g. borderRadius binds all 4 corner props)
+ *                  Figma then resolves the visual value natively.
+ *   4. If not found AND rawValue is set → applyRawValue() updates the style
+ *                  directly so the visual appearance reflects the new token.
+ *
+ *   Fill NV binding is intentionally excluded from auto-resolution because
+ *   Figma requires setBoundVariableForPaint() per paint entry — the rawValue
+ *   fallback handles solid and gradient fills instead.
+ *
+ * ── Output (returned as JSON string) ─────────────────────────────────────────
+ *
+ *   {
+ *     applied: number,
+ *     failed:  number,
+ *     report:  [ { rule, nodeId, nodeName, type, status, before?, after?, error? } ]
+ *   }
+ */
+
+const TS_NAMESPACE = 'tokens';
+
+// ─── TS key → Figma node property mapping ────────────────────────────────────
+
+const TS_TO_NV_PROP = {
+  fill:               'fills',
+  borderRadius:       'cornerRadius',
+  paddingLeft:        'paddingLeft',
+  paddingRight:       'paddingRight',
+  paddingTop:         'paddingTop',
+  paddingBottom:      'paddingBottom',
+  horizontalPadding:  'paddingLeft',   // sets both left + right
+  verticalPadding:    'paddingTop',    // sets both top + bottom
+  itemSpacing:        'itemSpacing',
+  opacity:            'opacity',
+  width:              'width',
+  height:             'height',
+};
+
+// TS key → setBoundVariable prop(s)
+// borderRadius needs all 4 corners; fill excluded (requires setBoundVariableForPaint)
+const TS_TO_BIND_PROPS = {
+  borderRadius:       ['topLeftRadius', 'topRightRadius', 'bottomLeftRadius', 'bottomRightRadius'],
+  paddingLeft:        ['paddingLeft'],
+  paddingRight:       ['paddingRight'],
+  paddingTop:         ['paddingTop'],
+  paddingBottom:      ['paddingBottom'],
+  horizontalPadding:  ['paddingLeft', 'paddingRight'],
+  verticalPadding:    ['paddingTop', 'paddingBottom'],
+  itemSpacing:        ['itemSpacing'],
+  opacity:            ['opacity'],
+  width:              ['width'],
+  height:             ['height'],
+};
+
+/** Convert TS dot-path → NV slash-name: "a.b.c" → "a/b/c" */
+function tsPathToNvName(tsPath) {
+  return tsPath.replace(/\./g, '/');
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function matchesPattern(name, pattern, matchType) {
+  if (matchType === 'exact')    return name === pattern;
+  if (matchType === 'contains') return name.includes(pattern);
+  if (matchType === 'regex')    return new RegExp(pattern).test(name);
+  return false;
+}
+
+function collectNodes(node, pattern, matchType, results = []) {
+  if (!node) return results;
+  if (matchesPattern(node.name, pattern, matchType)) results.push(node);
+  const children = ('children' in node) ? node.children : [];
+  for (const child of children) collectNodes(child, pattern, matchType, results);
+  return results;
+}
+
+/** Returns true when the node already has a native variable bound to nvProp. */
+function hasNvBinding(node, nvProp) {
+  const bv = node.boundVariables;
+  if (!bv) return false;
+  const b = bv[nvProp];
+  return b != null && (Array.isArray(b) ? b.length > 0 : true);
+}
+
+/** Parse a CSS color string → { r, g, b } (0-1 range) + opacity. */
+function parseCssColor(str) {
+  const rgba = str.match(/rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)(?:\s*,\s*([\d.]+))?\s*\)/);
+  if (rgba) {
+    return {
+      r: parseFloat(rgba[1]) / 255,
+      g: parseFloat(rgba[2]) / 255,
+      b: parseFloat(rgba[3]) / 255,
+      a: rgba[4] !== undefined ? parseFloat(rgba[4]) : 1,
+    };
+  }
+  const hex = str.match(/^#([0-9a-fA-F]{3,8})$/);
+  if (hex) {
+    let h = hex[1];
+    if (h.length === 3) h = h.split('').map(c => c + c).join('');
+    return {
+      r: parseInt(h.slice(0, 2), 16) / 255,
+      g: parseInt(h.slice(2, 4), 16) / 255,
+      b: parseInt(h.slice(4, 6), 16) / 255,
+      a: h.length === 8 ? parseInt(h.slice(6, 8), 16) / 255 : 1,
+    };
+  }
+  return null;
+}
+
+/** Parse the leading numeric value from a CSS string, e.g. "16px" → 16. */
+function parseCssNumber(str) {
+  const m = String(str).match(/^([\d.]+)/);
+  return m ? parseFloat(m[1]) : null;
+}
+
+/**
+ * Parse a CSS linear-gradient string → Figma GRADIENT_LINEAR fill.
+ * Handles: linear-gradient(Ndeg, color1 P1%, color2 P2%, ...)
+ */
+function parseCssLinearGradient(str) {
+  const m = str.match(/^linear-gradient\(\s*([\d.]+)deg\s*,(.*)\)$/s);
+  if (!m) return null;
+  const angle = parseFloat(m[1]);
+  const stopParts = m[2].split(',');
+  const stops = [];
+  for (const part of stopParts) {
+    const sp = part.trim();
+    const posMatch = sp.match(/(.*?)\s+([\d.]+)%\s*$/);
+    if (!posMatch) return null;
+    const color = parseCssColor(posMatch[1].trim());
+    if (!color) return null;
+    stops.push({ color, position: parseFloat(posMatch[2]) / 100 });
+  }
+  // Convert CSS angle to normalized [0,1] start/end points.
+  // CSS: 0deg=to top, 90deg=to right, 135deg=to bottom-right.
+  const rad = angle * Math.PI / 180;
+  const dx = Math.sin(rad);
+  const dy = -Math.cos(rad);
+  const startX = 0.5 - dx * 0.5;
+  const startY = 0.5 - dy * 0.5;
+  const endX   = 0.5 + dx * 0.5;
+  const endY   = 0.5 + dy * 0.5;
+  const a = endX - startX;
+  const c = endY - startY;
+  const gradientTransform = [[a, -c, startX], [c, a, startY]];
+  return { stops, gradientTransform };
+}
+
+/**
+ * Apply a raw CSS value to the node's Figma style property.
+ * Returns { status, prop, rawValue } or { status: 'skipped', reason }.
+ */
+function applyRawValue(node, tsKey, rawValue) {
+  const nvProp = TS_TO_NV_PROP[tsKey];
+  if (!nvProp) {
+    return { status: 'skipped', reason: `no style mapping for TS key "${tsKey}"` };
+  }
+
+  // fills — solid color or linear gradient
+  if (nvProp === 'fills') {
+    const color = parseCssColor(rawValue);
+    if (color) {
+      const { a, ...rgb } = color;
+      node.fills = [{ type: 'SOLID', color: rgb, opacity: a }];
+      return { status: 'ok', prop: nvProp, rawValue };
+    }
+    const gradient = parseCssLinearGradient(rawValue);
+    if (gradient) {
+      node.fills = [{
+        type: 'GRADIENT_LINEAR',
+        gradientTransform: gradient.gradientTransform,
+        gradientStops: gradient.stops.map(s => ({
+          color: { r: s.color.r, g: s.color.g, b: s.color.b, a: s.color.a },
+          position: s.position,
+        })),
+        opacity: 1,
+      }];
+      return { status: 'ok', prop: nvProp, rawValue };
+    }
+    return { status: 'skipped', reason: `cannot parse fill value: "${rawValue}"` };
+  }
+
+  // horizontalPadding → both sides
+  if (tsKey === 'horizontalPadding') {
+    const num = parseCssNumber(rawValue);
+    if (num === null) return { status: 'skipped', reason: `cannot parse number from "${rawValue}"` };
+    node.paddingLeft  = num;
+    node.paddingRight = num;
+    return { status: 'ok', prop: 'paddingLeft/paddingRight', rawValue };
+  }
+
+  // verticalPadding → both sides
+  if (tsKey === 'verticalPadding') {
+    const num = parseCssNumber(rawValue);
+    if (num === null) return { status: 'skipped', reason: `cannot parse number from "${rawValue}"` };
+    node.paddingTop    = num;
+    node.paddingBottom = num;
+    return { status: 'ok', prop: 'paddingTop/paddingBottom', rawValue };
+  }
+
+  // all other numeric properties
+  const num = parseCssNumber(rawValue);
+  if (num === null) {
+    return { status: 'skipped', reason: `cannot parse number from "${rawValue}"` };
+  }
+  node[nvProp] = num;
+  return { status: 'ok', prop: nvProp, rawValue };
+}
+
+// ─── Execute rules ────────────────────────────────────────────────────────────
+
+const root = await figma.getNodeByIdAsync(ROOT_ID);
+if (!root) return JSON.stringify({ error: `Root node "${ROOT_ID}" not found` });
+
+// Load all local variables once — used for auto-NV resolution
+const allVars = await figma.variables.getLocalVariablesAsync();
+
+const report = [];
+
+for (const rule of RULES) {
+  const nodes = collectNodes(root, rule.layerPattern, rule.matchType);
+
+  for (const node of nodes) {
+    for (const write of rule.writes) {
+      try {
+
+        // — Token Studio write + auto NV resolution ───────────────────────────
+        if (write.type === 'ts') {
+          const stored = `"${write.value}"`;
+          const before = node.getSharedPluginData(TS_NAMESPACE, write.key);
+          node.setSharedPluginData(TS_NAMESPACE, write.key, stored);
+          const after  = node.getSharedPluginData(TS_NAMESPACE, write.key);
+          report.push({
+            rule: rule.id, nodeId: node.id, nodeName: node.name,
+            type: 'ts', key: write.key, before, after, status: 'ok',
+          });
+
+          // 1. Auto-NV: find a variable whose name matches the TS dot-path
+          //    converted to slash-name (dots → slashes).
+          //    Excluded: fill — requires setBoundVariableForPaint per paint entry.
+          const bindProps = TS_TO_BIND_PROPS[write.key];
+          let nvBound = false;
+
+          if (bindProps) {
+            const nvName = tsPathToNvName(write.value);
+            const v = allVars.find(v => v.name === nvName) ?? null;
+            if (v) {
+              for (const prop of bindProps) {
+                try {
+                  node.setBoundVariable(prop, v);
+                  report.push({
+                    rule: rule.id, nodeId: node.id, nodeName: node.name,
+                    type: 'nv-auto', prop, varId: v.id, varName: v.name, status: 'ok',
+                  });
+                } catch (e) {
+                  report.push({
+                    rule: rule.id, nodeId: node.id, nodeName: node.name,
+                    type: 'nv-auto', prop, status: 'error', error: e.message,
+                  });
+                }
+              }
+              nvBound = true;
+            }
+          }
+
+          // 2. Raw value fallback: only when no NV was auto-bound
+          //    For fill, also check for a pre-existing NV binding on 'fills'.
+          if (!nvBound && write.rawValue) {
+            const nvProp = TS_TO_NV_PROP[write.key];
+            if (nvProp && !hasNvBinding(node, nvProp)) {
+              const r = applyRawValue(node, write.key, write.rawValue);
+              report.push({
+                rule: rule.id, nodeId: node.id, nodeName: node.name,
+                type: 'component-value', key: write.key, ...r,
+              });
+            }
+          }
+        }
+
+        // — Native variable write (manual override) ───────────────────────────
+        else if (write.type === 'nv') {
+          const v = await figma.variables.getVariableByIdAsync(write.varId);
+          if (!v) throw new Error(`Variable "${write.varId}" not found`);
+          node.setBoundVariable(write.prop, v);
+          report.push({
+            rule: rule.id, nodeId: node.id, nodeName: node.name,
+            type: 'nv', prop: write.prop, varId: write.varId, varName: v.name, status: 'ok',
+          });
+        }
+
+      } catch (e) {
+        report.push({
+          rule: rule.id, nodeId: node.id, nodeName: node.name,
+          status: 'error', error: e.message,
+        });
+      }
+    }
+  }
+}
+
+// ─── Return ───────────────────────────────────────────────────────────────────
+
+const applied = report.filter(r => r.status === 'ok').length;
+const failed  = report.filter(r => r.status === 'error').length;
+
+return JSON.stringify({ applied, failed, report }, null, 2);

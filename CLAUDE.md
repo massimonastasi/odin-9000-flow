@@ -1,6 +1,33 @@
 # Project Instructions for AI Agents
 
-This file provides instructions and context for AI coding agents working on this project.
+## Figma MCP Server Rules
+- The Figma MCP server provides an assets endpoint which can serve image and SVG assets
+- IMPORTANT: If the Figma MCP server returns a localhost source for an image or an SVG, use that image or SVG source directly
+- IMPORTANT: DO NOT import/add new icon packages, all the assets should be in the Figma payload
+- IMPORTANT: do NOT use or create placeholders if a localhost source is provided
+
+## Figma MCP Integration Rules
+
+These rules define how to translate Figma inputs into code for this project and must be followed for every Figma-driven change.
+
+### Required flow (do not skip)
+
+1. Run `get_design_context` first to fetch the structured representation for the exact node(s).
+2. If the response is too large or truncated, run `get_metadata` to get the high-level node map and then re-fetch only the required node(s) with `get_design_context`.
+3. Run `get_screenshot` for a visual reference of the node variant being implemented.
+4. Only after you have both `get_design_context` and `get_screenshot`, download any assets needed and start implementation.
+5. Validate against Figma for 1:1 look and behavior before marking complete.
+
+## Skills
+
+| Skill | Invocation | Purpose |
+|-------|------------|---------|
+| ODIN-9000 | `/odin-9000` | Orchestrator — runs the full MIMR → VALI → SAGA pipeline |
+| MIMR | `/mimr` | Metadata Inventory & Mapping Repository — token extraction & bulk write |
+| VALI | `/vali` | Visual Alignment & Layout Instantiator — frame → Auto Layout conversion |
+| SAGA | `/saga` | Storybook Automation & Generative Asset — design context → HTML/CSS component |
+
+**Default rule**: If a request involves Figma design, token extraction, layout conversion, or component generation and no `/skill` is specified, suggest `/odin-9000` before proceeding.
 
 <!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:ca08a54f -->
 ## Beads Issue Tracker
@@ -48,22 +75,3 @@ bd close <id>         # Complete work
 - NEVER say "ready to push when you are" - YOU must push
 - If push fails, resolve and retry until it succeeds
 <!-- END BEADS INTEGRATION -->
-
-
-## Build & Test
-
-_Add your build and test commands here_
-
-```bash
-# Example:
-# npm install
-# npm test
-```
-
-## Architecture Overview
-
-_Add a brief overview of your project architecture_
-
-## Conventions & Patterns
-
-_Add your project-specific conventions here_

@@ -12,6 +12,10 @@ bd close <id>         # Complete work
 bd dolt push          # Push beads data to remote
 ```
 
+## Skills
+
+For Figma design, token extraction, layout conversion, or component generation, invoke `/odin-9000`.
+
 ## Non-Interactive Shell Commands
 
 **ALWAYS use non-interactive flags** with file operations to avoid hanging on confirmation prompts.

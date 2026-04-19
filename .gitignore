@@ -1,5 +1,44 @@
 
-# Beads / Dolt files (added by bd init)
+# ─── macOS residuals ──────────────────────────────────────────
+.DS_Store
+.DS_Store?
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+.fseventsd
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# ─── Windows residuals ────────────────────────────────────────
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# ─── Credentials & secrets — NEVER commit ─────────────────────
+# ODIN session config (Figma PAT + last frame URL)
+.odin-session
+# Beads federation credential key
+.beads-credential-key
+# Generic secrets / tokens
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+secrets.*
+*_secret*
+*_token*
+*_pat*
+*.pat
+
+# ─── Beads / Dolt files (added by bd init) ────────────────────
 .dolt/
 *.db
-.beads-credential-key

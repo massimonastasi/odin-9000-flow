@@ -1,0 +1,259 @@
+---
+name: "vali"
+description: "**FIGMA WORKFLOW SKILL** — VALI (Visual Alignment & Layout Instantiator): converts Figma GROUPs and unwired FRAMEs into semantic auto-layout frames, names them using {direction / role} convention (section / group / pattern), and prepares them for token application by MIMR. USE FOR: converting absolute-positioned groups to auto-layout; detecting patterns vs groups vs sections from child composition; naming layers for token-agent handoff. NOT FOR: token writes (use mimr for that). INPUTS NEEDED: {frame_url}."
+agent: agent
+argument-hint: "Figma frame URL"
+---
+## First Render
+Always display this at the start of the workflow:
+
+█  █ █▀▀█ █    █
+▀▄▄▀ █▄▄█ █    █
+ ▀▀  ▀  ▀ ▀▀▀  ▀
+[ VALI (Visual Alignment & Layout Instantiator) ]
+[ LAYOUT & FLEX ]
+
+
+# VALI — Visual Alignment & Layout Instantiator
+
+> **"I'll be flex."**  
+> Transforms your spaghetti groups into crisp, tokenizer-ready auto-layout frames. No mercy for absolute positioning.
+
+## Purpose
+
+An agentic layout formatting tool for UX designers. VALI converts Figma GROUPs and unstructured FRAMEs into a standardised naming and auto-layout format that is both **human-readable** (for designers) and **machine-readable** (for downstream agents).
+
+Key roles:
+- **Standardise** — enforce a consistent `{direction / role}` naming convention across all layout frames
+- **Bulk refactor** — process entire sections, pages, or component sets in one pass rather than node-by-node
+- **Orchestrate** — act as the first stage in a two-step pipeline: VALI formats and names; **MIMR** tokenizes. A frame that hasn't been through VALI is not ready for MIMR.
+
+| Workflow | Trigger | Notes |
+|---|---|---|
+| **Analyse** | user provides a Figma URL | Phase 1 — scan + build OPS plan |
+| **Execute** | user confirms the plan | Phases 2+3 — single `process.figma.js` call |
+
+---
+
+## External files
+
+| File | Purpose | Edit? |
+|---|---|---|
+| `data/layout-rules.md` | Classification rules + naming conventions | **User / Agent** |
+| `scripts/scan.figma.js` | Phase 1 — tree scan; inject `NODE_ID` + `DEPTH` | **Agent (read-only)** |
+| `scripts/process.figma.js` | Phase 2+3 — execute OPS plan; inject `NODE_ID` + `OPS` | **Agent (read-only)** |
+
+### Load-once rule
+
+Read each script file **once per session** at the start of Phase 1. Cache the raw text in working memory. On every subsequent execution, prepend the injected constants block and run — do **not** re-read the file.
+
+**Injection template:**
+
+```
+// ── scan ──
+const NODE_ID = "{node_id}";
+const DEPTH = 5;
+<scan.figma.js content>
+
+// ── process ──
+const NODE_ID = "{node_id}";
+const OPS = [ /* generated plan from Phase 1 analysis */ ];
+<process.figma.js content>
+```
+
+---
+
+## Slots
+
+| Slot | Source | Format |
+|---|---|---|
+| `{frame_url}` | User | Full Figma URL |
+| `{file_key}` | Extracted from URL | path segment after `/design/` |
+| `{node_id}` | Extracted from URL `node-id` param | replace `-` → `:` |
+
+**Before Phase 1:** verify `{frame_url}` is present.
+
+---
+
+## Phase 1 — Analyse
+
+**Goal:** map the full subtree and identify every node that needs conversion.
+
+Read `scripts/scan.figma.js` (once per session). Prepend injection block and execute:
+
+```
+const NODE_ID = "{node_id}";
+const DEPTH = 5;
+// … paste scan.figma.js content here …
+```
+
+The script returns a JSON tree including `id`, `name`, `type`, `layoutMode`, `sizingH`, `sizingV`, `w`, `h`, and `children`.
+
+**Output a table:**
+
+| Node ID | Name | Type | layoutMode | Children |
+|---|---|---|---|---|
+| … | … | GROUP / FRAME / … | NONE / H / V | count + types |
+
+Flag every node where:
+- `type === 'GROUP'` — **must convert**
+- `type === 'FRAME'` and `layoutMode === 'NONE'` — **must convert**
+- `type === 'FRAME'` and `layoutMode` is wrong direction — **must fix**
+- `type === 'FRAME'` with exactly 1 child + no padding + no fill — **flag for ungrouping** (lift child to parent, remove wrapper); run this before classification
+
+Explain findings. **Ask user to confirm before Phase 2.**
+
+---
+
+## Phase 2 — Convert
+
+**Goal:** replace each flagged GROUP / unwired FRAME with an auto-layout FRAME.
+
+### Conversion rules (read `data/layout-rules.md` for full detail)
+
+1. **Direction** — infer from child positions:
+   - children stacked vertically (x values close, y values spread) → `VERTICAL`
+   - children side-by-side horizontally (y values close, x values spread) → `HORIZONTAL`
+
+2. **Create frame in-place:**
+   - `figma.createFrame()` at same parent slot as the group
+   - `frame.fills = []`, `frame.clipsContent = false`
+   - move children (sorted by primary-axis position)
+   - guard `group.remove()` — Figma auto-removes an empty GROUP, so wrap in `try/catch`
+
+3. **Auto-layout settings:** handled by `applyALSettings()` in `process.figma.js` — express as `{ op: 'al', id: '...', direction: 'VERTICAL' }`.
+
+4. **Fill width:** after conversion, set `layoutSizingHorizontal = 'FILL'` on each child where applicable.
+
+5. **Re-parent absorbed children:** if a standalone sibling clearly belongs inside a group (e.g. middle item in a vertical stack that wraps items 1 and 3), absorb it before converting the group.
+
+> **CRITICAL:** Always obtain node references via tree traversal (`root.children.find(...)`) rather than `figma.getNodeByIdAsync` on inner nodes inside a FRAME — the IDs may not resolve independently mid-script.
+
+---
+
+## Phase 3 — Name
+
+**Goal:** rename every auto-layout FRAME using `{direction / role}` format.
+
+### Classification (structural — read `data/layout-rules.md` for full rules)
+
+Apply **in order**, stop at first match:
+
+| Check | Result |
+|---|---|
+| All direct children are the same component family (same type + same base name) | **pattern** — even if sub-frames exist inside them |
+| Children are same-family runs broken by a different component | **group** — wrap each contiguous run into `{col/row / pattern}` first (see Wrapping below) |
+| 2+ sub-frames with **distinct** names (semantic content blocks) | **section** |
+| 2+ sub-frames with the **same** name (repeating rows) | **pattern** |
+| 1 sub-frame + ≥1 leaf sibling | **group** |
+| All children are leaves | **pattern** |
+
+> **`section` is strict** — only genuinely named, distinct content blocks qualify. Same-named or same-family sub-frames = `pattern`.
+
+### Name format
+
+```
+{direction / role}
+```
+
+Where:
+- `direction` = `col` (VERTICAL) or `row` (HORIZONTAL)
+- `role` = `section`, `group`, or `pattern`
+
+Examples: `{col / section}`, `{row / pattern}`, `{col / group}`
+
+All renames, conversions, wraps, ungroups, and token bindings are executed in a single call using `scripts/process.figma.js`:
+
+```
+const NODE_ID = "{node_id}";
+const OPS = [
+  { op: 'ungroup', id: 'WRAPPER_ID' },
+  { op: 'wrap', parentId: 'PARENT_ID', childIds: ['A','B'], direction: 'VERTICAL', name: '{col / pattern}' },
+  { op: 'al', id: 'GROUP_ID', direction: 'VERTICAL' },
+  { op: 'rename', id: 'FRAME_ID', to: '{col / group}' },
+  { op: 'token', id: 'FRAME_ID', gap: 'vGroup' },
+  { op: 'annotate', id: 'FRAME_ID', oldName: 'Form', newName: '{col / group}', direction: 'col', childSummary: '2 sub-frames' }
+];
+// … paste process.figma.js content here …
+```
+
+---
+
+## Wrapping
+
+Before classifying or tokenizing, fix broken layouts by creating wrapper frames:
+
+- **Broken pattern** — same-family children interrupted by a different component: wrap each contiguous same-type run into `{col / pattern}`, parent becomes `{col / group}`
+- **Loose INSTANCE** alongside named FRAME siblings: wrap the lone INSTANCE into `{col / pattern}` at its original index
+- **After any wrap** — re-classify the parent; its role will change
+
+See `data/layout-rules.md` Section 3 for the full wrapping procedure.
+
+---
+
+## Bulk mode — COMPONENT_SET
+
+When the root node is a COMPONENT_SET, process all variants in a **single execution**:
+
+1. **Phase 1** — scan the COMPONENT_SET root at `DEPTH = 3`
+2. **Plan** — for each variant child, build ops as if it were a standalone frame; append all ops into one flat `OPS` array
+3. **Token deduplication** — rename + token ops will be structurally identical per variant but must all be included
+4. **Execute** — single `process.figma.js` call with the merged `OPS`
+
+---
+
+## Handoff to MIMR
+
+After Phase 3 the frame is ready for token application. The `{direction / role}` names are the lookup key:
+
+| Layer name | Gap token to apply |
+|---|---|
+| `{col / section}` | `fds-spacing-const-gap-v-section` |
+| `{col / group}` | `fds-spacing-const-gap-v-group` |
+| `{col / pattern}` | `fds-spacing-const-gap-v-pattern` |
+| `{row / pattern}` | `fds-spacing-const-gap-h-pattern` |
+
+**Do not write tokens yourself.** Pass the converted frame URL to MIMR.
+
+---
+
+## Annotations
+
+**Always ask the user before creating annotations** using the `vscode_askQuestions` tool:
+
+```json
+{
+  "questions": [{
+    "header": "annotations",
+    "question": "Would you like Dev Mode annotations attached to the converted frames?",
+    "allowFreeformInput": false,
+    "options": [
+      { "label": "Yes — add annotations", "description": "Attach a Development-panel note to every renamed frame", "recommended": true },
+      { "label": "No — keep canvas clean", "description": "Skip annotations entirely" },
+      { "label": "Maybe later — ask me after the run", "description": "Execute now; I can re-run just the annotate ops afterwards" }
+    ]
+  }]
+}
+```
+
+If yes, add `annotate` ops at the end of the `OPS` array — one per renamed frame.
+
+---
+
+## Critical rules
+
+| Rule | Detail |
+|---|---|
+| Token writes target every AL frame | Apply tokens to each direct child AL frame independently |
+| Never guess node IDs | Always traverse from a known root |
+| guard `group.remove()` | Wrap in `try/catch` — Figma silently removes empty groups |
+| Preserve existing names | Only rename auto-layout FRAMEs; never touch leaf nodes |
+| Explain before acting | Show Phase 1 analysis and ask for confirmation before any writes |
+| `section` is strict | Requires named, semantically distinct blocks — same-named or same-family sub-frames = `pattern` |
+| Homogeneous = pattern | If all direct children are the same component family, it is always `pattern` |
+| Broken pattern = wrap first | Wrap contiguous same-type runs before classifying the parent |
+| Annotations — ask first | Always ask the user before creating annotations |
+| Single-instance wrappers | Detect FRAME with 1 child + no padding + no fill → ungroup BEFORE classifying |
+| Preserve sizing on every move | Capture `layoutSizingHorizontal` + `layoutSizingVertical` before move; restore after |
+| Script load-once | Read scripts once per session; cache content; prepend injection constants on reuse |
+| **Never use `findOne` per-op** | Use `nodeCache` map built at startup — never `figma.currentPage.findOne()` in a loop |
