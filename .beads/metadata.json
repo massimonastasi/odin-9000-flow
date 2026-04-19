@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "embedded",
+  "dolt_database": "fds_designer",
+  "project_id": "d1118123-c00c-40be-84b6-edbedba63aae"
+}
