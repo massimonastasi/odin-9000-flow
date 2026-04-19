@@ -1,4 +1,5 @@
 # Mapping Rules
+<!-- schema-version: 1 -->
 
 > **Bulk-update rules for token migrations.**
 > Agent parses these YAML blocks during Phase 3 to generate the write payload.

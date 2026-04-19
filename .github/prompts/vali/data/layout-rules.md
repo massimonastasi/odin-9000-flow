@@ -1,8 +1,9 @@
 # Layout Rules
+<!-- schema-version: 1 -->
 
 Rules for classifying and converting Figma layers into semantic auto-layout frames.
-Used by: **Flex-O-Nator 9000** (Phase 2 + 3).
-Token mapping consumed by: **Tokenator 9000**.
+Used by: **VALI** (Phase 2 + 3).
+Token mapping consumed by: **MIMR**.
 
 ---
 

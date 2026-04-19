@@ -1,4 +1,5 @@
 # Token Registry
+<!-- schema-version: 1 -->
 
 > **Source of truth for all FDS design tokens (Betsson node, `ref` subtree excluded).**
 > Agent reads this file during Phase 2 to suggest correct token paths.
