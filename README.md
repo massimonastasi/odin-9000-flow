@@ -91,12 +91,13 @@ Layout formatting engine. Converts Figma GROUPs and unwired FRAMEs into semantic
 ▀▀▀▀ ▀  ▀ ▀▀▀▀ ▀  ▀
 ```
 
-HTML component generator. Scaffolds semantic HTML + vanilla CSS + CSS Modules from a Figma Auto Layout node. Derives `--fds-*` CSS custom properties directly from native variable (NV) bindings — no hardcoded values.
+Code generation engine. Scaffolds semantic HTML + vanilla CSS + CSS Modules, **or** a StencilJS Web Component folder (`fds-{name}.tsx` + `fds-{name}.css` + `fds-{name}.stories.ts`) from a Figma Auto Layout node. Derives `--fds-*` CSS custom properties directly from native variable (NV) bindings — no hardcoded values. StencilJS output includes shadow DOM, typed `@Prop()` per variant axis, named slots, and a Storybook 9/10 CSF3 story file ready to drop into a Stencil project.
 
 **Invoke:** `/saga`  
 **Inputs:** Figma frame URL  
-**Outputs:** `{name}.html`, `{name}.css`, `{name}.module.css`  
-**Use when:** A component is ready (post-VALI + post-MIMR) and Storybook output is needed
+**Outputs (vanilla):** `{name}.html`, `{name}.css`, `{name}.module.css`  
+**Outputs (StencilJS):** `fds-{name}/fds-{name}.tsx`, `fds-{name}.css`, `fds-{name}.stories.ts`  
+**Use when:** A component is ready (post-VALI + post-MIMR) and code output or Storybook handoff is needed
 
 ---
 
@@ -295,13 +296,14 @@ User: "Figma URL or design brief"
     │      /vali ──► layout conversion        │
     │         │                               │
     │         ▼                               │
-    │      /saga ──► HTML + CSS output        │
+    │      /saga ──► HTML + CSS or StencilJS  │
     │         │                               │
     │  3. bd close + dolt push                │
     └─────────────────────────────────────────┘
           │
           ▼
-    Storybook-ready component
+    Storybook-ready component folder
+    (HTML/CSS or StencilJS Web Component)
     + full Beads audit trail
 ```
 
@@ -336,6 +338,58 @@ fds-designer/
 ├── AGENTS.md                      # Agent workflow reference
 └── CLAUDE.md                      # Claude Code integration
 ```
+
+---
+
+## Designer → Engineer handoff
+
+SAGA is the bridge between design and engineering. Once MIMR has bound tokens and VALI has structured the layers, a designer can run `/saga` on any Figma component and produce a folder that drops directly into an existing Stencil project.
+
+### What gets generated
+
+```
+src/components/fds-notification-banner/
+  fds-notification-banner.tsx       ← Stencil Web Component (shadow DOM)
+  fds-notification-banner.css       ← scoped styles, --fds-* vars only
+  fds-notification-banner.stories.ts ← Storybook 9/10 CSF3 story
+```
+
+The story uses `@storybook/web-components` + `lit` html renderer and includes:
+- `argTypes` auto-populated from Figma variant axes (`@Prop() type`, `@Prop() context`…)
+- Named slot args exposed as Storybook controls
+- `tags: ['autodocs']` for the auto-generated docs page
+- One named story per primary variant (Success, Error, Alert…)
+
+Storybook picks up the story automatically if the project's `stories` glob covers `src/components/**/*.stories.ts` — no manual import needed.
+
+### Handoff steps
+
+```
+Designer (Figma + VS Code)              Engineer (codebase)
+────────────────────────────────────────────────────────────
+1. /odin-9000 on Figma URL
+   └─ MIMR  → tokens bound in Figma     Token values = source of truth
+   └─ VALI  → layout structured          Layer semantics documented
+   └─ SAGA  → component folder written   Drop into src/components/
+                                          storybook dev
+                                          Component renders in isolation
+                                          Controls = every @Prop()
+
+2. Designer opens PR linking Figma URL
+
+3. Engineer reviews story in Storybook,
+   wires component into consuming app
+```
+
+### What the engineer does NOT need to derive manually
+
+| Normally manual | With SAGA output |
+|---|---|
+| Translate Figma padding/gap → CSS | Already `var(--fds-container-card)`, `var(--fds-gap-v-group)` |
+| Determine variant prop names | `@Prop() type`, `@Prop() context` typed as unions |
+| Write Storybook `argTypes` | Already in the story, controls auto-populated |
+| Decide slot names | Declared in the SAGA session, wired in `render()` |
+| Inspect Figma for border-radius/elevation | Already `var(--fds-container-reg)`, bound elevation annotation |
 
 ---
 
