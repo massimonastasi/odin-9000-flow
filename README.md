@@ -307,6 +307,105 @@ User: "Figma URL or design brief"
     + full Beads audit trail
 ```
 
+### Technical pipeline (SAGA detail)
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                          FIGMA FILE                                  │
+│                  (COMPONENT_SET + token bindings)                    │
+└─────────────────────────┬───────────────────────────────────────────┘
+                          │  Figma URL
+                          ▼
+                   ┌─────────────┐
+                   │ /odin-9000  │  orchestrates, creates bd issue
+                   └──────┬──────┘
+                          │
+          ┌───────────────┼───────────────┐
+          ▼               ▼               ▼
+   ┌─────────────┐ ┌─────────────┐ ┌─────────────┐
+   │    MIMR     │ │    VALI     │ │    SAGA     │
+   │  (tokens)   │ │  (layout)   │ │   (code)    │
+   └──────┬──────┘ └──────┬──────┘ └──────┬──────┘
+          │               │               │
+          ▼               ▼               │
+   Binds --fds-*    Converts GROUPs       │
+   vars to Figma    to Auto Layout        │
+   nodes via NV     frames, renames       │
+                    layers:               │
+                    {col/row / role}      │
+                          │               │
+                          └───────────────┤
+                                          │  get_design_context
+                                          │  (NV bindings + layout)
+                                          ▼
+                               ┌──────────────────────┐
+                               │  Step 3 asks user:   │
+                               │  Output format?      │
+                               └──────────┬───────────┘
+                                          │
+                    ┌─────────────────────┼──────────────────────┐
+                    ▼                     ▼                       ▼
+           ┌──────────────┐    ┌────────────────────┐   ┌──────────────┐
+           │   Vanilla    │    │     StencilJS      │   │    Both      │
+           └──────┬───────┘    └─────────┬──────────┘   └──────┬───────┘
+                  │                      │                      │
+                  ▼                      ▼                      ▼
+         ┌────────────────┐   ┌──────────────────────┐  (runs both
+         │ {name}.html    │   │ fds-{name}/          │   branches)
+         │ {name}.css     │   │   fds-{name}.tsx     │
+         │ {name}         │   │   fds-{name}.css     │
+         │  .module.css   │   │   fds-{name}         │
+         └────────────────┘   │     .stories.ts      │
+                              └──────────┬───────────┘
+                                         │
+                              ┌──────────▼───────────┐
+                              │  @Component          │
+                              │    tag: fds-{name}   │
+                              │    shadow: true      │
+                              │                      │
+                              │  @Prop() type        │  ← variant axes
+                              │  @Prop() context     │    from Figma
+                              │                      │
+                              │  render() {          │
+                              │    <Host class=...>  │
+                              │      <slot name="icon">   │
+                              │      <slot name="content">│
+                              │      <slot name="actions">│
+                              │    </Host>           │  ← slots from
+                              │  }                   │    user input
+                              └──────────┬───────────┘
+                                         │
+                              ┌──────────▼───────────┐
+                              │  .stories.ts         │
+                              │                      │
+                              │  meta: {             │
+                              │    tags:['autodocs'] │
+                              │    argTypes: {       │
+                              │      type: select    │  ← from @Prop()
+                              │      context: select │
+                              │      iconSlot: text  │  ← from slots
+                              │    }                 │
+                              │  }                   │
+                              │                      │
+                              │  export Default      │
+                              │  export Error        │  ← one story
+                              │  export Alert  ...   │    per variant
+                              └──────────┬───────────┘
+                                         │
+                                         ▼
+                              ┌──────────────────────┐
+                              │   Stencil project    │
+                              │   src/components/    │
+                              │                      │
+                              │   storybook dev      │
+                              │        │             │
+                              │        ▼             │
+                              │   [Autodocs page]    │
+                              │   [Default story]    │
+                              │   [Error story]  ... │
+                              └──────────────────────┘
+```
+
 ---
 
 ## Project structure
@@ -342,6 +441,90 @@ fds-designer/
 ---
 
 ## Designer → Engineer handoff
+
+### The designer's journey
+
+```
+  THE DESIGNER'S JOURNEY
+  ──────────────────────────────────────────────────────────────────
+
+
+   FIGMA                          VS CODE                  STORYBOOK
+   ──────                         ───────                  ─────────
+
+  ┌──────────────────┐
+  │                  │   "Here's my
+  │  Component       │    Figma link"
+  │  designed with   │ ──────────────►  /odin-9000
+  │  tokens + layout │                      │
+  │                  │                      │
+  └──────────────────┘                      │
+
+  ┌──────────────────┐            ┌─────────▼──────────────────────┐
+  │                  │◄───────────│                                │
+  │  Tokens are      │  binds     │  Reads the design              │
+  │  connected to    │  colours,  │  Checks token coverage         │
+  │  the right       │  spacing,  │  Fills any gaps                │
+  │  design values   │  radius    │                                │
+  │                  │            └─────────┬──────────────────────┘
+  └──────────────────┘                      │
+
+  ┌──────────────────┐            ┌─────────▼──────────────────────┐
+  │                  │◄───────────│                                │
+  │  Layers are      │  renames   │  Reads the layout              │
+  │  named and       │  + fixes   │  Converts loose groups         │
+  │  structured      │  layout    │  into structured frames        │
+  │  consistently    │            │                                │
+  │                  │            └─────────┬──────────────────────┘
+  └──────────────────┘                      │
+                                            │
+                                   "What format do
+                                    you need?"
+                                            │
+                              ┌─────────────┴─────────────┐
+                              │                           │
+                              ▼                           ▼
+                       For the web team            For Storybook
+                       ─────────────              ─────────────
+                       HTML + CSS files           Web Component
+                       ready to paste             with all variants
+                       into any project           as interactive
+                                                  controls
+                                                       │
+                                                       ▼
+
+                                            ┌──────────────────────┐
+                                            │  ● Default           │
+                                            │  ● Error             │
+                                            │  ● Alert             │
+                                            │  ● Info              │
+                                            │                      │
+                                            │  [ type    ▼ ]       │
+                                            │  [ context ▼ ]       │
+                                            │  [ icon slot ... ]   │
+                                            │                      │
+                                            │  Auto-generated      │
+                                            │  documentation page  │
+                                            └──────────────────────┘
+
+
+  ──────────────────────────────────────────────────────────────────
+  THE HANDOFF
+
+  Designer                                        Engineer
+  ────────                                        ────────
+
+  Opens a pull request                            Opens Storybook
+  with a link to the                              Sees every variant
+  Figma component                                 as a live story
+        │                                                │
+        │           No Figma access needed              │
+        │           No spec-reading needed    ◄──────────┘
+        │           Spacing and colour are
+        │           already in the code
+        │
+        └─── One conversation.  One source of truth.  No back-and-forth.
+```
 
 SAGA is the bridge between design and engineering. Once MIMR has bound tokens and VALI has structured the layers, a designer can run `/saga` on any Figma component and produce a folder that drops directly into an existing Stencil project.
 
