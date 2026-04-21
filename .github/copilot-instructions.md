@@ -5,7 +5,7 @@ Run `bd prime` for full workflow context.
 
 **Quick reference:**
 - `bd ready` - Find unblocked work
-- `bd create "Title" --type task --priority 2` - Create issue
+- `bd create "Title" --type task --priority 2` - Create issue (title = component name/type, **never a node ID** — node IDs are volatile)
 - `bd update <id> --claim` - Claim a task atomically
 - `bd close <id>` - Complete work
 - `bd dolt push` - Push changes to remote (run at session end)
