@@ -222,4 +222,35 @@ Before applying, check that all sibling rows in the same component have matching
 
 ---
 
+## Annotations
+
+When `Annotations: True` is passed to ODIN-9000 or MIMR, write Figma **native annotations** on each node that receives token bindings. Do **not** use `setSharedPluginData` for this purpose.
+
+### API
+
+```js
+node.setAnnotations([{
+  label: 'borderRadius → fds-round-const-container-reg\nspacing → fds-spacing-const-container-card\nboxShadow → on-surface.fds-elevation-const-surface-heavy',
+  properties: []
+}]);
+```
+
+### Format
+
+The `label` string should list every token binding applied to the node, one per line:
+
+```
+{tsKey} → {tsPath}
+{tsKey} → {tsPath}
+...
+```
+
+### Failure handling
+
+If `node.setAnnotations` throws or is unavailable in the current API context:
+1. Log `{ nodeId, error }` to the audit report under a `⚠️ annotation-skipped` row.
+2. **Do not fall back to `setSharedPluginData`.** Shared plugin data is only for Token Studio (`tokens` namespace) and verified workflow metadata — never for display annotations.
+
+---
+
 <!-- Add YAML bulk-update rules below. Each rule is a fenced YAML block. -->
