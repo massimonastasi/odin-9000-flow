@@ -336,21 +336,36 @@ When `Annotations: True` is passed to ODIN-9000 or MIMR, write Figma **native an
 ### API
 
 ```js
-node.setAnnotations([{
-  label: 'borderRadius → fds-round-const-container-reg\nspacing → fds-spacing-const-container-card\nboxShadow → on-surface.fds-elevation-const-surface-heavy',
-  properties: []
-}]);
+node.annotations = [{
+  label: 'Token bindings applied',
+  properties: [
+    { type: 'cornerRadius' },  // border radius bound
+    { type: 'padding' },       // padding bound
+    { type: 'fills' },         // fill color bound  ← use 'fills', NOT 'fill'
+    { type: 'effects' },       // elevation/effect style bound
+    { type: 'itemSpacing' },   // gap bound
+  ],
+}];
 ```
+
+### Valid `type` values (confirmed by API)
+
+| Type string | Use for |
+|---|---|
+| `cornerRadius` | `setBoundVariable('cornerRadius', ...)` |
+| `padding` | `setBoundVariable('paddingLeft/Right/Top/Bottom', ...)` |
+| `fills` | `setBoundVariableForPaint(fill, 'color', ...)` — **use `fills`, NOT `fill`** |
+| `effects` | `effectStyleId` binding |
+| `itemSpacing` | `setBoundVariable('itemSpacing', ...)` |
+| `width` | width sizing |
+| `height` | height sizing |
+| `layoutMode` | layout direction |
+
+> **Common mistake:** `type: 'fill'` throws a validation error. Always use `type: 'fills'` (plural).
 
 ### Format
 
-The `label` string should list every token binding applied to the node, one per line:
-
-```
-{tsKey} → {tsPath}
-{tsKey} → {tsPath}
-...
-```
+Only include `properties` entries that were actually bound on the node. Omit unbound properties.
 
 ### Failure handling
 
