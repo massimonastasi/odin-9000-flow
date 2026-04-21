@@ -218,7 +218,114 @@ Before applying, check that all sibling rows in the same component have matching
 | **Modal-class** — full-screen drawers, modal dialogs | `fds-round-const-modal-reg` / `fds-round-const-modal-lg` | `fds-round-const.containers.modal-class.*` |
 | **Buttons** | see Button token rules section — `fds-round-const-btn-*` | |
 
-> **Note:** `fds-round-const-container-reg` and `fds-round-const-modal-reg` both resolve to 8px but have distinct semantic meaning. Use `container-reg` for overlay/popover panels; reserve `modal-reg` for true modal dialogs.
+> **Note:** `fds-round-const-container-reg` resolves to **16px** and `fds-round-const-modal-reg` also resolves to **16px** — they have distinct semantic meaning despite the same value. Use `container-reg` for overlay/popover panels; reserve `modal-reg` for true modal dialogs.
+
+---
+
+## Input field rules
+
+Apply when the target component is an **input field** (layer name contains `Input`, `Field`, `FDS-Input`, or variant property `Type=text-input` / `State=default|focus|error`).
+
+### Border radius
+
+| Token | TS path |
+|---|---|
+| `fds-round-const-input-reg` | `fds-round-const.ui-controls.input.fds-round-const-input-reg` |
+
+Confirmed Variable ID: `VariableID:8094:59655` (resolves to 8px)
+
+### Spacing
+
+| Property | Token | TS path |
+|---|---|---|
+| `paddingTop` / `paddingBottom` | `fds-spacing-const-input-v` | `spacing.fds-spacing-const.input.fds-spacing-const-input-v` |
+| `paddingLeft` / `paddingRight` | `fds-spacing-const-input-h` | `spacing.fds-spacing-const.input.fds-spacing-const-input-h` |
+| `itemSpacing` (icon + text gap) | `fds-spacing-const-ui-gap` | `spacing.fds-spacing-const.utility.fds-spacing-const-ui-gap` |
+
+### Layout sizing
+
+- Height: **FIXED** — input fields have a defined height, do not hug
+- Width: **FILL** (counter axis) on most usage contexts
+
+---
+
+## Media / Thumb rules
+
+Apply when the target layer name contains `Thumb`, `thumbnail`, `media`, `_image`, or the component is a carousel/media tile.
+
+### Border radius
+
+| Use case | Token | TS path |
+|---|---|---|
+| Regular thumbnail | `fds-round-const-media-thumb-reg` | `fds-round-const.media.fds-round-const-media-thumb-reg` |
+
+Confirmed Variable ID: `VariableID:8094:59666` (resolves to 16px)
+
+> **Remote component rule:** If the node is `remote: true` (published from another library), variable writes are blocked. In this case, add a native Figma annotation only — do **not** attempt `setBoundVariable`. Log the node as `remote-skip` in the audit report.
+
+### Layers to skip
+
+Always skip `_Image-holder`, `_Overlay`, and any layer name starting with `_` that is an `INSTANCE` — these are presentational containers, not tokenisable layout frames.
+
+---
+
+## Sportsbook card rules (container-group class)
+
+Apply when the target is a **sportsbook betting card** — layer name contains `SB-Card`, `SB-card`, `betting-card`, or variant properties include `Usage=Sports` / `Usage=Home page`.
+
+### Token bindings
+
+| Property | Token | Variable ID | Resolved value |
+|---|---|---|---|
+| `cornerRadius` | `fds-round-const-container-lg` | `VariableID:8094:59660` | 20px |
+| `paddingLeft/Right/Top/Bottom` | `fds-spacing-const-container-group` | `VariableID:8094:59628` | 8px |
+| `itemSpacing` | `fds-spacing-const-ui-gap` | `VariableID:8094:59638` | 8px |
+| `effectStyleId` | `on-surface/fds-elevation-const-surface-heavy` | `S:e159aab36df57d0689998f8c12591e55836e7fb7,` | — |
+
+### Layout sizing
+
+- **Height**: `primaryAxisSizingMode = AUTO` (hug) — cards expand to content
+- **Width**: `counterAxisSizingMode = FIXED` — cards have a defined width
+
+### Gap exceptions
+
+Variants with `itemSpacing = 0` (e.g. Sports/Default, Sports/3-column-view) — **skip gap tokenisation**. Binding `ui-gap` on a zero-gap layout changes the visual. Log as `gap-skipped (itemSpacing=0)` in the audit.
+
+### Write scope
+
+Apply tokens to **top-level COMPONENT nodes only**. Do not recurse into INSTANCE children or nested FRAMEs. The card shell owns layout; sub-components own their own tokens.
+
+---
+
+## Layout sizing rules
+
+These rules govern when to set `primaryAxisSizingMode` / `counterAxisSizingMode` during a token apply run.
+
+> **Only change sizing mode if the current value is `FIXED` and the archetype rule requires `AUTO` (hug).** Never change a node that is already `AUTO` or `FILL`.
+
+| Archetype | Primary axis (height for VERTICAL) | Counter axis (width for VERTICAL) |
+|---|---|---|
+| **Sportsbook card** | `AUTO` (hug) | `FIXED` |
+| **Sort overlay / popover panel** | `AUTO` (hug) | `FIXED` |
+| **Input field** | `FIXED` | `FILL` or `FIXED` (confirm with user) |
+| **List item row** | `AUTO` (hug) | `FILL` |
+| **Header / section strip** | `FIXED` | `FILL` |
+| **Media thumb tile** | `FIXED` | `FIXED` |
+
+### How to apply
+
+```js
+// Hug height (VERTICAL layout)
+node.primaryAxisSizingMode = 'AUTO';
+
+// Fixed height
+node.primaryAxisSizingMode = 'FIXED';
+
+// Fill width
+node.counterAxisSizingMode = 'FILL_CONTAINER';
+```
+
+> **Ask before changing sizing** if the archetype is ambiguous or if the node is a COMPONENT_SET child that differs across variants.
 
 ---
 
