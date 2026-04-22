@@ -1,0 +1,29 @@
+{
+  "name": "odinflow",
+  "version": "1.0.0",
+  "description": "Figma → Design System → Storybook pipeline — Odin Flow",
+  "private": true,
+  "scripts": {
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/katbinaris/odinflow.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/katbinaris/odinflow/issues"
+  },
+  "homepage": "https://github.com/katbinaris/odinflow#readme",
+  "devDependencies": {
+    "@stencil/core": "^4.43.4",
+    "@storybook/addon-essentials": "^8.6.14",
+    "@storybook/web-components-vite": "^10.3.5",
+    "lit": "^3.3.2",
+    "storybook": "^10.3.5",
+    "typescript": "^6.0.3"
+  }
+}

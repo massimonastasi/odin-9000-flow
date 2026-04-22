@@ -39,6 +39,18 @@ secrets.*
 *_pat*
 *.pat
 
+# ─── Node / npm ───────────────────────────────────────────────
+node_modules/
+npm-debug.log*
+package-lock.json
+
+# ─── Generated component output (SAGA) ───────────────────────
+src/
+
+# ─── Storybook config & build output ─────────────────────────
+.storybook/
+storybook-static/
+
 # ─── Beads / Dolt files (added by bd init) ────────────────────
 .dolt/
 *.db
