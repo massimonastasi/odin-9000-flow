@@ -1,22 +1,4 @@
-# fds-designer
-
-```
-.       .
-        .   |   .
-    .   \   |   /   .
-     \   \  |  /   /
-  ____\   \ | /   /____
- █  ▄  █ █▀▀▄ █ █▄  █   ▄▀▀▄ ▄▀▀▄ ▄▀▀▄ █▀▀▄
- █  █  █ █  █ █ █ █ █   ▀▀▄█ █  █ █  █ █  █
- █  ▀  █ █▄▄▀ █ █  ▀█   ▀▀▀  ▀▀▀  ▀▀▀  ▀▀▀ 
-  ‾‾‾‾/   / | \   \‾‾‾‾
-     /   /  |  \   \
-    '   /   |   \   '
-        '   |   '
-            '
-
-[ Odin-9000 (Orchestrator for Design Intent & Navigation) ]
-```
+# Odin Flow
 
 A GitHub Copilot agent skill suite for automating the Figma → Design System → Storybook pipeline. Powered by [Beads](https://github.com/gastownhall/beads) for persistent memory across agent sessions.
 
@@ -177,7 +159,7 @@ MIMR uses the Figma REST API directly (for `sharedPluginData` access), which req
 1. Go to [figma.com](https://figma.com) → click your avatar (top-right) → **Settings**
 2. Scroll to **Security** → **Personal access tokens**
 3. Click **Generate new token**
-4. Give it a name (e.g. `fds-designer-agent`) and set expiry
+4. Give it a name (e.g. `odinflow-agent`) and set expiry
 5. Copy the token — it starts with `figd_`
 
 > **Keep your PAT private.** Never commit it. When MIMR asks for `{pat}`, paste it directly in chat — it is never logged or stored by the skill.
@@ -222,7 +204,7 @@ pip install beads-mcp
 #### Initialize Beads in this repo
 
 ```bash
-cd fds-designer
+cd odinflow
 bd init --quiet --skip-hooks
 ```
 
@@ -264,8 +246,8 @@ MCP servers load on window start. After reload, Beads tools will appear in Copil
 ### 4. Clone and run
 
 ```bash
-git clone git@github.com:<your-org>/fds-designer.git
-cd fds-designer
+git clone git@github.com:katbinaris/odinflow.git
+cd odinflow
 
 # Install bd + beads-mcp (see above)
 bd init --quiet --skip-hooks
@@ -411,7 +393,7 @@ User: "Figma URL or design brief"
 ## Project structure
 
 ```
-fds-designer/
+odinflow/
 ├── .beads/                        # Beads issue database (Dolt)
 ├── .github/
 │   ├── copilot-instructions.md    # Global Copilot + Beads rules
