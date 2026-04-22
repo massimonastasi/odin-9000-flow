@@ -1,5 +1,7 @@
 # Odin Flow
 
+![Odin Flow](docs/images/odin-flow-banner.png)
+
 A GitHub Copilot agent skill suite for automating the Figma → Design System → Storybook pipeline. Powered by [Beads](https://github.com/gastownhall/beads) for persistent memory across agent sessions.
 
 ---
