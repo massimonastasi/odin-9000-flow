@@ -578,4 +578,10 @@ Designer (Figma + VS Code)              Engineer (codebase)
 
 ## License
 
-MIT
+© 2026. All rights reserved.
+
+This project is licensed under the **PolyForm Noncommercial License 1.0.0**.  
+You may use, modify, and share this software for **non-commercial purposes only**.  
+Commercial use of any kind requires explicit written permission from the author.
+
+See [LICENSE](./LICENSE) for full terms.
