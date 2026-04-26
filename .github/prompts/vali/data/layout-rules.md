@@ -109,7 +109,7 @@ Key steps (for reference):
 2. `parent.insertChild(idx, inner)` → `wrapper.remove()`
 3. Restore wrapper's sizing on the lifted child
 
-> Use `figma.currentPage.findOne()` to locate nodes — do not rely on snapshot references across ops.
+> Use the `nodeCache` map built at startup in `process.figma.js` for O(1) node lookups — never `figma.currentPage.findOne()` in a loop.
 > After ungrouping, re-run classification on the parent — its role may change.
 
 ---
@@ -159,7 +159,7 @@ clipsContent            = false
 
 ## 6. Token mapping (for Tokenator 9000 handoff)
 
-### 5a. Gap tokens — `itemSpacing`
+### 6a. Gap tokens — `itemSpacing`
 
 Apply to auto-layout FRAMEs based on role. Description from registry:
 
@@ -183,7 +183,7 @@ Apply to auto-layout FRAMEs based on role. Description from registry:
 
 ---
 
-### 5b. Utility token — `ui-gap` (8px) — primary fallback for `itemSpacing`
+### 6b. Utility token — `ui-gap` (8px) — primary fallback for `itemSpacing`
 
 > **`fds-spacing-const-ui-gap` is the default fallback whenever a gap-* token does not fit.**  
 > If a FRAME's children are not a clean section/group/pattern (e.g. icon+label, mixed inline controls, tightly coupled siblings), use `ui-gap` before considering any other option.

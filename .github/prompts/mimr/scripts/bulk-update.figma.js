@@ -94,7 +94,10 @@ function tsPathToNvName(tsPath) {
 function matchesPattern(name, pattern, matchType) {
   if (matchType === 'exact')    return name === pattern;
   if (matchType === 'contains') return name.includes(pattern);
-  if (matchType === 'regex')    return new RegExp(pattern).test(name);
+  if (matchType === 'regex') {
+    try { return new RegExp(pattern).test(name); }
+    catch(e) { return false; }
+  }
   return false;
 }
 
@@ -246,6 +249,7 @@ if (!root) return JSON.stringify({ error: `Root node "${ROOT_ID}" not found` });
 
 // Load all local variables once — used for auto-NV resolution
 const allVars = await figma.variables.getLocalVariablesAsync();
+const varsByName = new Map(allVars.map(v => [v.name, v]));
 
 const report = [];
 
@@ -275,7 +279,7 @@ for (const rule of RULES) {
 
           if (bindProps) {
             const nvName = tsPathToNvName(write.value);
-            const v = allVars.find(v => v.name === nvName) ?? null;
+            const v = varsByName.get(nvName) ?? null;
             if (v) {
               for (const prop of bindProps) {
                 try {

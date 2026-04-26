@@ -4,7 +4,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 function scan(node, depth) {
-  var info = {
+  const info = {
     id:         node.id,
     name:       node.name,
     type:       node.type,
@@ -12,16 +12,21 @@ function scan(node, depth) {
     sizingH:    ('layoutSizingHorizontal'  in node) ? node.layoutSizingHorizontal  : null,
     sizingV:    ('layoutSizingVertical'    in node) ? node.layoutSizingVertical    : null,
     w:          node.width,
-    h:          node.height
+    h:          node.height,
+    padT:       ('paddingTop'    in node) ? node.paddingTop    : null,
+    padB:       ('paddingBottom' in node) ? node.paddingBottom : null,
+    padL:       ('paddingLeft'   in node) ? node.paddingLeft   : null,
+    padR:       ('paddingRight'  in node) ? node.paddingRight  : null,
+    itemSpacing: ('itemSpacing'  in node) ? node.itemSpacing   : null,
+    fillCount:  ('fills'         in node) ? node.fills.length  : 0,
+    childCount: ('children'      in node) ? node.children.length : 0
   };
-  if ('children' in node && depth > 0) {
-    info.children = Array.from(node.children).map(function(c) {
-      return scan(c, depth - 1);
-    });
+  if ('children' in node && depth > 0 && node.type !== 'INSTANCE') {
+    info.children = Array.from(node.children).map(c => scan(c, depth - 1));
   }
   return info;
 }
 
-var root = figma.getNodeById(NODE_ID);
-if (!root) { return JSON.stringify({ error: 'Node not found: ' + NODE_ID }); }
+const root = figma.getNodeById(NODE_ID);
+if (!root) { return JSON.stringify({ error: `Node not found: ${NODE_ID}` }); }
 return JSON.stringify(scan(root, DEPTH), null, 2);

@@ -38,7 +38,7 @@ Audit, compare and bulk-update token bindings across Token Studio (TS) and nativ
 | `data/token-registry.md` | All available tokens — human-readable reference | **User** |
 | `data/token-index.json` | All available tokens — compact machine index for agent lookups | **Auto-generated** |
 | `data/mapping-rules.md` | Bulk-update rules (YAML blocks) | **User** |
-| `examples/` | Format reference for both data files | Reference only |
+| `data/ts-core-fabric.json` | Raw Token Studio export — source for registry/index generation | **No — never load** (21K lines, context overflow risk) |
 
 ---
 
@@ -68,7 +68,10 @@ X-Figma-Token: {pat}
 
 ### Node walk
 
-Walk the full response tree recursively. For each node collect:
+Walk the full response tree recursively. For each node:
+
+**INSTANCE guard — check first, before any property read:**
+- If `node.type === 'INSTANCE'`: record `{ id, name, type: 'INSTANCE', parentName, isInstance: true }` with empty `tokenBindings` and `boundVariables`. **Do not read `sharedPluginData`. Do not read `boundVariables`. Do not recurse into `children`.** Continue to the next sibling.
 
 **TS bindings** from `node.sharedPluginData.tokens`:
 - Strip surrounding quotes from raw value
@@ -128,13 +131,14 @@ Emit `⚠️ CONFLICT` when a node has **both** TS and NV on the same logical pr
 ### Tree format
 
 ```
-Legend: 🎨 TS = Token Studio  📐 NV = Native variable  ∅ = no bindings  ⚠️ = conflict
+Legend: 🎨 TS = Token Studio  📐 NV = Native variable  ∅ = no bindings  ⚠️ = conflict  🔒 = Instance (read-only, not expanded)
 
 {RootName}  [{TYPE}]  {id}
 ├── {prop}  🎨 {ts.short}  |  📐 {nv.name}  [{nv.collection} · {nv.type}]                       ← TS+NV chain
 ├── {prop}  🎨 {ts.short}  |  📐 {nv.name}  [{nv.collection} · {nv.type}]  ⚠️ CONFLICT  → suggest: {canonical}
 ├── 🎨 {key}  →  {ts.short}                                                                       ← TS only
 ├── 📐 {prop}  →  {nv.name}  [{nv.collection} · {nv.type}]                                       ← NV only
+├── 🔒 {name}  [INSTANCE]                                                                         ← instance leaf — not expanded
 └── ∅
 ```
 
@@ -259,7 +263,7 @@ List `status: 'error'` entries with `nodeId`, `rule`, `error`.
 | Variable ID prefix | Pass `VariableID:abc/123` as-is to `getVariableByIdAsync` |
 | Library variables | `getVariableByIdAsync` resolves local + library — always use it |
 | Null-guard children | Always `node.children ?? []` |
-| Confirm before write | Hard stop between Phase 2 and Phase 3 — no exceptions |
+| Confirm before write | Hard stop between Phase 2 and Phase 3 — no exceptions. **Padding writes require extra confirmation:** before applying any padding token (`paddingTop`, `paddingBottom`, `paddingLeft`, `paddingRight`, `verticalPadding`, `horizontalPadding`) to any COMPONENT or FRAME node, always stop and confirm with the user via `vscode_askQuestions`. Present the exact candidate token path(s) and the list of affected node ids/names. Do not proceed until explicit approval is received. |
 | Phase 4 is opt-in | Never scaffold unless user explicitly requests it |
 | PAT security | Never log or expose `{pat}` in any output |
 | Page switching | `await figma.setCurrentPageAsync(page)` — never assign `figma.currentPage =` |
@@ -267,5 +271,6 @@ List `status: 'error'` entries with `nodeId`, `rule`, `error`.
 | Content fills | **Never omit.** After binding background fill on the COMPONENT, always bind `fds-on-*-hi` (or chosen emphasis) on every TEXT and `icon` VECTOR inside each variant. Omitting content fills is a checklist failure. |
 | `on-*` ≠ background | `fds-btn-on-surface-*`, `fds-on-btn-*`, `fds-on-surface-*` — all `on-*` tokens are content colours. **Never** apply them as a COMPONENT background fill. |
 | Token suggestions | Never guess a token path. Always use `grep_search` on `data/token-registry.md` by short name or partial TS path. Never read the full file. |
+| ts-core-fabric.json | **Never read or load** `data/ts-core-fabric.json` — it is 21K lines and will overflow the context window. Use `token-registry.md` (grep_search) or `token-index.json` instead. |
 | User input | **Always use `vscode_askQuestions` for any decision or confirmation needed from the user** — never use inline chat text. Specific decision points in `data/mapping-rules.md` provide the exact question + options; use those templates directly. For any unexpected decision not covered by a template, construct a `vscode_askQuestions` call on the spot. |
 | Annotations | **Never use `setSharedPluginData` for annotations.** When `Annotations: True` is requested, write Figma native annotations via `node.setAnnotations([{ label, properties }])`. If `setAnnotations` is not available in the current API context, log a warning and skip — do not fall back to shared plugin data. |

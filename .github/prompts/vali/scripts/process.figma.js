@@ -28,11 +28,11 @@
 // Run ops in order: ungroups → wraps → al-conversions → renames → tokens → [annotate if confirmed]
 // ─────────────────────────────────────────────────────────────────────────────
 
-var log    = [];
-var failed = [];
+const log    = [];
+const failed = [];
 
 // Gap variable IDs — hardcoded (file: Ahvbwk0dUHeHazrQX2XtGd, never changes)
-var GAP_VAR_IDS = {
+const GAP_VAR_IDS = {
   vSection: 'VariableID:8094:59629',   // fds-spacing-const-gap-v-section  32px
   vGroup:   'VariableID:8094:59630',   // fds-spacing-const-gap-v-group    20px
   vPattern: 'VariableID:8094:59631',   // fds-spacing-const-gap-v-pattern  12px
@@ -46,18 +46,18 @@ var GAP_VAR_IDS = {
 // with 10+ ops this causes the plugin to hang for 30 s+ on large files.
 // All ops use nodeCache for O(1) lookup. Newly created nodes are registered
 // immediately after creation so subsequent ops can find them.
-var nodeCache = {};
+const nodeCache = {};
 (function buildCache(node) {
   nodeCache[node.id] = node;
   if ('children' in node) {
-    for (var _i = 0; _i < node.children.length; _i++) { buildCache(node.children[_i]); }
+    for (const child of node.children) { buildCache(child); }
   }
 })(figma.getNodeById(NODE_ID) || figma.currentPage);
 
 function getNode(id) {
   if (nodeCache[id]) return nodeCache[id];
   // fallback for nodes created mid-run (wraps, al-conversions)
-  var n = figma.getNodeById(id);
+  const n = figma.getNodeById(id);
   if (n) nodeCache[id] = n;
   return n;
 }
@@ -75,7 +75,7 @@ function restoreSizing(node, sizing) {
 }
 
 function applyFillCounterAxis(parent) {
-  Array.from(parent.children).forEach(function(c) {
+  Array.from(parent.children).forEach(c => {
     try {
       if (parent.layoutMode === 'VERTICAL')   { c.layoutSizingHorizontal = 'FILL'; }
       if (parent.layoutMode === 'HORIZONTAL') { c.layoutSizingVertical   = 'FILL'; }
@@ -100,27 +100,27 @@ function applyALSettings(frame, direction) {
 // Precondition: wrapper must have exactly 1 child, no padding, no visible fill.
 
 function opUngroup(op) {
-  var wrapper = getNode(op.id);
+  const wrapper = getNode(op.id);
   if (!wrapper) { failed.push({ op: 'ungroup', id: op.id, reason: 'node not found' }); return; }
-  var parent = wrapper.parent;
+  const parent = wrapper.parent;
   if (!parent)  { failed.push({ op: 'ungroup', id: op.id, reason: 'no parent' }); return; }
   if (wrapper.children.length !== 1) {
-    failed.push({ op: 'ungroup', id: op.id, reason: 'child count != 1: ' + wrapper.children.length }); return;
+    failed.push({ op: 'ungroup', id: op.id, reason: `child count != 1: ${wrapper.children.length}` }); return;
   }
 
-  var inner      = wrapper.children[0];
-  var wrapperName = wrapper.name; var wrapperId = wrapper.id;
-  var innerName   = inner.name;   var innerId   = inner.id;
-  var sizing     = captureSizing(wrapper);
-  var idx        = Array.from(parent.children).indexOf(wrapper);
+  const inner       = wrapper.children[0];
+  const wrapperName = wrapper.name; const wrapperId = wrapper.id;
+  const innerName   = inner.name;   const innerId   = inner.id;
+  const sizing      = captureSizing(wrapper);
+  const idx         = Array.from(parent.children).indexOf(wrapper);
 
   nodeCache[inner.id] = inner;  // register before move
   parent.insertChild(idx, inner);
   try { wrapper.remove(); } catch(e) {}
   restoreSizing(inner, sizing);
 
-  log.push({ op: 'ungroup', removed: wrapperName + ' [' + wrapperId + ']',
-             lifted: innerName + ' [' + innerId + ']', sizingRestored: sizing });
+  log.push({ op: 'ungroup', removed: `${wrapperName} [${wrapperId}]`,
+             lifted: `${innerName} [${innerId}]`, sizingRestored: sizing });
 }
 
 // ── op: wrap ──────────────────────────────────────────────────────────────────
@@ -128,30 +128,28 @@ function opUngroup(op) {
 // Inherits sizing from first child; applies FILL on counter axis to all children.
 
 function opWrap(op) {
-  var parent = getNode(op.parentId);
+  const parent = getNode(op.parentId);
   if (!parent) { failed.push({ op: 'wrap', parentId: op.parentId, reason: 'parent not found' }); return; }
 
-  var parentChildren = Array.from(parent.children);
-  var children = op.childIds.map(function(cid) {
-    return parentChildren.find(function(c) { return c.id === cid; });
-  }).filter(Boolean);
+  const parentChildren = Array.from(parent.children);
+  const children = op.childIds.map(cid => parentChildren.find(c => c.id === cid)).filter(Boolean);
 
   if (children.length === 0) { failed.push({ op: 'wrap', parentId: op.parentId, reason: 'no matching children found' }); return; }
 
-  var firstChild    = children[0];
-  var inheritSizing = captureSizing(firstChild);
+  const firstChild    = children[0];
+  const inheritSizing = captureSizing(firstChild);
   if (!inheritSizing.h) inheritSizing.h = 'FILL';
   if (!inheritSizing.v) inheritSizing.v = 'HUG';
 
-  var originalIndex = parentChildren.indexOf(firstChild);
-  var direction     = op.direction || 'VERTICAL';
-  var wrapperName   = op.name || ('{' + (direction === 'HORIZONTAL' ? 'row' : 'col') + ' / pattern}');
+  const originalIndex = parentChildren.indexOf(firstChild);
+  const direction     = op.direction || 'VERTICAL';
+  const wrapperName   = op.name || `{${direction === 'HORIZONTAL' ? 'row' : 'col'} / pattern}`;
 
-  var wrapper = figma.createFrame();
+  const wrapper = figma.createFrame();
   wrapper.name = wrapperName;
   applyALSettings(wrapper, direction);
 
-  for (var i = 0; i < children.length; i++) { wrapper.appendChild(children[i]); }
+  for (const child of children) { wrapper.appendChild(child); }
   parent.insertChild(originalIndex, wrapper);
 
   try { wrapper.layoutSizingHorizontal = inheritSizing.h; } catch(e) {}
@@ -168,20 +166,20 @@ function opWrap(op) {
 // GROUPs are replaced with a new FRAME (Figma does not support AL on GROUP nodes directly).
 
 function opAL(op) {
-  var node = getNode(op.id);
+  const node = getNode(op.id);
   if (!node) { failed.push({ op: 'al', id: op.id, reason: 'node not found' }); return; }
 
-  var dir          = op.direction || 'VERTICAL';
-  var sizingBefore = captureSizing(node);
+  const dir          = op.direction || 'VERTICAL';
+  const sizingBefore = captureSizing(node);
 
   if (node.type === 'GROUP') {
-    var parent   = node.parent;
-    var idx      = Array.from(parent.children).indexOf(node);
-    var frame    = figma.createFrame();
-    frame.name   = node.name;
+    const parent   = node.parent;
+    const idx      = Array.from(parent.children).indexOf(node);
+    const frame    = figma.createFrame();
+    frame.name     = node.name;
     applyALSettings(frame, dir);
-    var snapshot = Array.from(node.children);
-    for (var i = 0; i < snapshot.length; i++) { frame.appendChild(snapshot[i]); }
+    const snapshot = Array.from(node.children);
+    for (const child of snapshot) { frame.appendChild(child); }
     parent.insertChild(idx, frame);
     try { node.remove(); } catch(e) {}
     applyFillCounterAxis(frame);
@@ -198,11 +196,11 @@ function opAL(op) {
 // ── op: rename ────────────────────────────────────────────────────────────────
 
 function opRename(op) {
-  var node = getNode(op.id);
+  const node = getNode(op.id);
   if (!node) { failed.push({ op: 'rename', id: op.id, reason: 'node not found' }); return; }
-  var before = node.name;
+  const before = node.name;
   node.name  = op.to;
-  log.push({ op: 'rename', id: node.id, before: before, after: op.to });
+  log.push({ op: 'rename', id: node.id, before, after: op.to });
 }
 
 // ── op: token ─────────────────────────────────────────────────────────────────
@@ -210,15 +208,15 @@ function opRename(op) {
 // op.gap must be one of: vSection | vGroup | vPattern | hPattern
 
 function opToken(op) {
-  var node = getNode(op.id);
+  const node = getNode(op.id);
   if (!node) { failed.push({ op: 'token', id: op.id, reason: 'node not found' }); return; }
-  var varId = GAP_VAR_IDS[op.gap];
-  if (!varId) { failed.push({ op: 'token', id: op.id, reason: 'unknown gap key: ' + op.gap }); return; }
+  const varId = GAP_VAR_IDS[op.gap];
+  if (!varId) { failed.push({ op: 'token', id: op.id, reason: `unknown gap key: ${op.gap}` }); return; }
   try {
-    var variable = figma.variables.getVariableById(varId);
-    if (!variable) { failed.push({ op: 'token', id: op.id, reason: 'variable not found: ' + varId }); return; }
+    const variable = figma.variables.getVariableById(varId);
+    if (!variable) { failed.push({ op: 'token', id: op.id, reason: `variable not found: ${varId}` }); return; }
     node.setBoundVariable('itemSpacing', variable);
-    log.push({ op: 'token', id: node.id, name: node.name, gap: op.gap, varId: varId });
+    log.push({ op: 'token', id: node.id, name: node.name, gap: op.gap, varId });
   } catch(e) {
     failed.push({ op: 'token', id: op.id, reason: e.message || String(e) });
   }
@@ -231,26 +229,25 @@ function opToken(op) {
 // Op shape: { op: 'annotate', id, oldName, newName, direction, childSummary }
 
 function opAnnotate(op) {
-  var node = getNode(op.id);
+  const node = getNode(op.id);
   if (!node) { failed.push({ op: 'annotate', id: op.id, reason: 'node not found' }); return; }
-  var label = '**\u2705 Flex-O-Nator 9000**\nRenamed: `' + (op.oldName || '?') + '` \u2192 `' + (op.newName || node.name) + '`\n'
-            + (op.direction || '') + (op.childSummary ? ' \u00b7 ' + op.childSummary : '');
+  const label = `**\u2705 Flex-O-Nator 9000**\nRenamed: \`${op.oldName || '?'}\` \u2192 \`${op.newName || node.name}\`\n`
+            + (op.direction || '') + (op.childSummary ? ` \u00b7 ${op.childSummary}` : '');
   try {
     node.annotations = [{ labelMarkdown: label, properties: [{ type: 'itemSpacing' }] }];
     log.push({ op: 'annotate', id: node.id, name: node.name });
   } catch(e) {
     // annotations not supported on this node type — log skip, narrate to user
     log.push({ op: 'annotate', id: op.id, skipped: true,
-               reason: node.type + ' does not support annotations — create sticky manually' });
+               reason: `${node.type} does not support annotations — create sticky manually` });
   }
 }
 
 // ── execute ───────────────────────────────────────────────────────────────────
 
-var handlers = { ungroup: opUngroup, wrap: opWrap, al: opAL, rename: opRename, token: opToken, annotate: opAnnotate };
+const handlers = { ungroup: opUngroup, wrap: opWrap, al: opAL, rename: opRename, token: opToken, annotate: opAnnotate };
 
-for (var i = 0; i < OPS.length; i++) {
-  var op = OPS[i];
+for (const op of OPS) {
   try {
     if (handlers[op.op]) { handlers[op.op](op); }
     else { failed.push({ op: op.op, reason: 'unknown op type' }); }

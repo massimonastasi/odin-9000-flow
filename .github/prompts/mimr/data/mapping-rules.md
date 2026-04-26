@@ -10,6 +10,70 @@
 
 ---
 
+## YAML rule template
+
+Use this schema when generating `RULES` for `bulk-update.figma.js`. Each YAML block maps directly to one entry in the `RULES` array.
+
+```yaml
+# ─── Template ────────────────────────────────────────────────────────────────
+- id: "rule-id"                  # unique, kebab-case identifier
+  layer_pattern: "pattern"       # string to match against node.name
+  matchType: "exact"             # exact | contains | regex
+  writes:
+    # Token Studio write (sets plugin data + auto-NV resolution)
+    - type: ts
+      key: fill                  # TS property key (fill, borderRadius, paddingTop, etc.)
+      value: "var.fds.fds-surface-variant"  # full TS dot-path
+      rawValue: "#1a1a2e"        # optional CSS fallback if NV not found
+
+    # Native variable write (manual override — use only when auto-NV fails)
+    - type: nv
+      prop: "fills"              # Figma node property to bind
+      varId: "VariableID:..."    # exact Figma variable ID
+```
+
+**Example — button fill + radius + spacing:**
+
+```yaml
+- id: btn-fill-surface
+  layer_pattern: "btn"
+  matchType: contains
+  writes:
+    - type: ts
+      key: fill
+      value: "var.fds.fds-surface-variant"
+
+- id: btn-radius-reg
+  layer_pattern: "btn"
+  matchType: contains
+  writes:
+    - type: ts
+      key: borderRadius
+      value: "fds-round-const.ui-controls.btn.fds-round-const-btn-reg"
+
+- id: btn-spacing-reg
+  layer_pattern: "btn"
+  matchType: contains
+  writes:
+    - type: ts
+      key: paddingTop
+      value: "spacing.fds-spacing-const.btn.reg.fds-spacing-const-btn-reg-v"
+    - type: ts
+      key: paddingBottom
+      value: "spacing.fds-spacing-const.btn.reg.fds-spacing-const-btn-reg-v"
+    - type: ts
+      key: paddingLeft
+      value: "spacing.fds-spacing-const.btn.reg.fds-spacing-const-btn-reg-h"
+    - type: ts
+      key: paddingRight
+      value: "spacing.fds-spacing-const.btn.reg.fds-spacing-const-btn-reg-h"
+    - type: ts
+      key: itemSpacing
+      value: "spacing.fds-spacing-const.utility.fds-spacing-const-ui-gap"
+```
+
+---
+
 ## Button token rules
 
 Apply these rules whenever the target component is a button (layer name contains `btn`, `button`, `Button`, or variant properties contain `Appearance` / `State` / `Device`).

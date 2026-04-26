@@ -43,6 +43,7 @@ secrets.*
 node_modules/
 npm-debug.log*
 package-lock.json
+*.log
 
 # ─── Generated component output (SAGA) ───────────────────────
 src/

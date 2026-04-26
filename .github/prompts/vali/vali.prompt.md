@@ -87,7 +87,7 @@ const DEPTH = 5;
 // … paste scan.figma.js content here …
 ```
 
-The script returns a JSON tree including `id`, `name`, `type`, `layoutMode`, `sizingH`, `sizingV`, `w`, `h`, and `children`.
+The script returns a JSON tree including `id`, `name`, `type`, `layoutMode`, `sizingH`, `sizingV`, `w`, `h`, `padT`, `padB`, `padL`, `padR`, `itemSpacing`, `fillCount`, `childCount`, and `children`.
 
 **Output a table:**
 
@@ -96,12 +96,34 @@ The script returns a JSON tree including `id`, `name`, `type`, `layoutMode`, `si
 | … | … | GROUP / FRAME / … | NONE / H / V | count + types |
 
 Flag every node where:
+- `type === 'INSTANCE'` — **skip entirely.** Do not flag, convert, rename, or generate ops. Render in the analysis table as `🔒 INSTANCE (read-only)` with no children expanded and no ops column.
 - `type === 'GROUP'` — **must convert**
 - `type === 'FRAME'` and `layoutMode === 'NONE'` — **must convert**
 - `type === 'FRAME'` and `layoutMode` is wrong direction — **must fix**
 - `type === 'FRAME'` with exactly 1 child + no padding + no fill — **flag for ungrouping** (lift child to parent, remove wrapper); run this before classification
 
 Explain findings. **Ask user to confirm before Phase 2.**
+
+### Annotation question (mandatory — ask before building OPS)
+
+After the user confirms the Phase 1 plan, **immediately** ask about annotations using `vscode_askQuestions`:
+
+```json
+{
+  "questions": [{
+    "header": "annotations",
+    "question": "Would you like Dev Mode annotations attached to the converted frames?",
+    "allowFreeformInput": false,
+    "options": [
+      { "label": "Yes — add annotations", "description": "Attach a Development-panel note to every renamed frame", "recommended": true },
+      { "label": "No — keep canvas clean", "description": "Skip annotations entirely" },
+      { "label": "Maybe later — ask me after the run", "description": "Execute now; I can re-run just the annotate ops afterwards" }
+    ]
+  }]
+}
+```
+
+If yes, include `annotate` ops at the end of the `OPS` array — one per renamed frame. This must happen **before** Phase 2+3 execution since all ops run in a single `process.figma.js` call.
 
 ---
 
@@ -128,6 +150,8 @@ Explain findings. **Ask user to confirm before Phase 2.**
 5. **Re-parent absorbed children:** if a standalone sibling clearly belongs inside a group (e.g. middle item in a vertical stack that wraps items 1 and 3), absorb it before converting the group.
 
 > **CRITICAL:** Always obtain node references via tree traversal (`root.children.find(...)`) rather than `figma.getNodeByIdAsync` on inner nodes inside a FRAME — the IDs may not resolve independently mid-script.
+
+> **INSTANCE rule:** Never emit `al`, `rename`, `token`, `wrap`, or `ungroup` ops targeting an `INSTANCE` node or any of its children. INSTANCE internals are read-only in Figma. If a node flagged for conversion turns out to be an INSTANCE at runtime, skip it silently and log `{ op: 'skipped', id, reason: 'INSTANCE — read-only' }`.
 
 ---
 
@@ -184,7 +208,7 @@ const OPS = [
 Before classifying or tokenizing, fix broken layouts by creating wrapper frames:
 
 - **Broken pattern** — same-family children interrupted by a different component: wrap each contiguous same-type run into `{col / pattern}`, parent becomes `{col / group}`
-- **Loose INSTANCE** alongside named FRAME siblings: wrap the lone INSTANCE into `{col / pattern}` at its original index
+- **Loose INSTANCE** alongside named FRAME siblings: leave the INSTANCE in place at its original index — do not wrap it. INSTANCE nodes are read-only; classify the parent based on the non-INSTANCE siblings only.
 - **After any wrap** — re-classify the parent; its role will change
 
 See `data/layout-rules.md` Section 3 for the full wrapping procedure.
@@ -214,29 +238,6 @@ After Phase 3 the frame is ready for token application. The `{direction / role}`
 | `{row / pattern}` | `fds-spacing-const-gap-h-pattern` |
 
 **Do not write tokens yourself.** Pass the converted frame URL to MIMR.
-
----
-
-## Annotations
-
-**Always ask the user before creating annotations** using the `vscode_askQuestions` tool:
-
-```json
-{
-  "questions": [{
-    "header": "annotations",
-    "question": "Would you like Dev Mode annotations attached to the converted frames?",
-    "allowFreeformInput": false,
-    "options": [
-      { "label": "Yes — add annotations", "description": "Attach a Development-panel note to every renamed frame", "recommended": true },
-      { "label": "No — keep canvas clean", "description": "Skip annotations entirely" },
-      { "label": "Maybe later — ask me after the run", "description": "Execute now; I can re-run just the annotate ops afterwards" }
-    ]
-  }]
-}
-```
-
-If yes, add `annotate` ops at the end of the `OPS` array — one per renamed frame.
 
 ---
 

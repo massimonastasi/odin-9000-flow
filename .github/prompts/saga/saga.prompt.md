@@ -49,6 +49,47 @@ Activate when the user explicitly says:
 
 Run `get_design_context` on the node. If the response is too large or truncated, run `get_metadata` for the high-level node map, then re-fetch only the required node(s).
 
+### Step 1b — INSTANCE inventory
+
+Before mapping any layout, scan the full node tree for `INSTANCE` nodes. For each one found:
+
+1. **Derive the CE tag name** — two-step, in order:
+
+   | Source | How | Use when |
+   |---|---|---|
+   | `mainComponent.name` | REST field on the INSTANCE node | Present and non-empty — **preferred** |
+   | `node.name` (layer name) | Strip surrounding `{` `}` if present | Fallback |
+
+   Once you have the raw name:
+   - Lowercase + kebab-case (spaces and `_` → `-`)
+   - Strip non-alphanumeric-or-hyphen characters
+   - If result does **not** start with `fds-`, keep it as-is and **flag for review** (see dependency table below)
+
+   > Example: `mainComponent.name = "FDS Button / Primary"` → `fds-button-primary`  
+   > Example: layer name `{fds-badge}` → strip braces → `fds-badge`  
+   > Example: layer name `Leading element` → `leading-element` ← ⚠️ flag (no `fds-` prefix)
+
+2. **Record the mapping** — `{ layerName, derivedTag, source, flagged }` — do not emit any HTML/TSX yet.
+
+3. **Do not descend into the INSTANCE's children.** The instance's internal structure is read-only and owned by the main component.
+
+**Emit a dependency table** before any file output:
+
+```
+Component dependencies detected:
+┌──────────────────┬──────────────────┬─────────────────────────────────────────┐
+│ Layer name       │ Derived CE tag   │ Note                                    │
+├──────────────────┼──────────────────┼─────────────────────────────────────────┤
+│ Leading element  │ fds-badge        │ from mainComponent.name                 │
+│ {fds-button}     │ fds-button       │ from layer name (braces stripped)       │
+│ Close icon       │ close-icon       │ ⚠️ no fds- prefix — confirm or skip    │
+└──────────────────┴──────────────────┴─────────────────────────────────────────┘
+```
+
+Ask (via `vscode_askQuestions`): **"Are these tag mappings correct? Edit any before I generate the files."**
+
+Wait for confirmation before proceeding to Step 2.
+
 ### Step 2 — Map Auto Layout → CSS
 
 For each frame in the node tree, map Figma properties to CSS:
@@ -64,9 +105,18 @@ For each frame in the node tree, map Figma properties to CSS:
 | `cornerRadius` | `border-radius` — see CSS var rule below |
 | `width` / `height` (FIXED sizing) | explicit `width` / `height` |
 
-**CSS var derivation rule:** For any property that has an NV binding, derive the CSS custom property as `--{shortName}` where `shortName` is the last `/`-separated segment of the NV variable name.
+**CSS var derivation rule:** For any property that has an NV binding, derive the CSS custom property as `--{shortName}` where `shortName` is the last `/`-separated segment of the NV variable name. **Always include the resolved pixel/hex value as the fallback**, even when a binding exists.
 
 > Example: NV name `spacing/fds-spacing-const/gap/h/fds-spacing-const-gap-h-pattern` → `--fds-spacing-const-gap-h-pattern`
+
+```css
+/* Correct — token var with resolved fallback */
+border-radius: var(--fds-round-const-container-reg, 16px);
+background: var(--fds-success-surface, #d8f2d7);
+
+/* Wrong — no fallback; component breaks when tokens aren't loaded */
+border-radius: var(--fds-round-const-container-reg);
+```
 
 Fall back to the raw resolved value for any property with no NV binding.
 
@@ -104,6 +154,26 @@ vscode_askQuestions([{
 | **`{name}.html`** | Semantic structure mirroring the layer hierarchy |
 | **`{name}.css`** | Vanilla CSS with `--fds-*` custom properties |
 | **`{name}.module.css`** | CSS Modules version (scoped class names, same values) |
+
+**INSTANCE nodes in HTML output** — emit a self-closing CE tag at the exact position the instance occupies in the layout. Do not reconstruct its internals.
+
+```html
+<!-- instance: Leading element -->
+<fds-badge></fds-badge>
+
+<!-- instance inside a slot-mapped area -->
+<fds-badge slot="icon"></fds-badge>
+```
+
+At the top of the `.html` file, add a comment block listing all instance dependencies:
+
+```html
+<!--
+  Component dependencies:
+    <fds-badge>     — from mainComponent.name "FDS Badge"
+    <fds-button>    — from layer name "{fds-button}"
+-->
+```
 
 **If StencilJS (or Both):** proceed to Phase 4.
 
@@ -166,6 +236,31 @@ render() {
 }
 ```
 
+**INSTANCE nodes in TSX render()** — emit the derived CE tag inline. Do not reconstruct the instance's children.
+
+```tsx
+render() {
+  return (
+    <Host class={`${this.type.toLowerCase()} ${this.context}`}>
+      {/* instance: Leading element */}
+      <fds-badge slot="icon"></fds-badge>
+      <slot name="content" />
+      <slot name="actions" />
+    </Host>
+  );
+}
+```
+
+**Import comment block** — at the top of every `.tsx` file that contains instance references, add:
+
+```tsx
+// Component dependencies — import these in your app shell:
+// import 'fds-components/fds-badge';
+// import 'fds-components/fds-button';
+```
+
+Use the confirmed tag names from Step 1b. One comment line per unique dependency.
+
 **Host sizing — map from root frame `layoutSizingHorizontal`**
 
 | Figma value | `:host` CSS |
@@ -194,31 +289,82 @@ Never branch on props in `render()` for visual differences — use CSS classes m
 
 ### 4.4 — CSS file rules
 
-- All values via `--fds-*` CSS custom properties from the NV binding map (Phase 2).
-- `:host` block first, then variant overrides, then internal layout.
-- No hardcoded pixel values for any property that has an NV binding.
+- All values via `--fds-*` CSS custom properties from the NV binding map (Phase 2), **always with resolved fallbacks**.
+- `:host` block first, then variant overrides, then internal layout, then `::slotted` typography.
 - Shadow DOM scoping — no BEM, no descendant selectors deeper than one level.
 
 ```css
 :host {
   display: block;
   width: 100%;
-  background: var(--fds-surface);
-  border-radius: var(--fds-container-reg);
-  padding: var(--fds-container-card);
+  background: var(--fds-surface, #f7f7f7);
+  border-radius: var(--fds-round-const-container-reg, 16px);
+  padding: var(--fds-spacing-const-container-card, 20px);
 }
 
 /* Variant overrides */
-:host(.success) { --fds-surface: var(--fds-color-success-surface); }
-:host(.error)   { --fds-surface: var(--fds-color-error-surface); }
+:host(.success) { background: var(--fds-success-surface, #d8f2d7); }
+:host(.error)   { background: var(--fds-error-surface,   #ffe0e8); }
 
 /* Internal layout */
 .banner-content {
   display: flex;
   flex-direction: column;
-  gap: var(--fds-gap-v-group);
+  gap: var(--fds-spacing-const-gap-v-group, 20px);
 }
 ```
+
+#### `::slotted()` typography rules
+
+Shadow DOM does not inherit CSS across slot boundaries. For every text-bearing slot, write an explicit `::slotted([slot="name"])` rule with full typography. **Only include `font-variation-settings` if the Figma font is a variable font (confirmed by the design context).** When TokenStudio variables exist for typography properties, use them with resolved fallbacks; otherwise use the resolved value directly.
+
+```css
+/* Title — Open Sans Bold 16/24 */
+::slotted([slot="title"]) {
+  display: block;
+  font-family: 'Open Sans', sans-serif;
+  font-weight: 700;
+  font-size: 16px;
+  line-height: 24px;
+  color: rgba(0, 0, 0, 0.87);
+  margin: 0;
+}
+
+/* Body — Open Sans Regular 14/20 */
+::slotted([slot="content"]) {
+  display: block;
+  font-family: 'Open Sans', sans-serif;
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 20px;
+  color: rgba(0, 0, 0, 0.87);
+  margin: 0;
+}
+```
+
+#### No-chrome action slot
+
+If the Figma action area has no `background`, `border`, or `padding` (text label only), strip all browser button defaults from the slot:
+
+```css
+::slotted([slot="actions"]) {
+  appearance: none;
+  -webkit-appearance: none;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  /* then apply Figma typography */
+  font-family: 'Lato', sans-serif;
+  font-weight: 700;
+  font-size: 16px;
+  line-height: 24px;
+  color: rgba(0, 0, 0, 0.87);
+  cursor: pointer;
+}
+```
+
+This applies when stories render `<button slot="actions">` — prevents UA chrome that Figma does not have.
 
 ### 4.5 — Storybook story (CSF3, Storybook 9/10, `@storybook/web-components`)
 
@@ -227,7 +373,7 @@ import type { Meta, StoryObj } from '@storybook/web-components';
 import { html } from 'lit';
 
 // Ensure the component is registered
-import '../fds-{name}';
+import './fds-{name}';
 
 type ComponentArgs = {
   type: 'Status' | 'Neutral';
@@ -256,7 +402,7 @@ const meta: Meta<ComponentArgs> = {
 export default meta;
 type Story = StoryObj<ComponentArgs>;
 
-// One story per primary variant; no story if combinations > 12
+// If total axis × value combinations > 12, vary only the primary axis; keep defaults for others.
 export const Default: Story = {
   args: { type: 'Status', context: 'success', contentSlot: 'Banner message goes here.' },
 };
@@ -276,9 +422,18 @@ export const Neutral: Story = {
 
 **Story rules:**
 - Use `lit` `html` template tag for rendering — required by `@storybook/web-components`.
-- Slot args are plain strings wrapped in a `<span slot="…">` — keeps the story controls simple.
+- Slot args are plain strings wrapped in a `<span slot="…">` — keeps the story controls simple. Action slots use `<button slot="actions">` so the no-chrome CSS rule is exercised.
 - If the component has no variant axes, emit a single `Default` story only.
 - `tags: ['autodocs']` always present — enables the auto-generated docs page.
+- **Boolean props must use lit's `?attr=${bool}` binding.** Lit removes the attribute entirely when the value is `false`; never use `attr="false"` (the CE stub would receive the string `"false"` and misinterpret it as truthy).
+
+```ts
+// Correct — attribute is present (true) or absent (false)
+html`<fds-{name} ?action-button=${actionButton} ?show-title=${showTitle}>`
+
+// Wrong — passes the string "false", which evaluates as truthy in getAttribute checks
+html`<fds-{name} action-button="${actionButton}">`
+```
 
 ---
 
@@ -287,7 +442,9 @@ export const Neutral: Story = {
 | Rule | Detail |
 |---|---|
 | Explicit trigger only | Never activate unless the user explicitly requests code generation — do not auto-trigger after a MIMR audit |
-| No hardcoded values | Every property with an NV binding must use a `--fds-*` CSS var — never inline the resolved pixel value |
+| INSTANCE nodes are CE references | Never reconstruct a Figma INSTANCE node's internals. Emit a self-closing CE tag (`<fds-badge></fds-badge>`) at the position the instance occupies. Derive tag from `mainComponent.name` (preferred) or layer name. Always confirm the tag mapping with the user via `vscode_askQuestions` before generating files. |
+| INSTANCE children — never descend | Stop at the INSTANCE boundary. Children of an INSTANCE are read-only overrides — do not walk them, do not generate HTML/TSX for them. |
+| CSS vars with fallbacks | Every `--fds-*` var must include the resolved pixel/hex value as a fallback: `var(--fds-token, 16px)`. Component must render correctly even when design tokens are not loaded. |
 | User input | Use `vscode_askQuestions` for any ambiguous decision (e.g. which variant to scaffold, output file location). Never use inline chat text. |
 | CLAUDE.md assets | If Figma MCP returns a localhost image/SVG source, use it directly — do not create placeholders or import new icon packages |
 | Shadow DOM always | StencilJS output always uses `shadow: true` — never `shadow: false` |
@@ -295,3 +452,94 @@ export const Neutral: Story = {
 | No JS variant logic | Visual variant differences go in CSS (`:host(.class)`) — never branch in `render()` |
 | Stencil tag prefix | All generated tags must be prefixed `fds-` |
 | Story renderer | Always use `lit` `html` tag in stories — required by `@storybook/web-components` |
+| Boolean props — `?attr` binding | Boolean props must use `?attr=${bool}` in lit templates. The CE stub must use `hasAttribute()`, never `getAttribute() !== 'false'` (attribute is absent, not `"false"`, when lit unbinds it). |
+| `::slotted` typography always explicit | Write `::slotted([slot="name"])` rules for every text slot. Shadow DOM does not inherit typography. Use TS token vars with resolved fallbacks; raw resolved values if no token exists. |
+| No-chrome action slot | If Figma has no background/border/padding on the action area, `::slotted([slot="actions"])` must reset `appearance`, `background`, `border`, and `padding` to none. |
+| CE stub must mirror Stencil CSS | `register-components.ts` is a parallel implementation. Every `::slotted`, variant, icon, or layout rule added to the Stencil CSS file must also appear in the stub's inline `<style>`. Keep them in sync. |
+| GFM tables — `remark-gfm` required | Any MDX handoff doc that uses `\|---|---|` table syntax requires `remark-gfm`. Install it and register via `addon-docs` `mdxPluginOptions.mdxCompileOptions.remarkPlugins`. Without it, tables render as raw text. |
+
+---
+
+## Storybook project setup requirements
+
+These must be in place before any `.mdx` handoff doc or story is generated.
+
+### `remark-gfm` (GFM table support in MDX)
+
+```bash
+npm install --save-dev remark-gfm --legacy-peer-deps
+```
+
+In `.storybook/main.ts`:
+
+```ts
+import remarkGfm from 'remark-gfm';
+
+addons: [{
+  name: '@storybook/addon-docs',
+  options: {
+    mdxPluginOptions: {
+      mdxCompileOptions: {
+        remarkPlugins: [remarkGfm],
+      },
+    },
+  },
+}]
+```
+
+### `register-components.ts` (native CE preview stub)
+
+A `register-components.ts` file in `.storybook/` registers a native `HTMLElement` subclass that mirrors the Stencil component for Storybook preview (no Stencil compilation required). Import it from `preview.ts`.
+
+Rules:
+- Embed all shadow styles inline in a `<template>` — identical structure to the Stencil CSS.
+- Use `hasAttribute('attr')` for all boolean props — never `getAttribute('attr') !== 'false'`.
+- In `_update()`, re-render dynamic parts (icon, visibility) on every `attributeChangedCallback`.
+- `customElements.define` guarded with `if (!customElements.get('tag'))` to survive HMR.
+
+**Structural skeleton** — fill `{placeholders}` from the component's variant axes, slots, and styling:
+
+```ts
+// .storybook/register-components.ts — CE preview stub for fds-{name}
+
+const tmpl = document.createElement('template');
+tmpl.innerHTML = `
+  <style>
+    /* ── :host base ── */
+    :host { display: {inline-flex|flex|block}; /* mirror Stencil :host */ }
+
+    /* ── variant overrides (one per variant axis value) ── */
+    /* :host(.{variant-value}) { ... } */
+
+    /* ── ::slotted rules (one per declared slot) ── */
+    /* ::slotted([slot="{name}"]) { ... } */
+  </style>
+
+  <!-- Slots: one <slot> per component slot, in DOM order -->
+  <!-- <slot name="{slot-name}"></slot> -->
+`;
+
+class Fds{PascalName} extends HTMLElement {
+  // List every @Prop() attribute the Stencil component observes
+  static observedAttributes = [/* '{prop-name}', ... */];
+
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' }).appendChild(tmpl.content.cloneNode(true));
+  }
+
+  attributeChangedCallback() { this._update(); }
+  connectedCallback()        { this._update(); }
+
+  _update() {
+    // 1. Read attributes → toggle host classes for variant CSS
+    // 2. Boolean attrs: use this.hasAttribute('{attr}'), NEVER getAttribute !== 'false'
+    // 3. Conditionally show/hide elements based on attr presence
+  }
+}
+
+// HMR guard — prevents re-registration on hot reload
+if (!customElements.get('fds-{name}')) {
+  customElements.define('fds-{name}', Fds{PascalName});
+}
+```
