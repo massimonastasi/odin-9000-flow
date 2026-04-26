@@ -33,7 +33,7 @@ Audit, compare and bulk-update token bindings across Token Studio (TS) and nativ
 
 | File | Purpose | Edit? |
 |---|---|---|
-| `scripts/audit.figma.js` | Phase 1 alt — plugin-side tree walk for large components (> 20 variants) | No |
+| `scripts/audit.figma.js` | **Phase 1 — MANDATORY** plugin-side tree walk. Use for ALL discovery. | No |
 | `scripts/resolve.figma.js` | Phase 1b — variable resolution (Plugin API), batched in chunks of 50 | No |
 | `scripts/bulk-update.figma.js` | Phase 3 — write engine (Plugin API), chunked in batches of 100 | No |
 | `data/token-registry.md` | All available tokens — human-readable reference | **User** |
@@ -58,61 +58,34 @@ Audit, compare and bulk-update token bindings across Token Studio (TS) and nativ
 
 ---
 
-## Phase 1 — REST extraction
+## Phase 1 — Discovery (ALWAYS use scripts)
 
-### Large COMPONENT_SET detection (variant sampling)
+> **⚠️ MANDATORY: Use `scripts/audit.figma.js` for ALL discovery.**
+> Never write ad-hoc Plugin API code to walk the tree or inspect nodes.
+> Never make multiple `getNodeByIdAsync` calls in a loop.
+> The script is optimized to return only bound nodes, uses variant sampling,
+> supports PRIOR_SCAN forwarding, and costs 4× fewer context tokens.
 
-Before fetching, check whether the target node is a `COMPONENT_SET` with many variants. Use `get_metadata` (Figma MCP) or a shallow REST call with `depth=1` to read the node type and direct child count.
+The script handles all component sizes — from single frames to 500+ variant COMPONENT_SETs — with built-in sampling and batching. There is no size threshold; always use it.
 
-**If the root is a `COMPONENT_SET` with > 20 direct COMPONENT children:**
+### Script load (session-cached)
 
-1. Read `variantGroupProperties` from the COMPONENT_SET (available on the parent node in REST)
-2. **Sample variants** — select 1 variant per unique value of the **primary axis** (the axis with the most values). Keep all other axes at their default (first) value. This typically yields 5–15 samples from 500+ variants.
-3. Fetch only the sampled variant IDs (comma-separated in `ids=`) instead of the full COMPONENT_SET
-4. In Phase 2, note: `⚡ Sampled {N} of {total} variants (primary axis: {axisName})`
-5. In Phase 3, `bulk-update.figma.js` still targets the full COMPONENT_SET root — `collectNodes()` applies rules to **all** variants, not just the samples
+Read `scripts/audit.figma.js` only if not already loaded this session. Cache under key `audit-script`.
 
-**If ≤ 20 children** → proceed with the full fetch as normal.
+### Variant sampling (built into the script)
 
-### REST fetch
+Before running the script, determine whether variant sampling is needed:
 
-```
-GET https://api.figma.com/v1/files/{file_key}/nodes?ids={node_id_param}&plugin_data=shared&depth={depth}
-X-Figma-Token: {pat}
-```
+1. Use `get_metadata` (Figma MCP) or a shallow REST call with `depth=1` to read the node type and direct child count
+2. **If the root is a `COMPONENT_SET` with > 20 direct COMPONENT children:**
+   - Read `variantGroupProperties` from the COMPONENT_SET
+   - **Sample variants** — select 1 variant per unique value of the **primary axis** (the axis with the most values). Keep all other axes at their default (first) value.
+   - Pass sampled IDs via `SAMPLE_IDS` injection slot
+3. **If ≤ 20 children** → set `SAMPLE_IDS = null` for full audit
 
-`plugin_data=shared` is mandatory — without it `sharedPluginData` is silently absent.
+### Injection slots
 
-**Depth parameter:**
-- Default: omit `depth` (full tree)
-- **For COMPONENT_SET with > 20 variants:** use `depth=3` (SET → COMPONENT → direct children). This captures token bindings on variant root frames and their immediate children without descending into deep internal layer trees. If deeper bindings are needed, re-fetch specific nodes later.
-- For single frames or small components: omit `depth` (full tree)
-
-### Node walk
-
-Walk the full response tree recursively. For each node:
-
-**INSTANCE guard — check first, before any property read:**
-- If `node.type === 'INSTANCE'`: record `{ id, name, type: 'INSTANCE', parentName, isInstance: true }` with empty `tokenBindings` and `boundVariables`. **Do not read `sharedPluginData`. Do not read `boundVariables`. Do not recurse into `children`.** Continue to the next sibling.
-
-**TS bindings** from `node.sharedPluginData.tokens`:
-- Strip surrounding quotes from raw value
-- `short` = last path segment (split on `/`, take last element)
-
-**Raw NV IDs** from `node.boundVariables`:
-- Array props → array of IDs; scalar props → single ID string
-
-Deduplicate all variable IDs into `allVarIds[]`.
-
-Output: `results[]` — flat array of `{ id, name, type, parentName, tokenBindings, rawBoundVars, hasTokens, hasBoundVars }`.
-
-### Phase 1 alternative — Plugin-side audit (for large components)
-
-When using REST is impractical (response too large, truncated, or > 100 variants), use `scripts/audit.figma.js` via `mcp_figma_use_figma` instead. This runs the tree walk inside the Figma plugin sandbox and returns **only nodes with bindings**, drastically reducing the data the agent must process.
-
-**Script load (session-cached):** Read `scripts/audit.figma.js` only if not already loaded this session. Cache under key `audit-script`.
-
-Inject at the top:
+Inject at the top of the script:
 ```js
 const ROOT_ID    = "{node_id}";
 const MAX_DEPTH  = 4;
@@ -125,19 +98,29 @@ When ODIN runs VALI before MIMR, the VALI scan already discovers every node that
 
 When invoking MIMR standalone (not via ODIN), leave `PRIOR_SCAN = null` — the script falls back to the standard tree walk automatically.
 
+### Script output
+
 The script returns `{ root, variantGroupProperties, nodes, varIds, stats, fromPriorScan }`.
 - Use `nodes` directly as Phase 1 results (already filtered to bound nodes only)
 - Use `varIds` as `allVarIds` for Phase 1b
 - `stats` gives totals for the Phase 2 summary line
 - `fromPriorScan` indicates whether the fast path was used
 
-**Decision: REST vs Plugin audit:**
+### REST fallback (ONLY when Plugin API is unavailable)
 
-| Condition | Use |
-|---|---|
-| ≤ 20 variants, single frame | REST (standard) |
-| 20–100 variants | REST with `depth=3` + variant sampling |
-| > 100 variants or REST response truncated | Plugin audit (`audit.figma.js`) |
+Use REST **only** if `mcp_figma_use_figma` is unavailable (e.g. Figma MCP not connected). This is the exception, not the default.
+
+```
+GET https://api.figma.com/v1/files/{file_key}/nodes?ids={node_id_param}&plugin_data=shared&depth={depth}
+X-Figma-Token: {pat}
+```
+
+`plugin_data=shared` is mandatory — without it `sharedPluginData` is silently absent.
+
+**Depth parameter:**
+- Default: omit `depth` (full tree)
+- **For COMPONENT_SET with > 20 variants:** use `depth=3` + variant sampling
+- For single frames or small components: omit `depth`
 
 ---
 
@@ -244,6 +227,11 @@ When the user describes a change directly (e.g. "update all Square nodes' gap to
 ---
 
 ## Phase 3 — Bulk write (only after confirmation)
+
+> **⚠️ MANDATORY: Use `scripts/bulk-update.figma.js` for ALL writes.**
+> Never write ad-hoc Plugin API code to apply tokens, bind variables, or modify node properties.
+> The script handles TS metadata, auto NV resolution, fill binding, chunked execution,
+> and skip-if-already-bound logic. Ad-hoc code bypasses all of these safeguards.
 
 ### 1 — Parse rules
 

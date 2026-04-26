@@ -10,6 +10,23 @@
 
 ---
 
+## Global rule: theme-aware content fill tokens
+
+**This rule applies to ALL component types** — buttons, inputs, headers, cards, or any component with Theme/Surface/Appearance variants.
+
+When binding fill tokens to content nodes (TEXT, VECTOR icons), the token MUST match the variant's surface context:
+
+| Variant property value | Content fill token (`hi` emphasis) | Content fill token (`m` emphasis) |
+|---|---|---|
+| `Theme=Surface`, `Theme=Surface-Variant`, `Surface=on-surface`, `Appearance=onSurface` | `var/fds/fds-on-surface-hi` | `var/fds/fds-on-surface-m` |
+| `Theme=Alternate-Surface`, `Theme=Alternate-Surface-Variant`, `Surface=on-alternate-surface`, `Appearance=onAlternate` | `var/fds/fds-on-alternate-surface-hi` | `var/fds/fds-on-alternate-surface-m` |
+
+**Detection:** Extract the theme from the variant name. If it contains `Alternate` → use `fds-on-alternate-surface-*`. Otherwise → use `fds-on-surface-*`.
+
+**Never apply a single `on-surface-*` token to all variants regardless of theme.** This is the most common mistake — it results in dark text on dark backgrounds or light text on light backgrounds.
+
+---
+
 ## YAML rule template
 
 Use this schema when generating `RULES` for `bulk-update.figma.js`. Each YAML block maps directly to one entry in the `RULES` array.
@@ -310,6 +327,27 @@ Confirmed Variable ID: `VariableID:8094:59655` (resolves to 8px)
 
 - Height: **FIXED** — input fields have a defined height, do not hug
 - Width: **FILL** (counter axis) on most usage contexts
+
+### Content fills — theme-aware (Label, Prefix, Suffix, Input Text, icons)
+
+After binding spacing/radius on the Input FRAME, you **must** also bind fill NV on every TEXT and `icon` VECTOR node inside each variant. The token depends on the variant's **Theme** property:
+
+| Theme variant | Content fill token | Variable ID | Resolves to |
+|---|---|---|---|
+| `Theme=Surface` | `var/fds/fds-on-surface-hi` | `VariableID:8094:59349` | `ref/text/black/opacity87` |
+| `Theme=Surface-Variant` | `var/fds/fds-on-surface-hi` | `VariableID:8094:59349` | `ref/text/black/opacity87` |
+| `Theme=Alternate-Surface` | `var/fds/fds-on-alternate-surface-hi` | `VariableID:8094:59357` | `ref/text/white/opacity100` |
+| `Theme=Alternate-Surface-Variant` | `var/fds/fds-on-alternate-surface-hi` | `VariableID:8094:59357` | `ref/text/white/opacity100` |
+
+> **Rule:** `Surface` and `Surface-Variant` → `fds-on-surface-hi`. `Alternate-*` → `fds-on-alternate-surface-hi`. Extract Theme from the variant name: `Theme=([^,]+)`. If starts with `Alternate` → alternate token.
+
+> **Emphasis level:** default to `hi`. If the design uses different emphasis (e.g. Label at `m` for placeholder state), ask the user.
+
+**How to apply:** Use `setBoundVariableForPaint(fills[0], 'color', variable)` on each TEXT/VECTOR node. Set `opacity = 1` (let the variable handle opacity through its resolved value). TS key = `fill`.
+
+**Scope:** Apply to these named layers inside each variant: `Label`, `Input Text`, `Prefix`, `Suffix`, and any VECTOR child of `leading-icon` / `trailing-icon` instances.
+
+**Background fill for label container:** If a FRAME named `label` or `Frame 1` wraps the Label text, bind its fill to the **same surface token as the parent Input frame** (theme-matched: `fds-surface-variant` / `fds-surface` / `fds-alternate-surface-variant` / `fds-alternate-surface`). Copy the fill variable from the sibling Input frame's `boundVariables.fills[0]`.
 
 ---
 
