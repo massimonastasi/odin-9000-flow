@@ -128,6 +128,25 @@ Use `fds-round-const-btn-*` — **never** `fds-border-radius-btn-*` for radius o
 | `paddingLeft/Right` | `fds-spacing-const-btn-{size}-h` | Same size tier as vertical |
 | `itemSpacing` inside button (icon + label) | `fds-spacing-const-ui-gap` | Always `ui-gap` — this is a UI-level spacing, not a pattern gap |
 
+### Button borders (stroke)
+
+Border tokens for buttons depend on **Type** (Primary/Secondary/Tertiary) and **Theme**. All borders use `type: "border"` writes with decomposed width + color.
+
+| Type | Theme | Composite token | Width NV (TS path) | Color NV (TS path) |
+|---|---|---|---|---|
+| **Primary** | On header / On surface | `fds-stroke-const-ui-reg-on-surface` | `fds-stroke/fds-stroke-100` (`fds-stroke.fds-stroke-100`) | `var/fds/fds-on-surface-ulow` (`var.fds.fds-on-surface-ulow`) |
+| **Primary** | On alternate surface | `fds-stroke-const-ui-reg-on-alternate-surface` | `fds-stroke/fds-stroke-100` (`fds-stroke.fds-stroke-100`) | `var/fds/fds-on-alternate-surface-ulow` (`var.fds.fds-on-alternate-surface-ulow`) |
+| **Secondary** | On header | `fds-stroke-const-ghost-on-surface-color` | `fds-stroke/fds-stroke-100` (`fds-stroke.fds-stroke-100`) | `ref/text/white/opacity100` (`ref.text.white.opacity100`) |
+| **Secondary** | On surface | `fds-stroke-const-ghost-on-surface` | `fds-stroke/fds-stroke-100` (`fds-stroke.fds-stroke-100`) | `ref/brand/primary/primary40` (`ref.brand.primary.primary40`) |
+| **Secondary** | On alternate surface | `fds-stroke-const-ghost-on-alternate-surface` | `fds-stroke/fds-stroke-100` (`fds-stroke.fds-stroke-100`) | `ref/text/white/opacity100` (`ref.text.white.opacity100`) |
+| **Tertiary** | all | **none** | — | — |
+
+> **Tertiary note:** Tertiary buttons may have a phantom `strokeWeight` (e.g. 2px) with an empty `strokes` array. This is intentional — leave it as-is. Do not bind border tokens to Tertiary.
+
+> **Primary border rationale:** Primary buttons have a solid background fill (shade). The UI border provides a subtle containment line that does not compete with the fill — `ulow` (ultra-low contrast) color ensures this.
+
+> **Secondary border rationale:** Secondary (ghost) buttons use the border as their primary visual indicator — the fill is transparent or absent. Ghost border tokens use brand or white colors for prominence.
+
 ### When unsure about size tier (sm / reg / lg)
 
 **Always ask before writing** using `vscode_askQuestions`:
@@ -151,13 +170,29 @@ Use `fds-round-const-btn-*` — **never** `fds-border-radius-btn-*` for radius o
 
 After binding the background fill on the COMPONENT frame, you **must** also bind fill NV on every TEXT and `icon` VECTOR node inside each component variant.
 
-**Rule:** content fill token is determined by `Appearance` — same as background, but using `fds-on-*` counterpart.
+**Rule:** For surface-style buttons, content fill is determined by `Appearance`/`Theme`. For core FDS buttons, it is determined by the **Colour variant axis**.
+
+#### Surface-style buttons (Appearance-based)
 
 | Appearance | Content fill token | Variable name |
 |---|---|---|
 | `onSurface` | `var.fds.fds-on-surface-hi` | `var/fds/fds-on-surface-hi` |
 | `onAlternate` | `var.fds.fds-on-alternate-surface-hi` | `var/fds/fds-on-alternate-surface-hi` |
-| Core FDS button | `var.fds.fds-on-btn-hi` (or equivalent) | Confirm with user |
+
+#### Core FDS buttons (Colour-variant-based)
+
+The **Colour** variant axis determines which `fds-on-btn-*` / `fds-btn-on-*` token to use. These tokens exist as **NV COLOR variables** (not just paint styles) — bind via `setBoundVariableForPaint(fills[0], 'color', var)`.
+
+| Colour variant value | Content fill NV name | TS path | Resolves to |
+|---|---|---|---|
+| `accent` | `var/btn/fds-on-btn-accent` | `var.btn.fds-on-btn-accent` | white @ 87% |
+| `default` | `var/btn/fds-on-btn-default` | `var.btn.fds-on-btn-default` | white @ 87% |
+| `alternate accent` | `var/btn/fds-on-btn-alternate-accent` | `var.btn.fds-on-btn-alternate-accent` | white @ 100% |
+| `header default` | `var/btn/fds-btn-on-header-default` | `var.btn.fds-btn-on-header-default` | white @ 100% |
+| `surface default` | `var/btn/fds-btn-on-surface-default` | `var.btn.fds-btn-on-surface-default` | brand primary |
+| `alternate surface default` | `var/btn/fds-btn-on-alternate-surface-default` | `var.btn.fds-btn-on-alternate-surface-default` | white @ 100% |
+
+> **Important:** These tokens apply to **all button types** (Primary, Secondary, Tertiary) — the Colour axis, not Type, determines content color.
 
 **Emphasis level:** default to `hi` unless the design uses a different emphasis. Ask with `vscode_askQuestions` if unsure:
 
