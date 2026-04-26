@@ -41,7 +41,7 @@ for (const vid of VAR_IDS) {
   }
 }
 
-// ─── 2. Collect bound variable bindings per node ─────────────────────────────
+// ─── 2. Collect bound variable bindings per node (batched for performance) ───
 
 const PROPS = [
   'paddingLeft', 'paddingRight', 'paddingTop', 'paddingBottom',
@@ -53,27 +53,32 @@ const PROPS = [
   'fontFamily', 'fontStyle', 'fontSize', 'fontWeight',
 ];
 
+const BATCH_SIZE = 50;
 const nodeBindings = [];
 
-for (const nid of NODE_IDS) {
-  const node = await figma.getNodeByIdAsync(nid);
-  if (!node) continue;
+for (let i = 0; i < NODE_IDS.length; i += BATCH_SIZE) {
+  const batch = NODE_IDS.slice(i, i + BATCH_SIZE);
+  const fetched = await Promise.all(batch.map(id => figma.getNodeByIdAsync(id)));
 
-  const resolved = {};
-  for (const prop of PROPS) {
-    const binding = node.boundVariables?.[prop];
-    if (!binding) continue;
+  for (const node of fetched) {
+    if (!node) continue;
 
-    const entries = Array.isArray(binding) ? binding : [binding];
-    const mapped  = entries
-      .filter(b => b?.id)
-      .map(b => ({ varId: b.id, ...(varMap[b.id] ?? { name: '(unknown)', collection: '—' }) }));
+    const resolved = {};
+    for (const prop of PROPS) {
+      const binding = node.boundVariables?.[prop];
+      if (!binding) continue;
 
-    if (mapped.length) resolved[prop] = mapped;
-  }
+      const entries = Array.isArray(binding) ? binding : [binding];
+      const mapped  = entries
+        .filter(b => b?.id)
+        .map(b => ({ varId: b.id, ...(varMap[b.id] ?? { name: '(unknown)', collection: '—' }) }));
 
-  if (Object.keys(resolved).length) {
-    nodeBindings.push({ id: nid, name: node.name, type: node.type, resolved });
+      if (mapped.length) resolved[prop] = mapped;
+    }
+
+    if (Object.keys(resolved).length) {
+      nodeBindings.push({ id: node.id, name: node.name, type: node.type, resolved });
+    }
   }
 }
 

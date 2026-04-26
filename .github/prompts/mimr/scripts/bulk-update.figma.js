@@ -242,7 +242,7 @@ function applyRawValue(node, tsKey, rawValue) {
   return { status: 'ok', prop: nvProp, rawValue };
 }
 
-// ─── Execute rules ────────────────────────────────────────────────────────────
+// ─── Execute rules (chunked for large trees) ─────────────────────────────────
 
 const root = await figma.getNodeByIdAsync(ROOT_ID);
 if (!root) return JSON.stringify({ error: `Root node "${ROOT_ID}" not found` });
@@ -251,12 +251,23 @@ if (!root) return JSON.stringify({ error: `Root node "${ROOT_ID}" not found` });
 const allVars = await figma.variables.getLocalVariablesAsync();
 const varsByName = new Map(allVars.map(v => [v.name, v]));
 
-const report = [];
-
+// Pre-collect all (rule, node) pairs into a flat work queue.
+// This avoids re-walking the tree per rule and enables chunked processing.
+const workQueue = [];
 for (const rule of RULES) {
   const nodes = collectNodes(root, rule.layerPattern, rule.matchType);
-
   for (const node of nodes) {
+    workQueue.push({ rule, node });
+  }
+}
+
+const CHUNK_SIZE = 100;
+const report = [];
+
+for (let chunkStart = 0; chunkStart < workQueue.length; chunkStart += CHUNK_SIZE) {
+  const chunk = workQueue.slice(chunkStart, chunkStart + CHUNK_SIZE);
+
+  for (const { rule, node } of chunk) {
     for (const write of rule.writes) {
       try {
 
@@ -339,4 +350,4 @@ for (const rule of RULES) {
 const applied = report.filter(r => r.status === 'ok').length;
 const failed  = report.filter(r => r.status === 'error').length;
 
-return JSON.stringify({ applied, failed, report }, null, 2);
+return JSON.stringify({ applied, failed, totalWork: workQueue.length, report }, null, 2);
