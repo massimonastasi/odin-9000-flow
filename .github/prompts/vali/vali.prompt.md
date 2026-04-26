@@ -40,8 +40,8 @@ Key roles:
 | File | Purpose | Edit? |
 |---|---|---|
 | `data/layout-rules.md` | Classification rules + naming conventions | **User / Agent** |
-| `scripts/scan.figma.js` | Phase 1 — tree scan; inject `NODE_ID` + `DEPTH` | **Agent (read-only)** |
-| `scripts/process.figma.js` | Phase 2+3 — execute OPS plan; inject `NODE_ID` + `OPS` | **Agent (read-only)** |
+| `scripts/scan.figma.js` | **Phase 1 — MANDATORY** tree scan; inject `NODE_ID` + `DEPTH` | **Agent (read-only)** |
+| `scripts/process.figma.js` | **Phase 2+3 — MANDATORY** execute OPS plan; inject `NODE_ID` + `OPS` | **Agent (read-only)** |
 
 ### Load-once rule
 
@@ -126,6 +126,12 @@ Nodes already in correct auto-layout with a `{direction / role}` name are emitte
 
 ## Phase 1 — Analyse
 
+> **⚠️ MANDATORY: Use `scripts/scan.figma.js` for ALL discovery.**
+> Never write ad-hoc Plugin API code to walk the tree, inspect nodes, or read layout properties.
+> Never call `getNodeByIdAsync` in a loop to gather node data.
+> The script handles fingerprinting, SKIP_OK filtering, variant sampling, and returns
+> a structured tree at 4× fewer context tokens than manual inspection.
+
 **Goal:** map the full subtree and identify every node that needs conversion.
 
 Read `scripts/scan.figma.js` (once per session). Prepend injection block and execute:
@@ -177,6 +183,11 @@ If yes, include `annotate` ops at the end of the `OPS` array — one per renamed
 ---
 
 ## Phase 2 — Convert
+
+> **⚠️ MANDATORY: Use `scripts/process.figma.js` for ALL writes.**
+> Never write ad-hoc Plugin API code to convert nodes, set auto-layout, rename layers,
+> or modify properties. Build OPS arrays and let the script handle execution — it manages
+> chunking, template expansion, error recovery, and INSTANCE guards.
 
 **Goal:** replace each flagged GROUP / unwired FRAME with an auto-layout FRAME.
 
