@@ -351,6 +351,44 @@ After binding spacing/radius on the Input FRAME, you **must** also bind fill NV 
 
 ---
 
+## Stroke width rules
+
+Stroke width tokens control `strokeWeight` in Figma. Like border radius, Figma stores stroke weight as **4 individual properties**: `strokeTopWeight`, `strokeBottomWeight`, `strokeLeftWeight`, `strokeRightWeight`.
+
+### Available tokens
+
+| Token | Variable ID | Resolves to |
+|---|---|---|
+| `fds-stroke/fds-stroke-050` | `VariableID:8094:59675` | 0.5px |
+| `fds-stroke/fds-stroke-100` | `VariableID:8094:59676` | 1px |
+| `fds-stroke/fds-stroke-150` | `VariableID:8094:59677` | 1.5px |
+| `fds-stroke/fds-stroke-200` | `VariableID:8094:59678` | 2px |
+
+TS path format: `fds-stroke.fds-stroke-{tier}` (e.g. `fds-stroke.fds-stroke-150`)
+
+### TS key mapping
+
+| TS key | Figma property bound | Scope |
+|---|---|---|
+| `borderWidth` | `strokeTopWeight` + `strokeBottomWeight` + `strokeLeftWeight` + `strokeRightWeight` | All 4 sides (uniform) |
+| `borderWidthTop` | `strokeTopWeight` | Top only |
+| `borderWidthBottom` | `strokeBottomWeight` | Bottom only |
+| `borderWidthLeft` | `strokeLeftWeight` | Left only |
+| `borderWidthRight` | `strokeRightWeight` | Right only |
+
+> **Note:** `setBoundVariable('strokeWeight', v)` silently maps to all 4 individual weight properties. `boundVariables.strokeWeight` does NOT appear in read-back — check the 4 individual props instead.
+
+### Typical usage by component
+
+| Component | Stroke token | Notes |
+|---|---|---|
+| Input field (all states) | `fds-stroke-150` | Uniform 1.5px, INSIDE stroke align |
+| Buttons | Usually none | Buttons typically have no stroke |
+| Cards / containers | `fds-stroke-100` or none | Thin border or borderless |
+| Dividers / separators | `fds-stroke-050` | Hairline |
+
+---
+
 ## Media / Thumb rules
 
 Apply when the target layer name contains `Thumb`, `thumbnail`, `media`, `_image`, or the component is a carousel/media tile.

@@ -56,6 +56,11 @@ const TS_NAMESPACE = 'tokens';
 const TS_TO_NV_PROP = {
   fill:               'fills',
   borderRadius:       'cornerRadius',
+  borderWidth:        'strokeWeight',       // sets all 4 sides
+  borderWidthTop:     'strokeTopWeight',
+  borderWidthBottom:  'strokeBottomWeight',
+  borderWidthLeft:    'strokeLeftWeight',
+  borderWidthRight:   'strokeRightWeight',
   paddingLeft:        'paddingLeft',
   paddingRight:       'paddingRight',
   paddingTop:         'paddingTop',
@@ -72,6 +77,11 @@ const TS_TO_NV_PROP = {
 // borderRadius needs all 4 corners; fill excluded (requires setBoundVariableForPaint)
 const TS_TO_BIND_PROPS = {
   borderRadius:       ['topLeftRadius', 'topRightRadius', 'bottomLeftRadius', 'bottomRightRadius'],
+  borderWidth:        ['strokeTopWeight', 'strokeBottomWeight', 'strokeLeftWeight', 'strokeRightWeight'],
+  borderWidthTop:     ['strokeTopWeight'],
+  borderWidthBottom:  ['strokeBottomWeight'],
+  borderWidthLeft:    ['strokeLeftWeight'],
+  borderWidthRight:   ['strokeRightWeight'],
   paddingLeft:        ['paddingLeft'],
   paddingRight:       ['paddingRight'],
   paddingTop:         ['paddingTop'],
