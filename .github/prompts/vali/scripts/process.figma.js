@@ -22,10 +22,25 @@
 //   // ⑥ annotate — only if user confirmed; attach Dev Mode annotation
 //   //    oldName: original layer name before rename
 //   //    childSummary: e.g. '3× FDS-Input'
-//   { op: 'annotate', id: 'NODE_ID', oldName: 'Inputs', newName: '{col / pattern}', direction: 'col', childSummary: '3× FDS-Input' }
+//   { op: 'annotate', id: 'NODE_ID', oldName: 'Inputs', newName: '{col / pattern}', direction: 'col', childSummary: '3× FDS-Input' },
+//
+//   // ⑦ template — replicate ops across all COMPONENT children of a parent
+//   //    Each childOp uses {VARIANT_ID} as placeholder for the variant's id,
+//   //    and {CHILD:N:ID} for the Nth child of that variant.
+//   //    targetType: only apply to children of this type (default: 'COMPONENT')
+//   { op: 'template', parentId: 'COMPONENT_SET_ID', targetType: 'COMPONENT',
+//     childOps: [
+//       { op: 'al', id: '{CHILD:0:ID}', direction: 'VERTICAL' },
+//       { op: 'rename', id: '{CHILD:0:ID}', to: '{col / pattern}' },
+//       { op: 'token', id: '{CHILD:0:ID}', gap: 'vPattern' }
+//     ]
+//   }
 // ];
 //
+// const CHUNK_SIZE = 100;  // optional — ops per execution chunk (default 100)
+//
 // Run ops in order: ungroups → wraps → al-conversions → renames → tokens → [annotate if confirmed]
+// Template ops are expanded inline before execution.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const log    = [];
@@ -243,17 +258,85 @@ function opAnnotate(op) {
   }
 }
 
-// ── execute ───────────────────────────────────────────────────────────────────
+// ── op: template ──────────────────────────────────────────────────────────────
+// Expands a set of childOps across all matching children of a parent node.
+// Supports placeholders:
+//   {VARIANT_ID}  → the variant (child) node's id
+//   {CHILD:N:ID}  → id of the Nth child within the variant
+// Returns an array of concrete ops to splice into the main queue.
 
-const handlers = { ungroup: opUngroup, wrap: opWrap, al: opAL, rename: opRename, token: opToken, annotate: opAnnotate };
+function expandTemplate(tmpl) {
+  const parent = getNode(tmpl.parentId);
+  if (!parent || !('children' in parent)) {
+    failed.push({ op: 'template', parentId: tmpl.parentId, reason: 'parent not found or has no children' });
+    return [];
+  }
 
+  const targetType = tmpl.targetType || 'COMPONENT';
+  const targets = Array.from(parent.children).filter(c => c.type === targetType);
+  const expanded = [];
+
+  for (const variant of targets) {
+    const variantChildren = ('children' in variant) ? Array.from(variant.children) : [];
+
+    for (const childOp of tmpl.childOps) {
+      const concrete = JSON.parse(JSON.stringify(childOp));
+
+      // Replace placeholders in all string values
+      for (const key of Object.keys(concrete)) {
+        if (typeof concrete[key] === 'string') {
+          concrete[key] = concrete[key].replace(/\{VARIANT_ID\}/g, variant.id);
+          concrete[key] = concrete[key].replace(/\{CHILD:(\d+):ID\}/g, (_, idx) => {
+            const i = parseInt(idx, 10);
+            return (variantChildren[i]) ? variantChildren[i].id : `__MISSING_CHILD_${i}__`;
+          });
+        }
+        // Handle childIds arrays (for wrap ops)
+        if (Array.isArray(concrete[key])) {
+          concrete[key] = concrete[key].map(v => {
+            if (typeof v !== 'string') return v;
+            return v
+              .replace(/\{VARIANT_ID\}/g, variant.id)
+              .replace(/\{CHILD:(\d+):ID\}/g, (_, idx) => {
+                const i = parseInt(idx, 10);
+                return (variantChildren[i]) ? variantChildren[i].id : `__MISSING_CHILD_${i}__`;
+              });
+          });
+        }
+      }
+      expanded.push(concrete);
+    }
+  }
+
+  log.push({ op: 'template', parentId: tmpl.parentId, targetType, variantCount: targets.length, expandedOps: expanded.length });
+  return expanded;
+}
+
+// ── execute (chunked) ─────────────────────────────────────────────────────────
+
+// 1. Expand templates into concrete ops
+const expandedOps = [];
 for (const op of OPS) {
-  try {
-    if (handlers[op.op]) { handlers[op.op](op); }
-    else { failed.push({ op: op.op, reason: 'unknown op type' }); }
-  } catch(e) {
-    failed.push({ op: op.op, id: op.id || op.parentId, reason: e.message || String(e) });
+  if (op.op === 'template') {
+    expandedOps.push(...expandTemplate(op));
+  } else {
+    expandedOps.push(op);
   }
 }
 
-return JSON.stringify({ applied: log.length, failed: failed.length, log: log, errors: failed }, null, 2);
+// 2. Execute in chunks to prevent plugin timeout on large sets
+const chunkSize = (typeof CHUNK_SIZE !== 'undefined') ? CHUNK_SIZE : 100;
+
+for (let i = 0; i < expandedOps.length; i += chunkSize) {
+  const chunk = expandedOps.slice(i, i + chunkSize);
+  for (const op of chunk) {
+    try {
+      if (handlers[op.op]) { handlers[op.op](op); }
+      else { failed.push({ op: op.op, reason: 'unknown op type' }); }
+    } catch(e) {
+      failed.push({ op: op.op, id: op.id || op.parentId, reason: e.message || String(e) });
+    }
+  }
+}
+
+return JSON.stringify({ applied: log.length, failed: failed.length, totalOps: expandedOps.length, log, errors: failed }, null, 2);

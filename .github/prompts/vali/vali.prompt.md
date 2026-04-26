@@ -53,13 +53,62 @@ Read each script file **once per session** at the start of Phase 1. Cache the ra
 // ── scan ──
 const NODE_ID = "{node_id}";
 const DEPTH = 5;
+const SAMPLE = 0;          // 0 = scan all; N > 0 = explicit sample count
 <scan.figma.js content>
 
 // ── process ──
 const NODE_ID = "{node_id}";
+const CHUNK_SIZE = 100;     // ops per execution chunk
 const OPS = [ /* generated plan from Phase 1 analysis */ ];
 <process.figma.js content>
 ```
+
+---
+
+## Large COMPONENT_SET handling (> 20 variants)
+
+When the root node is a `COMPONENT_SET` with many variants, standard full-scan + per-variant OPS generation is prohibitively expensive. Use the tiered approach:
+
+| Variant count | Strategy |
+|---|---|
+| **≤ 20** | Standard: full scan, per-variant OPS |
+| **21–100** | Fingerprint mode: scan detects unique structures, agent analyses 1 per fingerprint, template OPS |
+| **> 100** | Fingerprint mode + `SAMPLE` cap: `SAMPLE = 10`, template OPS, `CHUNK_SIZE = 50` |
+
+### How fingerprint mode works
+
+1. **scan.figma.js** automatically activates for `COMPONENT_SET` with > 20 children
+2. It fingerprints every variant (type + layoutMode + child structure recursively)
+3. Groups variants by identical fingerprint → `fingerprintGroups`
+4. Scans only **one variant per unique fingerprint** (typically 1–5 from 500+)
+5. Returns `{ totalVariants, uniqueFingerprints, fingerprintGroups, sampled[] }`
+
+### How the agent uses the fingerprint output
+
+1. **Analyse only the `sampled[]` variants** — classify, detect groups/wrappings needed
+2. For each fingerprint group, build ops from the sample and emit a **template op**:
+   ```js
+   { op: 'template', parentId: 'COMPONENT_SET_ID', targetType: 'COMPONENT',
+     childOps: [
+       { op: 'al', id: '{CHILD:0:ID}', direction: 'VERTICAL' },
+       { op: 'rename', id: '{CHILD:0:ID}', to: '{col / pattern}' },
+       { op: 'token', id: '{CHILD:0:ID}', gap: 'vPattern' }
+     ]
+   }
+   ```
+3. `process.figma.js` expands templates at runtime — creates concrete ops for all 500 variants
+4. Agent injects: `const CHUNK_SIZE = 50;` for sets > 100 variants
+
+### Placeholders in template childOps
+
+| Placeholder | Replaced with |
+|---|---|
+| `{VARIANT_ID}` | The variant (COMPONENT) node's id |
+| `{CHILD:N:ID}` | The Nth direct child of that variant |
+
+### Scan SKIP_OK filtering
+
+Nodes already in correct auto-layout with a `{direction / role}` name are emitted as compact summaries (`ok: true`) instead of full subtrees. This reduces scan output for partially-converted components.
 
 ---
 
@@ -217,12 +266,19 @@ See `data/layout-rules.md` Section 3 for the full wrapping procedure.
 
 ## Bulk mode — COMPONENT_SET
 
-When the root node is a COMPONENT_SET, process all variants in a **single execution**:
+When the root node is a COMPONENT_SET, use the tiered strategy from "Large COMPONENT_SET handling" above:
 
-1. **Phase 1** — scan the COMPONENT_SET root at `DEPTH = 3`
-2. **Plan** — for each variant child, build ops as if it were a standalone frame; append all ops into one flat `OPS` array
-3. **Token deduplication** — rename + token ops will be structurally identical per variant but must all be included
-4. **Execute** — single `process.figma.js` call with the merged `OPS`
+**≤ 20 variants (standard):**
+1. **Phase 1** — scan at `DEPTH = 3`, analyse all variants
+2. **Plan** — build per-variant ops in one flat `OPS` array
+3. **Execute** — single `process.figma.js` call
+
+**> 20 variants (fingerprint mode):**
+1. **Phase 1** — scan auto-activates fingerprinting; returns `sampled[]` + `fingerprintGroups`
+2. **Plan** — analyse only sampled variants (1 per unique fingerprint); generate `template` ops instead of per-variant ops
+3. **Execute** — `process.figma.js` expands templates at runtime across all variants, chunked at `CHUNK_SIZE`
+
+**> 100 variants:** set `SAMPLE = 10` and `CHUNK_SIZE = 50` to cap scan output and prevent plugin timeout.
 
 ---
 
