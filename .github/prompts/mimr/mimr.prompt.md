@@ -117,12 +117,19 @@ Inject at the top:
 const ROOT_ID    = "{node_id}";
 const MAX_DEPTH  = 4;
 const SAMPLE_IDS = [{sampled_ids}];  // null for full audit, or array of variant IDs
+const PRIOR_SCAN = null;             // or array of {id, name} from VALI scan (ODIN only)
 ```
 
-The script returns `{ root, variantGroupProperties, nodes, varIds, stats }`.
+**`PRIOR_SCAN` fast path (ODIN pipeline only):**
+When ODIN runs VALI before MIMR, the VALI scan already discovers every node that needs tokens. ODIN forwards this as a `PRIOR_SCAN` array of `{id, name}` objects. When provided, the script skips the full tree walk and fetches only the listed nodes (batched 50 at a time), reading just their bound variables (`TS`/`NV`). This eliminates a redundant tree traversal and reduces plugin execution time significantly. The return shape is identical; `fromPriorScan: true` is set so the agent knows the fast path was used.
+
+When invoking MIMR standalone (not via ODIN), leave `PRIOR_SCAN = null` — the script falls back to the standard tree walk automatically.
+
+The script returns `{ root, variantGroupProperties, nodes, varIds, stats, fromPriorScan }`.
 - Use `nodes` directly as Phase 1 results (already filtered to bound nodes only)
 - Use `varIds` as `allVarIds` for Phase 1b
 - `stats` gives totals for the Phase 2 summary line
+- `fromPriorScan` indicates whether the fast path was used
 
 **Decision: REST vs Plugin audit:**
 

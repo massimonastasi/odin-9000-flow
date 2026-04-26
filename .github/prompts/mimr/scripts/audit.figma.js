@@ -16,6 +16,9 @@
  *   const SAMPLE_IDS = null;           // optional: array of variant IDs to audit
  *                                      //   null = audit all children
  *                                      //   ["id1","id2",...] = audit only these
+ *   const PRIOR_SCAN = null;           // optional: node list from a prior VALI scan
+ *                                      //   [{ id, type }, ...] — skip tree walk,
+ *                                      //   only read token data for these nodes
  *
  * ── Output (returned as JSON string) ────────────────────────────────────────
  *
@@ -24,7 +27,8 @@
  *     variantGroupProperties: { ... } | null,
  *     nodes:     [ { id, name, type, parentName, depth, ts, nv } ],
  *     varIds:    [ "VariableID:..." ],
- *     stats:     { total, withTS, withNV, instances, unbound, sampled }
+ *     stats:     { total, withTS, withNV, instances, unbound, sampled },
+ *     fromPriorScan: boolean
  *   }
  *
  *   ts = { [key]: { raw, short } }
@@ -39,6 +43,59 @@ if (!root) return JSON.stringify({ error: `Root node "${ROOT_ID}" not found` });
 const varIdSet = new Set();
 const nodes    = [];
 const stats    = { total: 0, withTS: 0, withNV: 0, instances: 0, unbound: 0, sampled: 0 };
+
+// ── PRIOR_SCAN fast path ─────────────────────────────────────────────────────
+// When ODIN forwards node IDs from a prior VALI scan, skip tree discovery
+// entirely — just fetch each node by ID and read its token data.
+
+if (typeof PRIOR_SCAN !== 'undefined' && PRIOR_SCAN && PRIOR_SCAN.length > 0) {
+  const BATCH = 50;
+  for (let i = 0; i < PRIOR_SCAN.length; i += BATCH) {
+    const batch = PRIOR_SCAN.slice(i, i + BATCH);
+    const fetched = await Promise.all(batch.map(entry => figma.getNodeByIdAsync(entry.id)));
+
+    for (let j = 0; j < fetched.length; j++) {
+      const node = fetched[j];
+      if (!node) continue;
+      stats.total++;
+
+      if (node.type === 'INSTANCE') {
+        stats.instances++;
+        nodes.push({ id: node.id, name: node.name, type: 'INSTANCE', parentName: node.parent?.name ?? null, depth: 0, ts: null, nv: null, isInstance: true });
+        continue;
+      }
+
+      const ts = getPluginData(node);
+      const nv = getBoundVars(node);
+
+      if (ts) stats.withTS++;
+      if (nv) stats.withNV++;
+      if (!ts && !nv) stats.unbound++;
+
+      if (ts || nv || node.type === 'COMPONENT' || node.type === 'COMPONENT_SET') {
+        nodes.push({ id: node.id, name: node.name, type: node.type, parentName: node.parent?.name ?? null, depth: 0, ts, nv });
+      }
+    }
+  }
+
+  let variantGroupProperties = null;
+  if (root.type === 'COMPONENT_SET' && 'variantGroupProperties' in root) {
+    variantGroupProperties = root.variantGroupProperties;
+  }
+
+  stats.sampled = PRIOR_SCAN.length;
+
+  return JSON.stringify({
+    root: { id: root.id, name: root.name, type: root.type, childCount: ('children' in root) ? root.children.length : 0 },
+    variantGroupProperties,
+    nodes,
+    varIds: Array.from(varIdSet),
+    stats,
+    fromPriorScan: true
+  }, null, 2);
+}
+
+// ── Standard tree walk (no prior scan) ───────────────────────────────────────
 
 // Determine which children to walk
 let walkTargets;
@@ -149,5 +206,6 @@ return JSON.stringify({
   variantGroupProperties,
   nodes,
   varIds: Array.from(varIdSet),
-  stats
+  stats,
+  fromPriorScan: false
 }, null, 2);
