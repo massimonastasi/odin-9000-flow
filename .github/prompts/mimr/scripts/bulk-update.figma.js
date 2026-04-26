@@ -22,6 +22,9 @@
  *       // type "nv" is a manual override only — auto-NV resolution handles
  *       // the common case; explicit nv entries are still respected.
  *       { type: "nv", prop: string, varId: string },
+ *       // type "border" decomposes a composite border token into atomic
+ *       // width (float NV → 4 stroke weight props) + color (color NV → strokes[0] paint).
+ *       { type: "border", widthToken: string, colorToken: string },
  *     ]
  *   }
  *
@@ -399,6 +402,69 @@ for (let chunkStart = 0; chunkStart < workQueue.length; chunkStart += CHUNK_SIZE
             rule: rule.id, nodeId: node.id, nodeName: node.name,
             type: 'nv', prop: write.prop, varId: write.varId, varName: v.name, status: 'ok',
           });
+        }
+
+        // — Composite border write (decomposed width + color) ────────────────
+        // Applies atomic width NV to all 4 stroke weight props and
+        // atomic color NV to the first stroke paint entry.
+        // Rule shape: { type: "border", widthToken: "fds-stroke.fds-stroke-100", colorToken: "var.fds.fds-on-surface-low" }
+        else if (write.type === 'border') {
+          // 1. Width: resolve NV and bind to all 4 stroke weight props
+          const widthNvName = tsPathToNvName(write.widthToken);
+          const widthVar = varsByName.get(widthNvName) ?? null;
+          if (widthVar) {
+            const widthProps = ['strokeTopWeight', 'strokeBottomWeight', 'strokeLeftWeight', 'strokeRightWeight'];
+            for (const wp of widthProps) {
+              node.setBoundVariable(wp, widthVar);
+            }
+            // TS metadata for width
+            node.setSharedPluginData(TS_NAMESPACE, 'borderWidth', `"${write.widthToken}"`);
+            report.push({
+              rule: rule.id, nodeId: node.id, nodeName: node.name,
+              type: 'border-width', prop: 'strokeWeight(4)', varName: widthVar.name, status: 'ok',
+            });
+          } else {
+            report.push({
+              rule: rule.id, nodeId: node.id, nodeName: node.name,
+              type: 'border-width', status: 'error',
+              error: `Width variable "${widthNvName}" not found`,
+            });
+          }
+
+          // 2. Color: resolve NV and bind to stroke paint
+          if (write.colorToken === 'transparent') {
+            // Transparent: no color variable — set a transparent solid stroke
+            node.strokes = [{ type: 'SOLID', color: { r: 0, g: 0, b: 0 }, opacity: 0 }];
+            report.push({
+              rule: rule.id, nodeId: node.id, nodeName: node.name,
+              type: 'border-color', prop: 'strokes', status: 'ok', note: 'color-transparent',
+            });
+          } else {
+            const colorNvName = tsPathToNvName(write.colorToken);
+            const colorVar = varsByName.get(colorNvName) ?? null;
+            if (colorVar) {
+              // Ensure node has at least one stroke paint to bind to
+              if (!node.strokes || node.strokes.length === 0) {
+                node.strokes = [{ type: 'SOLID', color: { r: 0, g: 0, b: 0 }, opacity: 1 }];
+              }
+              const strokes = JSON.parse(JSON.stringify(node.strokes));
+              strokes[0] = figma.variables.setBoundVariableForPaint(strokes[0], 'color', colorVar);
+              node.strokes = strokes;
+
+              // TS metadata for stroke color
+              node.setSharedPluginData(TS_NAMESPACE, 'borderColor', `"${write.colorToken}"`);
+              report.push({
+                rule: rule.id, nodeId: node.id, nodeName: node.name,
+                type: 'border-color', prop: 'strokes[0]', varName: colorVar.name, status: 'ok',
+              });
+            } else {
+              report.push({
+                rule: rule.id, nodeId: node.id, nodeName: node.name,
+                type: 'border-color', status: 'error',
+                error: `Color variable "${colorNvName}" not found`,
+              });
+            }
+          }
         }
 
       } catch (e) {

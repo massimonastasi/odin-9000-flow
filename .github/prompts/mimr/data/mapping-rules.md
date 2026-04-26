@@ -553,4 +553,66 @@ If `node.setAnnotations` throws or is unavailable in the current API context:
 
 ---
 
+## Composite border token decomposition
+
+Composite border tokens (`type: "border"` in ts-core-fabric.json) combine `width` + `style` + `color` into a single TS path. Figma has no composite "border" property — these must be decomposed into **atomic width** (float variable → `strokeWeight`) + **atomic color** (color variable → `strokes[0]` paint).
+
+### Detection rule
+
+```
+Token type = "border" in ts-core-fabric.json
+OR TS path contains "fds-stroke-const" (composite namespace)
+```
+
+> **When to use:** Use `scripts/token-lookup.py --decompose` to resolve any composite border token into its atomic width + color references. Never guess the decomposition.
+
+### Decomposition table
+
+| Composite TS token | Width ref → NV name | Color ref → NV name | Description |
+|---|---|---|---|
+| `fds-stroke-const-ui-s-on-surface` | `fds-stroke.fds-stroke-050` → `fds-stroke/fds-stroke-050` | `var.fds.fds-on-surface-ulow` → `var/fds/fds-on-surface-ulow` | Subtle hairline border on primary surfaces |
+| `fds-stroke-const-ui-reg-on-surface` | `fds-stroke.fds-stroke-100` → `fds-stroke/fds-stroke-100` | `var.fds.fds-on-surface-ulow` → `var/fds/fds-on-surface-ulow` | Standard baseline border on primary surfaces |
+| `fds-stroke-const-ui-s-on-alternate-surface` | `fds-stroke.fds-stroke-100` → `fds-stroke/fds-stroke-100` | `var.fds.fds-on-alternate-surface-ulow` → `var/fds/fds-on-alternate-surface-ulow` | Subtle border on alternate surfaces |
+| `fds-stroke-const-ui-reg-on-alternate-surface` | `fds-stroke.fds-stroke-100` → `fds-stroke/fds-stroke-100` | `var.fds.fds-on-alternate-surface-ulow` → `var/fds/fds-on-alternate-surface-ulow` | Standard border on alternate surfaces |
+| `fds-stroke-const-int-rest` | `fds-stroke.fds-stroke-100` → `fds-stroke/fds-stroke-100` | `var.fds.fds-on-surface-low` → `var/fds/fds-on-surface-low` | Input/interactive rest state |
+| `fds-stroke-const-int-active` | `fds-stroke.fds-stroke-150` → `fds-stroke/fds-stroke-150` | `ref.brand.primary.primary40` → `ref/brand/primary/primary40` | Focus/active state (brand primary) |
+| `fds-stroke-const-int-error` | `fds-stroke.fds-stroke-150` → `fds-stroke/fds-stroke-150` | `ref.system.error.error40` → `ref/system/error/error40` | Error validation state |
+| `fds-stroke-const-int-success` | `fds-stroke.fds-stroke-150` → `fds-stroke/fds-stroke-150` | `ref.system.success.success50` → `ref/system/success/success50` | Success validation state |
+| `fds-stroke-const-int-disabled` | `fds-stroke.fds-stroke-100` → `fds-stroke/fds-stroke-100` | `var.fds.fds-on-surface-ulow` → `var/fds/fds-on-surface-ulow` | Disabled/inert state |
+| `fds-stroke-const-ghost-on-surface` | `fds-stroke.fds-stroke-100` → `fds-stroke/fds-stroke-100` | `ref.brand.primary.primary40` → `ref/brand/primary/primary40` | Ghost button on standard surfaces |
+| `fds-stroke-const-ghost-on-alternate-surface` | `fds-stroke.fds-stroke-100` → `fds-stroke/fds-stroke-100` | `ref.text.white.opacity100` → `ref/text/white/opacity100` | Ghost button on dark surfaces |
+| `fds-stroke-const-ghost-on-surface-color` | `fds-stroke.fds-stroke-100` → `fds-stroke/fds-stroke-100` | `ref.text.white.opacity100` → `ref/text/white/opacity100` | Ghost button on colored surfaces |
+| `fds-stroke-const-divider-reg` | `fds-stroke.fds-stroke-050` → `fds-stroke/fds-stroke-050` | `var.fds.fds-on-surface-ulow` → `var/fds/fds-on-surface-ulow` | Hairline list separator |
+| `fds-stroke-const-divider-heavy` | `fds-stroke.fds-stroke-100` → `fds-stroke/fds-stroke-100` | `var.fds.fds-on-surface-low` → `var/fds/fds-on-surface-low` | Heavy section separator |
+| `fds-stroke-const-ui-transparent` | `fds-stroke.fds-stroke-100` → `fds-stroke/fds-stroke-100` | `transparent` | Layout-preserving invisible border |
+| `fds-stroke-const-ui-focus-ring` | `fds-stroke.fds-stroke-150` → `fds-stroke/fds-stroke-150` | `ref.brand.primary.primary40` → `ref/brand/primary/primary40` | Accessibility focus ring |
+
+### YAML rule template for composite borders
+
+Use `type: "border"` writes to apply decomposed width + color in a single rule:
+
+```yaml
+- id: input-border-rest
+  layer_pattern: "Input"
+  matchType: contains
+  writes:
+    - type: border
+      widthToken: "fds-stroke.fds-stroke-100"     # atomic width TS path
+      colorToken: "var.fds.fds-on-surface-low"     # atomic color TS path
+```
+
+The `bulk-update.figma.js` script handles `type: "border"` by:
+1. Resolving `widthToken` → NV name → `setBoundVariable` on all 4 stroke weight props
+2. Resolving `colorToken` → NV name → `setBoundVariableForPaint(strokes[0], 'color', v)` on stroke paint
+3. Writing TS metadata: `borderWidth` ← widthToken, `border` ← composite token path (optional)
+
+### Transparent color exception
+
+`fds-stroke-const-ui-transparent` has `color: "transparent"` — no color NV exists. The script:
+1. Binds the width token normally
+2. Sets `node.strokes = [{ type: 'SOLID', color: {r:0,g:0,b:0}, opacity: 0 }]` for the transparent color
+3. Logs `color-transparent` in the report
+
+---
+
 <!-- Add YAML bulk-update rules below. Each rule is a fenced YAML block. -->

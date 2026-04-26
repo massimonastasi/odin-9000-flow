@@ -40,6 +40,7 @@ Audit, compare and bulk-update token bindings across Token Studio (TS) and nativ
 | `data/token-index.json` | All available tokens — compact machine index for agent lookups | **Auto-generated** |
 | `data/mapping-rules.md` | Bulk-update rules (YAML blocks) | **User** |
 | `data/ts-core-fabric.json` | Raw Token Studio export — source for registry/index generation | **No — never load** (21K lines, context overflow risk) |
+| `scripts/token-lookup.py` | CLI tool to search ts-core-fabric.json — use `--decompose` for composite border tokens | No |
 
 ---
 
@@ -276,6 +277,13 @@ Execute via `mcp_figma_use_figma` with `fileKey = {file_key}`.
 - **Solid fills:** excluded from auto-NV (`setBoundVariableForPaint` is needed); rawValue fallback applies the color.
 - **Gradient fills (`-shade` / `-g` suffix):** TS tokens ending with `-shade` or `-g` are gradient paint styles, NOT variables. The script auto-detects these and applies via `node.fillStyleId = style.id` using `getLocalPaintStylesAsync()`. No rawValue needed.
 
+**Composite border handling (`type: "border"`):**
+- Composite border tokens (e.g. `fds-stroke-const-int-active`) combine width + color. Figma has no composite border property — they must be decomposed into atomic width NV + color NV.
+- Use `scripts/token-lookup.py "token-name" --type border --decompose` to resolve any composite border token.
+- In the RULES array, use `{ type: "border", widthToken: "...", colorToken: "..." }` with the atomic TS paths from the decomposition table in `data/mapping-rules.md`.
+- The script binds width to all 4 `strokeWeight` props and color via `setBoundVariableForPaint` on `strokes[0]`.
+- Exception: `colorToken: "transparent"` sets a zero-opacity solid stroke (no variable).
+
 ### 4 — Audit log
 
 | Result | Count |
@@ -318,7 +326,8 @@ List `status: 'error'` entries with `nodeId`, `rule`, `error`.
 | Content fills | **Never omit.** After binding background fill on the COMPONENT, always bind `fds-on-*-hi` (or chosen emphasis) on every TEXT and `icon` VECTOR inside each variant. Omitting content fills is a checklist failure. |
 | `on-*` ≠ background | `fds-btn-on-surface-*`, `fds-on-btn-*`, `fds-on-surface-*` — all `on-*` tokens are content colours. **Never** apply them as a COMPONENT background fill. |
 | Gradient fills (`-shade`/`-g`) | TS tokens whose last path segment ends with `-shade` or `-g` are **gradient paint styles**, not NV variables. Figma variables only support solid colours. The `bulk-update.figma.js` script auto-detects these and applies via `fillStyleId`. In audit reports, gradient fills appear as `fillStyleId: "S:..."` instead of `boundVariables.fills`. |
+| Composite borders (`fds-stroke-const-*`) | Composite border tokens have `type: "border"` with `{width, color}` sub-values. **Never bind the composite token directly** — decompose into atomic width NV + color NV. Use `token-lookup.py --decompose` or the decomposition table in `data/mapping-rules.md`. In RULES, use `type: "border"` writes (not `type: "ts"`). |
 | Token suggestions | Never guess a token path. Always use `grep_search` on `data/token-registry.md` by short name or partial TS path. Never read the full file. |
-| ts-core-fabric.json | **Never read or load** `data/ts-core-fabric.json` — it is 21K lines and will overflow the context window. Use `token-registry.md` (grep_search) or `token-index.json` instead. |
+| ts-core-fabric.json | **Never read or load** `data/ts-core-fabric.json` — it is 21K lines and will overflow the context window. Use `token-registry.md` (grep_search) or `token-index.json` instead. For composite token decomposition, use `scripts/token-lookup.py`. |
 | User input | **Always use `vscode_askQuestions` for any decision or confirmation needed from the user** — never use inline chat text. Specific decision points in `data/mapping-rules.md` provide the exact question + options; use those templates directly. For any unexpected decision not covered by a template, construct a `vscode_askQuestions` call on the spot. |
 | Annotations | **Never use `setSharedPluginData` for annotations.** When `Annotations: True` is requested, write Figma native annotations via `node.setAnnotations([{ label, properties }])`. If `setAnnotations` is not available in the current API context, log a warning and skip — do not fall back to shared plugin data. |
