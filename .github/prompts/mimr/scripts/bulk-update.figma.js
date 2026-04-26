@@ -99,6 +99,35 @@ function tsPathToNvName(tsPath) {
   return tsPath.replace(/\./g, '/');
 }
 
+/**
+ * Detect gradient TS paths.  In this design system every TS token whose
+ * **last segment** ends with `-shade` or `-g` is a gradient (GRADIENT_LINEAR)
+ * stored as a Figma paint style — NOT a native variable.
+ *
+ * Examples:
+ *   var.btn.fds-btn-accent-shade   → gradient
+ *   var.btn.fds-btn-accent-g       → gradient
+ *   var.btn.fds-btn-accent         → solid (normal variable)
+ */
+function isGradientToken(tsPath) {
+  const last = tsPath.split('.').pop() || '';
+  return last.endsWith('-shade') || last.endsWith('-g');
+}
+
+/**
+ * Convert a TS dot-path to the paint style name used in Figma.
+ * TS uses dots, paint style names use slashes, and the leading group
+ * prefix may differ.  "var.btn.fds-btn-accent-shade" → "btn/fds-btn-accent-shade".
+ * We strip the first segment when it equals 'var' (semantic namespace prefix)
+ * then join with '/'.
+ */
+function tsPathToPaintStyleName(tsPath) {
+  const parts = tsPath.split('.');
+  // Strip leading 'var' namespace prefix if present
+  if (parts[0] === 'var') parts.shift();
+  return parts.join('/');
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function matchesPattern(name, pattern, matchType) {
@@ -261,6 +290,12 @@ if (!root) return JSON.stringify({ error: `Root node "${ROOT_ID}" not found` });
 const allVars = await figma.variables.getLocalVariablesAsync();
 const varsByName = new Map(allVars.map(v => [v.name, v]));
 
+// Load all local paint styles once — used for gradient fill resolution
+// Gradient tokens (TS paths ending with -shade or -g) are paint styles,
+// not variables.  They must be applied via `node.fillStyleId = style.id`.
+const allPaintStyles = await figma.getLocalPaintStylesAsync();
+const paintStylesByName = new Map(allPaintStyles.map(s => [s.name, s]));
+
 // Pre-collect all (rule, node) pairs into a flat work queue.
 // This avoids re-walking the tree per rule and enables chunked processing.
 const workQueue = [];
@@ -291,6 +326,27 @@ for (let chunkStart = 0; chunkStart < workQueue.length; chunkStart += CHUNK_SIZE
             rule: rule.id, nodeId: node.id, nodeName: node.name,
             type: 'ts', key: write.key, before, after, status: 'ok',
           });
+
+          // 0. Gradient fill: if the TS path ends with -shade or -g, this
+          //    is a gradient paint style — apply via fillStyleId, not NV.
+          if (write.key === 'fill' && isGradientToken(write.value)) {
+            const styleName = tsPathToPaintStyleName(write.value);
+            const style = paintStylesByName.get(styleName) ?? null;
+            if (style) {
+              node.fillStyleId = style.id;
+              report.push({
+                rule: rule.id, nodeId: node.id, nodeName: node.name,
+                type: 'paint-style', prop: 'fillStyleId', styleId: style.id, styleName: style.name, status: 'ok',
+              });
+            } else {
+              report.push({
+                rule: rule.id, nodeId: node.id, nodeName: node.name,
+                type: 'paint-style', prop: 'fillStyleId', status: 'error',
+                error: `Paint style "${styleName}" not found (gradient token: ${write.value})`,
+              });
+            }
+            continue; // skip NV / rawValue path for gradients
+          }
 
           // 1. Auto-NV: find a variable whose name matches the TS dot-path
           //    converted to slash-name (dots → slashes).

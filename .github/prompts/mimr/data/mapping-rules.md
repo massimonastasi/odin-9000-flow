@@ -351,6 +351,44 @@ After binding spacing/radius on the Input FRAME, you **must** also bind fill NV 
 
 ---
 
+## Gradient fill rules
+
+In this design system, **all TS tokens whose last segment ends with `-shade` or `-g` are gradients** (`GRADIENT_LINEAR`). Figma variables only support solid colors — gradients are stored as **paint styles**.
+
+### Detection rule
+
+```
+TS path last segment ends with "-shade" or "-g"  →  paint style (not NV variable)
+```
+
+Examples:
+- `var.btn.fds-btn-accent-shade` → paint style `btn/fds-btn-accent-shade`
+- `var.btn.fds-btn-default-shade` → paint style `btn/fds-btn-default-shade`
+- `var.btn.fds-btn-alternate-accent-shade` → paint style `btn/fds-btn-alternate-accent-shade`
+- `var.fds.fds-success-shade` → paint style `fds/fds-success-shade`
+
+### Binding mechanism
+
+| Property | Solid color | Gradient |
+|---|---|---|
+| **Storage** | Figma variable | Figma paint style |
+| **API** | `setBoundVariable('fills', 0, v)` | `node.fillStyleId = style.id` |
+| **Lookup** | `getLocalVariablesAsync()` by name | `getLocalPaintStylesAsync()` by name |
+| **bulk-update.figma.js** | Auto-NV resolution (skipped for fill) | Auto paint style resolution via `isGradientToken()` |
+| **audit.figma.js** | `boundVariables.fills` | `node.fillStyleId` |
+
+### TS path → paint style name conversion
+
+1. Split TS path on `.` → segments
+2. Strip leading `var` segment (namespace prefix)
+3. Join remaining segments with `/`
+
+`var.btn.fds-btn-accent-shade` → strip `var` → `btn.fds-btn-accent-shade` → `btn/fds-btn-accent-shade`
+
+> **Note:** The `bulk-update.figma.js` script handles this automatically. When a fill write's TS path matches the gradient suffix pattern, it resolves via paint styles instead of variables.
+
+---
+
 ## Stroke width rules
 
 Stroke width tokens control `strokeWeight` in Figma. Like border radius, Figma stores stroke weight as **4 individual properties**: `strokeTopWeight`, `strokeBottomWeight`, `strokeLeftWeight`, `strokeRightWeight`.

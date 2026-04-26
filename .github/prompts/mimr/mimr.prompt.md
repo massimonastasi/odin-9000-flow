@@ -272,7 +272,9 @@ Execute via `mcp_figma_use_figma` with `fileKey = {file_key}`.
 3. If found → `setBoundVariable` is called for each mapped prop (`borderRadius` → all 4 corners, etc.) — Figma resolves the value natively
 4. If not found → `rawValue` is applied directly to the node style
 
-Fill is excluded from auto-NV (requires `setBoundVariableForPaint`); rawValue handles solid and gradient fills.
+**Fill handling — solid vs gradient:**
+- **Solid fills:** excluded from auto-NV (`setBoundVariableForPaint` is needed); rawValue fallback applies the color.
+- **Gradient fills (`-shade` / `-g` suffix):** TS tokens ending with `-shade` or `-g` are gradient paint styles, NOT variables. The script auto-detects these and applies via `node.fillStyleId = style.id` using `getLocalPaintStylesAsync()`. No rawValue needed.
 
 ### 4 — Audit log
 
@@ -315,6 +317,7 @@ List `status: 'error'` entries with `nodeId`, `rule`, `error`.
 | Conflict vs chain | TS+NV on same property = direct-apply chain. Only `⚠️` when last segments differ |
 | Content fills | **Never omit.** After binding background fill on the COMPONENT, always bind `fds-on-*-hi` (or chosen emphasis) on every TEXT and `icon` VECTOR inside each variant. Omitting content fills is a checklist failure. |
 | `on-*` ≠ background | `fds-btn-on-surface-*`, `fds-on-btn-*`, `fds-on-surface-*` — all `on-*` tokens are content colours. **Never** apply them as a COMPONENT background fill. |
+| Gradient fills (`-shade`/`-g`) | TS tokens whose last path segment ends with `-shade` or `-g` are **gradient paint styles**, not NV variables. Figma variables only support solid colours. The `bulk-update.figma.js` script auto-detects these and applies via `fillStyleId`. In audit reports, gradient fills appear as `fillStyleId: "S:..."` instead of `boundVariables.fills`. |
 | Token suggestions | Never guess a token path. Always use `grep_search` on `data/token-registry.md` by short name or partial TS path. Never read the full file. |
 | ts-core-fabric.json | **Never read or load** `data/ts-core-fabric.json` — it is 21K lines and will overflow the context window. Use `token-registry.md` (grep_search) or `token-index.json` instead. |
 | User input | **Always use `vscode_askQuestions` for any decision or confirmation needed from the user** — never use inline chat text. Specific decision points in `data/mapping-rules.md` provide the exact question + options; use those templates directly. For any unexpected decision not covered by a template, construct a `vscode_askQuestions` call on the spot. |

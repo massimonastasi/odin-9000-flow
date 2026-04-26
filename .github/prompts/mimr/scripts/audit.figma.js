@@ -147,6 +147,12 @@ function getBoundVars(node) {
       }
     }
   } catch (e) { /* some node types don't support boundVariables */ }
+  // Detect paint style bindings (gradient fills use fillStyleId, not boundVariables)
+  try {
+    if (node.fillStyleId && typeof node.fillStyleId === 'string' && node.fillStyleId.length > 0) {
+      nv['fillStyleId'] = node.fillStyleId;
+    }
+  } catch (e) { /* some node types don't support fillStyleId */ }
   return Object.keys(nv).length > 0 ? nv : null;
 }
 
