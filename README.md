@@ -102,6 +102,22 @@ Code generation engine. Scaffolds semantic HTML + vanilla CSS + CSS Modules, **o
 
 ---
 
+### Kevin — Response Style Modifier 🌶️
+
+A persona overlay, not a workflow. Chain before any skill to modify how the agent narrates — not what it does. Three verbosity modes:
+
+| Mode | Style |
+|---|---|
+| **Lite** | Short sentences. Casual, like lunch. One analogy max. Why big talk when small talk do trick. |
+| **Normal** | Drop articles, fragments OK, short synonyms. Tables encouraged. One-liners when possible. |
+| **Ultra** | Abbreviate everything. Arrows for flow. One word when one word enough. |
+
+**Invoke:** `/kevin /modi parse`, `/kevin /vali`, `/kevin /mimr`
+
+Technical data (node IDs, variant props, counts) stays 100% accurate in every mode. Beads and git operations always run in Ultra — nobody needs a story about a git push.
+
+---
+
 ## Memory — Beads
 
 ```
@@ -441,6 +457,7 @@ odinflow/
 │       │   └── scripts/           # scan.figma.js, process.figma.js
 │       └── saga/
 │           └── saga.prompt.md
+│       └── kevin.prompt.md        # /kevin persona overlay
 ├── .vscode/
 │   └── mcp.json                   # Beads MCP server config
 ├── AGENTS.md                      # Agent workflow reference
