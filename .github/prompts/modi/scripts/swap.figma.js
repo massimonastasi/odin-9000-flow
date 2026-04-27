@@ -56,8 +56,29 @@ function restoreSizing(node, sizing) {
 // node from the imported component set.
 
 async function findVariant(componentKey, variantProps) {
+  // Try local node first (for same-file components)
+  let imported = figma.getNodeById(componentKey);
+  if (imported && imported.type === 'COMPONENT') {
+    // componentKey was actually a node ID — use directly
+    if (!variantProps || Object.keys(variantProps).length === 0) return imported;
+    const componentSet = imported.parent;
+    if (!componentSet || componentSet.type !== 'COMPONENT_SET') return imported;
+    const variants = Array.from(componentSet.children);
+    for (const variant of variants) {
+      if (variant.type !== 'COMPONENT') continue;
+      const vProps = variant.variantProperties || {};
+      let match = true;
+      for (const [key, val] of Object.entries(variantProps)) {
+        if (vProps[key] !== val) { match = false; break; }
+      }
+      if (match) return variant;
+    }
+    log.push({ warning: `No exact variant match for ${JSON.stringify(variantProps)}, using provided node` });
+    return imported;
+  }
+
   // Import the component by key — this gives us the default variant
-  const imported = await figma.importComponentByKeyAsync(componentKey);
+  imported = await figma.importComponentByKeyAsync(componentKey);
   if (!imported) return null;
 
   // If no variant props requested, return the default

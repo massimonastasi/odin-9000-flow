@@ -23,4 +23,31 @@
 
 ## Discovered (auto-appended by MODI)
 
+- name: FDS-Input (local)
+  componentKey: "7a523c014c245d806c39ea4f825fb9396160d867"
+  nodeId: "8556:55146"
+  file: Ahvbwk0dUHeHazrQX2XtGd
+  local: true
+  axes:
+    State: [Default, Default-Error, Placeholder, Filled, Focus, Success, Danger, Disabled, readonly]
+    Assistive Text: [On, Off]
+    Prefix: [On, Off]
+    Suffix: [On, Off]
+    Leading Icon: [Off, On]
+    Theme: [Surface-Variant, Surface, Alternate-Surface-Variant, Alternate-Surface]
+  scanned: 2026-04-27
+
+- name: FDS-Button-Update
+  componentKey: "af0713c212ec9752e4b3aaaa2ca4fc85b996f8f5"
+  axes:
+    Size: [Large, Regular, Small, Tiny]
+    Type: [Primary, Secondary, Teritary]
+    Shape: [Default]
+    Leading Icon: [On, Off]
+    Label: [On, Off]
+    Trailing Icon: [On, Off]
+    Colour: [header default, default, accent, surface default, alternate accent, alternate surface default]
+    Theme: [On header, On surface, On alternate surface]
+  scanned: 2026-04-27
+
 ## Custom (user-provided URLs)

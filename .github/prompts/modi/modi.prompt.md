@@ -8,9 +8,9 @@ argument-hint: "Figma frame URL or swap instruction"
 ## First Render
 Always display this at the start of the workflow:
 
-█▀▄▀█ █▀▀▄ █▀▄ █
+█▀▄▀█ █▀▀▄ █▀▄  █
 █ ▀ █ █  █ █  █ █
-▀   ▀ ▀▀▀  ▀▀  ▀
+▀   ▀ ▀▀▀  ▀▀   ▀
 [ MODI (Model-to-Object Design Instantiator) ]
 [ WIREFRAME & SWAP ]
 
