@@ -29,7 +29,24 @@ A GitHub Copilot agent skill suite for automating the Figma → Design System �
 The top-level orchestrator. Reads design intent from a Figma URL or brief, decides which sub-skills to run, and sequences them in dependency order. Records every decision in Beads for future sessions.
 
 **Invoke:** `/odin-9000`  
-**Pipeline:** MIMR → VALI → SAGA
+**Pipeline:** MODI → VALI → MIMR → SAGA
+
+---
+
+### MODI — Model-to-Object Design Instantiator
+
+```
+█▀▄▀█ █▀▀▄ █▀▄ █
+█ ▀ █ █  █ █  █ █
+▀   ▀ ▀▀▀  ▀▀  ▀
+```
+
+Wireframe parsing and instance swapping engine. Resolves placeholder shapes (rectangles, ellipses) to real FDS library components and swaps existing instances to newer versions with full variant axis mapping. Uses a hybrid resolution strategy: cached component map → design system search → interactive user prompt.
+
+**Invoke:** `/modi`  
+**Inputs:** Figma frame URL + mode selection (parse / swap / scan-library)  
+**Outputs:** Swapped component instances in Figma, updated component map  
+**Use when:** A wireframe has placeholder shapes, or existing instances need to be migrated to a different component version
 
 ---
 
@@ -274,10 +291,13 @@ User: "Figma URL or design brief"
     │  2. bd create + claim issue             │
     │         │                               │
     │         ▼                               │
-    │      /mimr ──► token audit + writes     │
+    │      /modi ──► wireframe → components   │
     │         │                               │
     │         ▼                               │
     │      /vali ──► layout conversion        │
+    │         │                               │
+    │         ▼                               │
+    │      /mimr ──► token audit + writes     │
     │         │                               │
     │         ▼                               │
     │      /saga ──► HTML + CSS or StencilJS  │
@@ -304,21 +324,21 @@ User: "Figma URL or design brief"
                    │ /odin-9000  │  orchestrates, creates bd issue
                    └──────┬──────┘
                           │
-          ┌───────────────┼───────────────┐
-          ▼               ▼               ▼
-   ┌─────────────┐ ┌─────────────┐ ┌─────────────┐
-   │    MIMR     │ │    VALI     │ │    SAGA     │
-   │  (tokens)   │ │  (layout)   │ │   (code)    │
-   └──────┬──────┘ └──────┬──────┘ └──────┬──────┘
-          │               │               │
-          ▼               ▼               │
-   Binds --fds-*    Converts GROUPs       │
-   vars to Figma    to Auto Layout        │
-   nodes via NV     frames, renames       │
-                    layers:               │
-                    {col/row / role}      │
-                          │               │
-                          └───────────────┤
+          ┌────────┬──────┼───────────────┐
+          ▼        ▼      ▼               ▼
+   ┌────────────┐┌─────────────┐┌─────────────┐┌─────────────┐
+   │    MODI    ││    VALI     ││    MIMR     ││    SAGA     │
+   │ (wireframe)││  (layout)   ││  (tokens)   ││   (code)    │
+   └─────┬──────┘└──────┬──────┘└──────┬──────┘└──────┬──────┘
+         │              │              │              │
+         ▼              ▼              ▼              │
+   Swaps shapes   Converts GROUPs  Binds --fds-*     │
+   & instances    to Auto Layout   vars to Figma     │
+   to library     frames, renames  nodes via NV      │
+   components     layers:                            │
+                  {col/row / role}                    │
+                        │                            │
+                        └────────────────────────────┤
                                           │  get_design_context
                                           │  (NV bindings + layout)
                                           ▼
@@ -401,11 +421,16 @@ odinflow/
 │   ├── copilot-instructions.md    # Global Copilot + Beads rules
 │   └── prompts/
 │       ├── odin-9000.prompt.md    # /odin-9000 entry point
+│       ├── modi.prompt.md         # /modi entry point
 │       ├── mimr.prompt.md         # /mimr entry point
 │       ├── vali.prompt.md         # /vali entry point
 │       ├── saga.prompt.md         # /saga entry point
 │       ├── odin-9000/
 │       │   └── odin-9000.prompt.md
+│       ├── modi/
+│       │   ├── modi.prompt.md
+│       │   ├── data/              # component-map.md
+│       │   └── scripts/           # scan-wireframe.figma.js, swap.figma.js
 │       ├── mimr/
 │       │   ├── mimr.prompt.md
 │       │   ├── data/              # token-registry, mapping-rules, token-index
@@ -535,9 +560,10 @@ Storybook picks up the story automatically if the project's `stories` glob cover
 Designer (Figma + VS Code)              Engineer (codebase)
 ────────────────────────────────────────────────────────────
 1. /odin-9000 on Figma URL
-   └─ MIMR  → tokens bound in Figma     Token values = source of truth
-   └─ VALI  → layout structured          Layer semantics documented
-   └─ SAGA  → component folder written   Drop into src/components/
+   └─ MODI  → wireframe → real components  Shapes become instances
+   └─ VALI  → layout structured            Layer semantics documented
+   └─ MIMR  → tokens bound in Figma       Token values = source of truth
+   └─ SAGA  → component folder written     Drop into src/components/
                                           storybook dev
                                           Component renders in isolation
                                           Controls = every @Prop()

@@ -246,7 +246,7 @@ function opToken(op) {
 function opAnnotate(op) {
   const node = getNode(op.id);
   if (!node) { failed.push({ op: 'annotate', id: op.id, reason: 'node not found' }); return; }
-  const label = `**\u2705 Flex-O-Nator 9000**\nRenamed: \`${op.oldName || '?'}\` \u2192 \`${op.newName || node.name}\`\n`
+  const label = `**\u2705 VALI**\nRenamed: \`${op.oldName || '?'}\` \u2192 \`${op.newName || node.name}\`\n`
             + (op.direction || '') + (op.childSummary ? ` \u00b7 ${op.childSummary}` : '');
   try {
     node.annotations = [{ labelMarkdown: label, properties: [{ type: 'itemSpacing' }] }];
@@ -311,6 +311,17 @@ function expandTemplate(tmpl) {
   log.push({ op: 'template', parentId: tmpl.parentId, targetType, variantCount: targets.length, expandedOps: expanded.length });
   return expanded;
 }
+
+// ── Op handlers map ──────────────────────────────────────────────────────────
+
+const handlers = {
+  ungroup:  opUngroup,
+  wrap:     opWrap,
+  al:       opAL,
+  rename:   opRename,
+  token:    opToken,
+  annotate: opAnnotate
+};
 
 // ── execute (chunked) ─────────────────────────────────────────────────────────
 
