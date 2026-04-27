@@ -56,54 +56,68 @@ function restoreSizing(node, sizing) {
 // node from the imported component set.
 
 async function findVariant(componentKey, variantProps) {
-  // Try local node first (for same-file components)
-  let imported = figma.getNodeById(componentKey);
-  if (imported && imported.type === 'COMPONENT') {
-    // componentKey was actually a node ID — use directly
-    if (!variantProps || Object.keys(variantProps).length === 0) return imported;
-    const componentSet = imported.parent;
-    if (!componentSet || componentSet.type !== 'COMPONENT_SET') return imported;
-    const variants = Array.from(componentSet.children);
-    for (const variant of variants) {
+  // Helper: search a COMPONENT_SET's children for matching variant props
+  function findInSet(compSet, props) {
+    if (!props || Object.keys(props).length === 0) return compSet.children[0] || null;
+    for (const variant of compSet.children) {
       if (variant.type !== 'COMPONENT') continue;
       const vProps = variant.variantProperties || {};
       let match = true;
-      for (const [key, val] of Object.entries(variantProps)) {
+      for (const [key, val] of Object.entries(props)) {
         if (vProps[key] !== val) { match = false; break; }
       }
       if (match) return variant;
     }
-    log.push({ warning: `No exact variant match for ${JSON.stringify(variantProps)}, using provided node` });
-    return imported;
+    return null;
   }
 
-  // Import the component by key — this gives us the default variant
+  // ── 1. Try local node first (componentKey may be a node ID) ──
+  let imported = figma.getNodeById(componentKey);
+  if (imported) {
+    // Handle COMPONENT_SET — find matching variant child
+    if (imported.type === 'COMPONENT_SET') {
+      const found = findInSet(imported, variantProps);
+      if (found) return found;
+      log.push({ warning: `No exact local variant match for ${JSON.stringify(variantProps)}, using first child` });
+      return imported.children[0] || null;
+    }
+    // Handle COMPONENT — search siblings if variant props requested
+    if (imported.type === 'COMPONENT') {
+      if (!variantProps || Object.keys(variantProps).length === 0) return imported;
+      const componentSet = imported.parent;
+      if (componentSet && componentSet.type === 'COMPONENT_SET') {
+        const found = findInSet(componentSet, variantProps);
+        if (found) return found;
+      }
+      log.push({ warning: `No exact variant match for ${JSON.stringify(variantProps)}, using provided node` });
+      return imported;
+    }
+  }
+
+  // ── 2. Try importing as a component set (handles library set keys) ──
+  try {
+    const compSet = await figma.importComponentSetByKeyAsync(componentKey);
+    if (compSet && compSet.type === 'COMPONENT_SET') {
+      const found = findInSet(compSet, variantProps);
+      if (found) return found;
+      log.push({ warning: `No exact variant match in imported set for ${JSON.stringify(variantProps)}, using first child` });
+      return compSet.children[0] || null;
+    }
+  } catch(e) { /* not a valid set key — fall through */ }
+
+  // ── 3. Try importing as a single component key ──
   imported = await figma.importComponentByKeyAsync(componentKey);
   if (!imported) return null;
 
-  // If no variant props requested, return the default
   if (!variantProps || Object.keys(variantProps).length === 0) return imported;
 
-  // Get the component set (parent of all variants)
+  // Check if this component belongs to a set
   const componentSet = imported.parent;
-  if (!componentSet || componentSet.type !== 'COMPONENT_SET') {
-    // Not a multi-variant component — return the imported component directly
-    return imported;
+  if (componentSet && componentSet.type === 'COMPONENT_SET') {
+    const found = findInSet(componentSet, variantProps);
+    if (found) return found;
   }
 
-  // Find the variant that matches all requested props
-  const variants = Array.from(componentSet.children);
-  for (const variant of variants) {
-    if (variant.type !== 'COMPONENT') continue;
-    const vProps = variant.variantProperties || {};
-    let match = true;
-    for (const [key, val] of Object.entries(variantProps)) {
-      if (vProps[key] !== val) { match = false; break; }
-    }
-    if (match) return variant;
-  }
-
-  // No exact match — return default with a warning
   log.push({ warning: `No exact variant match for ${JSON.stringify(variantProps)}, using default` });
   return imported;
 }

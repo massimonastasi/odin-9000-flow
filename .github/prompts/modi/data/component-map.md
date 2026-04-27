@@ -51,3 +51,24 @@
   scanned: 2026-04-27
 
 ## Custom (user-provided URLs)
+
+- name: Status Bar - iPhone
+  componentSetKey: "921f043d21ba058760197af0dbbda05de2dbbcd5"
+  axes:
+    Background: [False, True]
+  defaultVariantKey: "306a7dd7d7ad637a44fe791d48466d86da257255"
+  scanned: 2026-04-27
+
+- name: Checkbox (DS Fabric)
+  componentSetKey: "b78a63b3938742980d4ea9bcfa03d7cb9d2c2bea"
+  axes:
+    Type: [Unselected, Error, Selected, Indeterminate]
+    State: [Rest, Focused, Disabled]
+    Context: [on-surface, on-alternate-surface]
+  defaultVariantKey: "998ff0cbf46b0342161ab309d61e53bb5ca1dcdb"
+  scanned: 2026-04-27
+
+- name: Top bar/ios/Back
+  componentKey: "810863aa8b8693a3a955c139fcbdfef9ac7ecd86"
+  axes: none
+  scanned: 2026-04-27
