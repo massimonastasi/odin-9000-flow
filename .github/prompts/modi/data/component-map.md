@@ -37,6 +37,26 @@
     Theme: [Surface-Variant, Surface, Alternate-Surface-Variant, Alternate-Surface]
   scanned: 2026-04-27
 
+- name: FDS-site-header
+  componentKey: "e871b2c694587f13a9ef4e6c13adfe387e4cb1b9"
+  library: "🧣 DS Fabric Components (WIP)"
+  file: Dli7JA3N6vuTTYi4lD9qMF
+  nodeId: "37086:21633"
+  axes:
+    Status: [Logged-out, Logged-in]
+    Break-point: [">1023px", "<1024px"]
+  scanned: 2026-06-15
+
+- name: FDS-ProgressBar
+  componentKey: "bcb44dddd44bf1cfd363dca318a7a516fd94bd76"
+  library: "🧣 DS Fabric Components (WIP)"
+  file: Dli7JA3N6vuTTYi4lD9qMF
+  nodeId: "27468:53201"
+  axes:
+    Property 1: [Short, Weak, Valid, Error]
+  notes: "Variants are password-strength flavoured (Short/Weak/Valid/Error) — not a generic 0–100% fill bar. For generic progress, stylise inline."
+  scanned: 2026-06-15
+
 - name: FDS-Button-Update
   componentKey: "af0713c212ec9752e4b3aaaa2ca4fc85b996f8f5"
   axes:
@@ -51,6 +71,16 @@
   scanned: 2026-04-27
 
 ## Custom (user-provided URLs)
+
+- name: FDS-Stepper
+  componentSetKey: "a0bd91f5ddd55cfff9bf012741251929c85774a6"
+  axes:
+    Steps: [3, 4, 5]
+    Direction: [horizontal, vertical]
+    Theme: [on-surface, on-alternate-surface]
+    Style: [Badge, Ico]
+    Text: [false, true]
+  scanned: 2026-04-27
 
 - name: Status Bar - iPhone
   componentSetKey: "921f043d21ba058760197af0dbbda05de2dbbcd5"
@@ -71,4 +101,12 @@
 - name: Top bar/ios/Back
   componentKey: "810863aa8b8693a3a955c139fcbdfef9ac7ecd86"
   axes: none
+  scanned: 2026-04-27
+
+- name: FDS-Verification-Code-Group-WIP
+  componentSetKey: "87936dc9bf368a687fb84fa831e8c81a796e6212"
+  axes:
+    State: [Default, Focus, Filled, Error, Disabled]
+    Lenght: [6, 5, 4]
+    Visible: [True, False]
   scanned: 2026-04-27
