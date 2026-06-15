@@ -1,0 +1,2 @@
+{"ts":"2026-06-15T00:00:00Z","runId":"seed","skill":"odin","phase":"open","summary":"Hermes episode journal initialised — replaces the legacy bd issue trail. One {open,close} pair per skill run is the audit record.","result":"ok"}
+{"ts":"2026-06-15T00:00:00Z","runId":"seed","skill":"odin","phase":"close","summary":"Journal seeded.","result":"ok"}

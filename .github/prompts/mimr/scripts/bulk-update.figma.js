@@ -289,15 +289,47 @@ function applyRawValue(node, tsKey, rawValue) {
 const root = await figma.getNodeByIdAsync(ROOT_ID);
 if (!root) return JSON.stringify({ error: `Root node "${ROOT_ID}" not found` });
 
-// Load all local variables once — used for auto-NV resolution
-const allVars = await figma.variables.getLocalVariablesAsync();
-const varsByName = new Map(allVars.map(v => [v.name, v]));
+// ── Lazy variable / paint-style resolution ───────────────────────────────────
+// Optional injected cache (from .hermes/cache/vars-<fileKey>-<version>.json):
+//   const CACHE_VAR_IDS   = { "<var/name>": "VariableID:...", ... };
+//   const CACHE_STYLE_IDS = { "<style/name>": "S:...", ... };
+// When present we resolve ONLY the few names actually used via getVariableByIdAsync,
+// avoiding getLocalVariablesAsync (slow: 500+ vars) / getLocalPaintStylesAsync on every run.
+// When absent we fall back to a one-time full load (previous behaviour).
+const VAR_NAME_TO_ID   = (typeof CACHE_VAR_IDS   !== 'undefined') ? CACHE_VAR_IDS   : null;
+const STYLE_NAME_TO_ID = (typeof CACHE_STYLE_IDS !== 'undefined') ? CACHE_STYLE_IDS : null;
 
-// Load all local paint styles once — used for gradient fill resolution
-// Gradient tokens (TS paths ending with -shade or -g) are paint styles,
-// not variables.  They must be applied via `node.fillStyleId = style.id`.
-const allPaintStyles = await figma.getLocalPaintStylesAsync();
-const paintStylesByName = new Map(allPaintStyles.map(s => [s.name, s]));
+let _varsByName = null, _paintStylesByName = null;
+const _resolvedById = new Map();
+
+async function resolveVarByName(name) {
+  if (VAR_NAME_TO_ID) {
+    const id = VAR_NAME_TO_ID[name];
+    if (!id) return null;
+    if (_resolvedById.has(id)) return _resolvedById.get(id);
+    const v = await figma.variables.getVariableByIdAsync(id);
+    _resolvedById.set(id, v);
+    return v;
+  }
+  if (!_varsByName) {
+    const allVars = await figma.variables.getLocalVariablesAsync();
+    _varsByName = new Map(allVars.map(v => [v.name, v]));
+  }
+  return _varsByName.get(name) ?? null;
+}
+
+async function resolvePaintStyleByName(name) {
+  if (STYLE_NAME_TO_ID) {
+    const id = STYLE_NAME_TO_ID[name];
+    if (!id) return null;
+    try { return (await figma.getStyleByIdAsync(id)) ?? null; } catch (_) { return null; }
+  }
+  if (!_paintStylesByName) {
+    const allPaintStyles = await figma.getLocalPaintStylesAsync();
+    _paintStylesByName = new Map(allPaintStyles.map(s => [s.name, s]));
+  }
+  return _paintStylesByName.get(name) ?? null;
+}
 
 // Pre-collect all (rule, node) pairs into a flat work queue.
 // This avoids re-walking the tree per rule and enables chunked processing.
@@ -334,7 +366,7 @@ for (let chunkStart = 0; chunkStart < workQueue.length; chunkStart += CHUNK_SIZE
           //    is a gradient paint style — apply via fillStyleId, not NV.
           if (write.key === 'fill' && isGradientToken(write.value)) {
             const styleName = tsPathToPaintStyleName(write.value);
-            const style = paintStylesByName.get(styleName) ?? null;
+            const style = await resolvePaintStyleByName(styleName);
             if (style) {
               node.fillStyleId = style.id;
               report.push({
@@ -359,7 +391,7 @@ for (let chunkStart = 0; chunkStart < workQueue.length; chunkStart += CHUNK_SIZE
 
           if (bindProps) {
             const nvName = tsPathToNvName(write.value);
-            const v = varsByName.get(nvName) ?? null;
+            const v = await resolveVarByName(nvName);
             if (v) {
               for (const prop of bindProps) {
                 try {
@@ -411,7 +443,7 @@ for (let chunkStart = 0; chunkStart < workQueue.length; chunkStart += CHUNK_SIZE
         else if (write.type === 'border') {
           // 1. Width: resolve NV and bind to all 4 stroke weight props
           const widthNvName = tsPathToNvName(write.widthToken);
-          const widthVar = varsByName.get(widthNvName) ?? null;
+          const widthVar = await resolveVarByName(widthNvName);
           if (widthVar) {
             const widthProps = ['strokeTopWeight', 'strokeBottomWeight', 'strokeLeftWeight', 'strokeRightWeight'];
             for (const wp of widthProps) {
@@ -441,7 +473,7 @@ for (let chunkStart = 0; chunkStart < workQueue.length; chunkStart += CHUNK_SIZE
             });
           } else {
             const colorNvName = tsPathToNvName(write.colorToken);
-            const colorVar = varsByName.get(colorNvName) ?? null;
+            const colorVar = await resolveVarByName(colorNvName);
             if (colorVar) {
               // Ensure node has at least one stroke paint to bind to
               if (!node.strokes || node.strokes.length === 0) {

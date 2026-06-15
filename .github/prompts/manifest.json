@@ -1,0 +1,86 @@
+{
+  "$comment": "ODIN reads ONLY this file at startup. It is intentionally tiny so it is never skipped. Full skill prompts + scripts are loaded lazily by each subagent when dispatched. Before any Plugin API call, a subagent MUST verify its listed scripts were actually read (self-check gate).",
+  "version": 1,
+  "memoryAdapter": ".github/prompts/.hermes/memory-adapter.md",
+  "skills": {
+    "odin": {
+      "role": "Orchestrator — Plan→Choose→Execute→Observe→Refine loop",
+      "prompt": ".github/prompts/odin-9000/odin-9000.prompt.md",
+      "agent": null,
+      "loadWhen": "always (entry point)"
+    },
+    "modi": {
+      "role": "Wireframe parse + instance swap",
+      "prompt": ".github/prompts/modi/modi.prompt.md",
+      "agent": ".github/agents/modi.agent.md",
+      "scripts": [
+        ".github/prompts/modi/scripts/scan-wireframe.figma.js",
+        ".github/prompts/modi/scripts/swap.figma.js"
+      ],
+      "data": [".github/prompts/modi/data/component-map.md"],
+      "loadWhen": "wireframe has placeholder shapes OR instance migration requested"
+    },
+    "vali": {
+      "role": "Group/Frame → Auto Layout conversion + naming",
+      "prompt": ".github/prompts/vali/vali.prompt.md",
+      "agent": ".github/agents/vali.agent.md",
+      "scripts": [
+        ".github/prompts/vali/scripts/scan.figma.js",
+        ".github/prompts/vali/scripts/process.figma.js"
+      ],
+      "data": [".github/prompts/vali/data/layout-rules.md"],
+      "loadWhen": "layout/structure needs to be coded (before MIMR)"
+    },
+    "mimr": {
+      "role": "Token audit + bulk write (TS + native variables)",
+      "prompt": ".github/prompts/mimr/mimr.prompt.md",
+      "agent": ".github/agents/mimr.agent.md",
+      "scripts": [
+        ".github/prompts/mimr/scripts/audit-resolve-digest.figma.js",
+        ".github/prompts/mimr/scripts/audit.figma.js",
+        ".github/prompts/mimr/scripts/resolve.figma.js",
+        ".github/prompts/mimr/scripts/bulk-update.figma.js",
+        ".github/prompts/mimr/scripts/token-lookup.py"
+      ],
+      "data": [
+        ".github/prompts/mimr/data/token-registry.md",
+        ".github/prompts/mimr/data/token-index.json",
+        ".github/prompts/mimr/data/mapping-rules.md"
+      ],
+      "loadWhen": "tokens changed or needed (after VALI if both)"
+    },
+    "saga": {
+      "role": "HTML/CSS + StencilJS + Storybook codegen",
+      "prompt": ".github/prompts/saga/saga.prompt.md",
+      "agent": ".github/agents/saga.agent.md",
+      "scripts": [],
+      "loadWhen": "component output needed (last; depends on MIMR+VALI)"
+    },
+    "librarian": {
+      "role": "Owns the large external Token Studio JSON + KB .md repos; narrow query interface only",
+      "prompt": null,
+      "agent": ".github/agents/librarian.agent.md",
+      "scripts": [".github/prompts/mimr/scripts/token-lookup.py"],
+      "loadWhen": "a token/value is missing from token-registry.md OR KB lookup needed",
+      "sync": {
+        "tokensRepo": "core-design-system-variables",
+        "kbRepo": "{{KB_REPO}}",
+        "clonePath": ".github/prompts/.hermes/cache",
+        "manifest": ".github/prompts/.hermes/cache/kb-manifest.json",
+        "stalenessCheck": "git ls-remote <repo> <branch>; re-pull only if SHA differs"
+      }
+    },
+    "kevin": {
+      "role": "Persona/verbosity overlay (narration only)",
+      "prompt": ".github/prompts/kevin.prompt.md",
+      "agent": null,
+      "loadWhen": "user chains /kevin before another skill"
+    }
+  },
+  "pipelineOrder": ["modi", "vali", "mimr", "saga"],
+  "handoffContracts": {
+    "vali->mimr": "node list [{id,type}] forwarded as PRIOR_SCAN (skips MIMR tree walk)",
+    "mimr->saga": "NV map {prop: shortName, value} reused for --fds-* CSS vars (no re-resolution)",
+    "modi->vali": "swap report; converted instances ready for layout pass"
+  }
+}

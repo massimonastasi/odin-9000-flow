@@ -29,49 +29,40 @@ These rules define how to translate Figma inputs into code for this project and 
 
 **Default rule**: If a request involves Figma design, token extraction, layout conversion, or component generation and no `/skill` is specified, suggest `/odin-9000` before proceeding.
 
-<!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:ca08a54f -->
-## Beads Issue Tracker
+<!-- BEGIN HERMES INTEGRATION v:1 -->
+## Hermes Harness (memory & run state)
 
-This project uses **bd (beads)** for issue tracking. Run `bd prime` to see full workflow context and commands.
-
-### Quick Reference
-
-```bash
-bd ready              # Find available work
-bd show <id>          # View issue details
-bd update <id> --claim  # Claim work
-bd close <id>         # Complete work
-```
+This project uses the **Hermes harness** instead of an external issue tracker. All persistent
+memory is reached through one seam: `.github/prompts/.hermes/memory-adapter.md`.
 
 ### Rules
 
-- Use `bd` for ALL task tracking — do NOT use TodoWrite, TaskCreate, or markdown TODO lists
-- Run `bd prime` for detailed command reference and session close protocol
-- Use `bd remember` for persistent knowledge — do NOT use MEMORY.md files
+- Read `.github/prompts/manifest.json` first on every skill invocation.
+- Track ALL task state through Hermes (`state.*` / `episode.*`) — do NOT use TodoWrite or markdown TODO lists for run tracking.
+- Persist durable knowledge as lessons (`lesson.append`) — do NOT use MEMORY.md files.
+- Every Figma write needs an `open → close` episode pair.
 
 ## Session Completion
 
-**When ending a work session**, you MUST complete ALL steps below. Work is NOT complete until `git push` succeeds.
+When ending a work session, complete ALL steps. Work is NOT complete until `git push` succeeds.
 
-**MANDATORY WORKFLOW:**
-
-1. **File issues for remaining work** - Create issues for anything that needs follow-up
-2. **Run quality gates** (if code changed) - Tests, linters, builds
-3. **Update issue status** - Close finished work, update in-progress items
-4. **PUSH TO REMOTE** - This is MANDATORY:
+1. **Capture follow-ups** — `state.openIssues[]` for anything unfinished; `lesson.append` for insights.
+2. **Run quality gates** (if code changed) — tests, linters, builds.
+3. **Close open runs** — `episode.append({phase:"close"})` for each finished run.
+4. **PUSH TO REMOTE** (mandatory):
    ```bash
    git pull --rebase
-   bd dolt push
+   git add -A
+   git commit -m "<summary>"
    git push
    git status  # MUST show "up to date with origin"
    ```
-5. **Clean up** - Clear stashes, prune remote branches
-6. **Verify** - All changes committed AND pushed
-7. **Hand off** - Provide context for next session
+5. **Clean up** — clear stashes, prune remote branches.
+6. **Verify** — all changes committed AND pushed.
+7. **Hand off** — provide context for the next session.
 
-**CRITICAL RULES:**
-- Work is NOT complete until `git push` succeeds
-- NEVER stop before pushing - that leaves work stranded locally
-- NEVER say "ready to push when you are" - YOU must push
-- If push fails, resolve and retry until it succeeds
-<!-- END BEADS INTEGRATION -->
+**Critical rules:**
+- Work is NOT complete until `git push` succeeds.
+- NEVER stop before pushing — that strands work locally.
+- If push fails, resolve and retry until it succeeds.
+<!-- END HERMES INTEGRATION -->

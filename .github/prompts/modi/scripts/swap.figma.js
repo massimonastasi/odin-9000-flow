@@ -28,7 +28,7 @@ const nodeCache = {};
   if ('children' in node) {
     for (const child of node.children) { buildCache(child); }
   }
-})(figma.getNodeById(NODE_ID) || figma.currentPage);
+})((await figma.getNodeByIdAsync(NODE_ID)) || figma.currentPage);
 
 function getNode(id) {
   if (nodeCache[id]) return nodeCache[id];
@@ -72,7 +72,7 @@ async function findVariant(componentKey, variantProps) {
   }
 
   // ── 1. Try local node first (componentKey may be a node ID) ──
-  let imported = figma.getNodeById(componentKey);
+  let imported = await figma.getNodeByIdAsync(componentKey);
   if (imported) {
     // Handle COMPONENT_SET — find matching variant child
     if (imported.type === 'COMPONENT_SET') {

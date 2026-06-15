@@ -2,9 +2,10 @@
 // const NODE_ID = "8914:78154";     // Root frame to scan
 // const MODE = "parse";             // "parse" | "swap"
 // const SOURCE_KEY = null;          // swap mode only: componentKey of source component set
-// ─────────────────────────────────────────────────────────────────────────────
+// const MAX_DEPTH = 10;             // optional recursion cap (default 10)
+// ───────────────────────────────────────────────────────────────────────────
 
-const root = figma.getNodeById(NODE_ID);
+const root = await figma.getNodeByIdAsync(NODE_ID);
 if (!root) { return JSON.stringify({ error: `Node not found: ${NODE_ID}` }); }
 
 const placeholders = [];
@@ -113,7 +114,7 @@ function scan(node, depth) {
 
 // ── Main ─────────────────────────────────────────────────────────────────────
 
-scan(root, 10);
+scan(root, typeof MAX_DEPTH !== 'undefined' && MAX_DEPTH > 0 ? MAX_DEPTH : 10);
 
 return JSON.stringify({
   mode: MODE,

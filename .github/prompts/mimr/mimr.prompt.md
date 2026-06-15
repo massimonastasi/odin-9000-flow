@@ -18,6 +18,15 @@ Color it yellow in console output if possible, or just print as plain text if no
 
 # MIMR — Metadata Inventory & Mapping Repository
 
+## Hermes integration (run at start, every invocation)
+
+1. Read `.github/prompts/manifest.json` and `.github/prompts/.hermes/memory-adapter.md`.
+2. `lesson.recall(["mimr"])` — honour returned lessons (esp. async reads, cornerRadius single-call, var caching).
+3. Open an episode if running standalone: `episode.append({phase:"open", skill:"mimr", summary})` (ODIN opens it when dispatched).
+4. **Cache:** before resolving variables, `cache.read("vars-<fileKey>-<version>")`; reuse if `cache.valid`. After a fresh resolution, `cache.write` the `name→id` / short-name map keyed by the Figma file `version`.
+5. **Librarian:** on a `token-registry.md` grep miss, dispatch the `librarian` subagent — never read `ts-core-fabric.json` directly.
+6. On finish: `episode.append({phase:"close", skill:"mimr", summary})` and `lesson.append(...)` for any corrected token path / perf insight (attach a `ruleProposal` against `data/mapping-rules.md` when durable).
+
 ## Purpose
 
 Audit, compare and bulk-update token bindings across Token Studio (TS) and native Figma variables (NV).
@@ -33,8 +42,9 @@ Audit, compare and bulk-update token bindings across Token Studio (TS) and nativ
 
 | File | Purpose | Edit? |
 |---|---|---|
-| `scripts/audit.figma.js` | **Phase 1 — MANDATORY** plugin-side tree walk. Use for ALL discovery. | No |
-| `scripts/resolve.figma.js` | Phase 1b — variable resolution (Plugin API), batched in chunks of 50 | No |
+| `scripts/audit-resolve-digest.figma.js` | **Phase 1+1b — DEFAULT for audit-only runs.** Single-pass: tree walk + variable resolution + anomaly detection. Returns a pre-digested `{ summary, matrix, sizes, issues, varMap }`. Target output <8KB inline (avoids file-write threshold); typical 2-4KB for small components, 6-7KB for large COMPONENT_SETs. Eliminates file writes, python parsing, read_file chunks, and the separate resolve call. Use this unless Phase 3 (bulk write) is planned. | No |
+| `scripts/audit.figma.js` | Phase 1 — raw tree walk only. Use when Phase 3 writes are planned (bulk-update needs full node lists). | No |
+| `scripts/resolve.figma.js` | Phase 1b — variable resolution only. Use paired with audit.figma.js for write-path runs. | No |
 | `scripts/bulk-update.figma.js` | Phase 3 — write engine (Plugin API), chunked in batches of 100 | No |
 | `data/token-registry.md` | All available tokens — human-readable reference | **User** |
 | `data/token-index.json` | All available tokens — compact machine index for agent lookups | **Auto-generated** |
@@ -64,52 +74,66 @@ Audit, compare and bulk-update token bindings across Token Studio (TS) and nativ
 > **⚠️ MANDATORY: Use `scripts/audit.figma.js` for ALL discovery.**
 > Never write ad-hoc Plugin API code to walk the tree or inspect nodes.
 > Never make multiple `getNodeByIdAsync` calls in a loop.
-> The script is optimized to return only bound nodes, uses variant sampling,
-> supports PRIOR_SCAN forwarding, and costs 4× fewer context tokens.
-
-The script handles all component sizes — from single frames to 500+ variant COMPONENT_SETs — with built-in sampling and batching. There is no size threshold; always use it.
+> **Script selection rule:**
+> - **Audit-only (no writes planned)** → use `audit-resolve-digest.figma.js`. Single call, inline result, no file writes, no python parsing needed.
+> - **Write-path (Phase 3 bulk-update planned)** → use `audit.figma.js` + `resolve.figma.js`. Full node lists are required by `bulk-update.figma.js`.
 
 ### Script load (session-cached)
 
-Read `scripts/audit.figma.js` only if not already loaded this session. Cache under key `audit-script`.
+- **Digest path:** Read `scripts/audit-resolve-digest.figma.js` only if not already loaded this session. Cache under key `digest-script`.
+- **Write path:** Read `scripts/audit.figma.js` under key `audit-script`; read `scripts/resolve.figma.js` under key `resolve-script`.
 
-### Variant sampling (built into the script)
+### Variant sampling
 
-Before running the script, determine whether variant sampling is needed:
+Before running either script, determine whether variant sampling is needed:
 
-1. Use `get_metadata` (Figma MCP) or a shallow REST call with `depth=1` to read the node type and direct child count
+1. Use `get_metadata` (Figma MCP) or a shallow REST call with `depth=1` to read the node type and direct child count.
 2. **If the root is a `COMPONENT_SET` with > 20 direct COMPONENT children:**
-   - Read `variantGroupProperties` from the COMPONENT_SET
+   - Read `variantGroupProperties` from the COMPONENT_SET.
    - **Sample variants** — select 1 variant per unique value of the **primary axis** (the axis with the most values). Keep all other axes at their default (first) value.
-   - Pass sampled IDs via `SAMPLE_IDS` injection slot
-3. **If ≤ 20 children** → set `SAMPLE_IDS = null` for full audit
+   - Pass sampled IDs via `SAMPLE_IDS` injection slot.
+3. **If ≤ 20 children** → set `SAMPLE_IDS = null` for full audit.
 
-### Injection slots
+### Injection slots (both scripts share the same four constants)
 
-Inject at the top of the script:
+Inject at the top of the script before execution:
 ```js
 const ROOT_ID    = "{node_id}";
 const MAX_DEPTH  = 4;
 const SAMPLE_IDS = [{sampled_ids}];  // null for full audit, or array of variant IDs
-const PRIOR_SCAN = null;             // or array of {id, name} from VALI scan (ODIN only)
+const PRIOR_SCAN = null;             // or array of {id, type} from VALI scan (ODIN only)
 ```
 
 **`PRIOR_SCAN` fast path (ODIN pipeline only):**
-When ODIN runs VALI before MIMR, the VALI scan already discovers every node that needs tokens. ODIN forwards this as a `PRIOR_SCAN` array of `{id, name}` objects. When provided, the script skips the full tree walk and fetches only the listed nodes (batched 50 at a time), reading just their bound variables (`TS`/`NV`). This eliminates a redundant tree traversal and reduces plugin execution time significantly. The return shape is identical; `fromPriorScan: true` is set so the agent knows the fast path was used.
+When ODIN runs VALI before MIMR, ODIN forwards the VALI scan as a `PRIOR_SCAN` array. Both scripts support this — they skip the tree walk and fetch only the listed node IDs. Leave `PRIOR_SCAN = null` for standalone MIMR runs.
 
-When invoking MIMR standalone (not via ODIN), leave `PRIOR_SCAN = null` — the script falls back to the standard tree walk automatically.
+### Script output — digest path
 
-### Script output
+`audit-resolve-digest.figma.js` returns `{ root, stats, summary, varMap, matrix, sizes, issues, fromPriorScan }` as an inline result (no file written, always <3KB).
+- `summary` — one-line stats string, use directly in Phase 2 header
+- `matrix` — one row per Colour+Theme combo: `{ variant, n, fill_ts, fill_nv, border_ts, border_nv, text_fill_ts, text_fill_nv }`
+- `sizes` — one row per Size: spacing, radius, stroke, typography tokens (TS + NV short names)
+- `issues` — pre-detected anomalies: `{ code, severity, scope, detail, affectedCount }`. Issue codes: `MISSING_NV_FILL`, `RAW_REF_BORDER`, `RAW_REF_FILL`, `TS_NV_CONFLICT`, `MISSING_TS`, `SHARED_RADIUS`, `TYPOGRAPHY_SHARED`
+- `varMap` — `{ varId: shortName }` **COLOR vars only** (structural FLOAT vars excluded — they are always clean and not needed for issue triage)
 
-The script returns `{ root, variantGroupProperties, nodes, varIds, stats, fromPriorScan }`.
-- Use `nodes` directly as Phase 1 results (already filtered to bound nodes only)
-- Use `varIds` as `allVarIds` for Phase 1b
-- `stats` gives totals for the Phase 2 summary line
-- `fromPriorScan` indicates whether the fast path was used
+**When using the digest path, Phase 1b is skipped entirely** — variable resolution is done inline by the script.
 
-### REST fallback (ONLY when Plugin API is unavailable)
+### Script output — write path
 
-Use REST **only** if `mcp_figma_use_figma` is unavailable (e.g. Figma MCP not connected). This is the exception, not the default.
+`audit.figma.js` returns `{ root, variantGroupProperties, nodes, varIds, stats, fromPriorScan }`.
+- Use `nodes` as Phase 1 results; use `varIds` as input to Phase 1b (`resolve.figma.js`).
+- Output is written to disk (20KB cap). Read in line-range chunks via `read_file`.
+
+### REST supplemental pass (optional)
+
+Use a REST `depth=1` + `plugin_data=shared` pass **in addition to** the Plugin API when you need TS coverage for ALL variants (not just sampled ones). Run REST and Plugin API **in the same LLM turn** — they are independent.
+
+```
+GET https://api.figma.com/v1/files/{file_key}/nodes?ids={node_id_param}&plugin_data=shared&depth=1
+X-Figma-Token: {pat}
+```
+
+`plugin_data=shared` is mandatory — without it `sharedPluginData` is silently absent.
 
 ```
 GET https://api.figma.com/v1/files/{file_key}/nodes?ids={node_id_param}&plugin_data=shared&depth={depth}
@@ -125,9 +149,12 @@ X-Figma-Token: {pat}
 
 ---
 
-## Phase 1b — Variable resolution (Plugin API)
+## Phase 1b — Variable resolution (write path only)
 
-**Script load (session-cached):** Read `scripts/resolve.figma.js` only if not already loaded this session. Store the content in session memory under key `resolve-script`. On subsequent calls within the same session, read from session memory instead of the file.
+> **Skip this phase when using `audit-resolve-digest.figma.js`** — variable resolution is done inline by that script.
+> Only run Phase 1b when `audit.figma.js` was used (write-path runs).
+
+**Script load (session-cached):** Read `scripts/resolve.figma.js` only if not already loaded this session. Store the content in session memory under key `resolve-script`.
 
 Inject at the top of the cached script content, then execute via `mcp_figma_use_figma`:
 
@@ -136,15 +163,27 @@ const VAR_IDS  = [ /* allVarIds from Phase 1 */ ];
 const NODE_IDS = [ /* ids where hasBoundVars === true */ ];
 ```
 
-Node resolution is batched internally (chunks of 50 via `Promise.all`) — no need to split the injected arrays. For very large node sets (500+), the batching prevents plugin timeout.
+Node resolution is batched internally (chunks of 50 via `Promise.all`). Use `fileKey = {file_key}`.
 
-Use `fileKey = {file_key}`.
-
-Merge returned `nodeBindings` into `results[]` by `node.id`, replacing `rawBoundVars` with `resolved` (human-readable names + collections).
+Merge returned `nodeBindings` into `results[]` by `node.id`, replacing `rawBoundVars` with `resolved`.
 
 ---
 
 ## Phase 2 — Merged report (STOP — confirm before any write)
+
+### Digest path (audit-resolve-digest.figma.js)
+
+The script returns the report pre-built. Render it directly — no additional parsing needed:
+
+1. Print `summary` as the header line.
+2. Render `sizes` as a table (Size · vPadding · hPadding · gap · radius · stroke · typography — TS and NV columns).
+3. Render `matrix` as a table (Colour / Theme · n · fill_ts · fill_nv · border_ts · border_nv · text_fill_ts · text_fill_nv).
+4. Render `issues` as a numbered list with severity emoji: ⚠️ warning / ❌ conflict / ℹ️ info.
+5. Optionally list `varMap` entries (varId → shortName) for reference.
+
+No tree traversal, no python, no file reads. The script has already done the analysis.
+
+### Write path (audit.figma.js + resolve.figma.js)
 
 ### Token registry lookup
 
@@ -263,19 +302,24 @@ Inject at the top of the cached script content:
 ```js
 const ROOT_ID = "{node_id}";    // colon format
 const RULES   = [ /* parsed rules */ ];
+// Optional fast-path cache (from cache.read("vars-<fileKey>-<version>")):
+// const CACHE_VAR_IDS   = { "fds/fds-on-surface-low": "VariableID:…", … };
+// const CACHE_STYLE_IDS = { "…/some-gradient": "S:…", … };
 ```
 
 Execute via `mcp_figma_use_figma` with `fileKey = {file_key}`.
 
+**Variable cache fast-path (perf):** if `cache.valid("vars-<fileKey>-<version>")`, inject its `name→id` maps as `CACHE_VAR_IDS` / `CACHE_STYLE_IDS`. The script then resolves ONLY the names it needs via `getVariableByIdAsync` and skips `getLocalVariablesAsync()` (500+ vars) and `getLocalPaintStylesAsync()` entirely. If the cache is stale or absent, omit the injection — the script falls back to a one-time full load and you should `cache.write` the resulting map.
+
 **Auto-NV resolution** happens inside the script for every `ts` write:
 1. The TS dot-path is converted to slash-name (`a.b.c` → `a/b/c`)
-2. `getLocalVariablesAsync()` is searched for an exact name match
+2. The variable is resolved by name — via `CACHE_VAR_IDS` + `getVariableByIdAsync` when injected, else `getLocalVariablesAsync()` (loaded once)
 3. If found → `setBoundVariable` is called for each mapped prop (`borderRadius` → all 4 corners, etc.) — Figma resolves the value natively
 4. If not found → `rawValue` is applied directly to the node style
 
 **Fill handling — solid vs gradient:**
 - **Solid fills:** excluded from auto-NV (`setBoundVariableForPaint` is needed); rawValue fallback applies the color.
-- **Gradient fills (`-shade` / `-g` suffix):** TS tokens ending with `-shade` or `-g` are gradient paint styles, NOT variables. The script auto-detects these and applies via `node.fillStyleId = style.id` using `getLocalPaintStylesAsync()`. No rawValue needed.
+- **Gradient fills (`-shade` / `-g` suffix):** TS tokens ending with `-shade` or `-g` are gradient paint styles, NOT variables. The script auto-detects these and applies via `node.fillStyleId = style.id`, resolving the style by name through `CACHE_STYLE_IDS` + `getStyleByIdAsync` when injected, else `getLocalPaintStylesAsync()`. No rawValue needed.
 
 **Composite border handling (`type: "border"`):**
 - Composite border tokens (e.g. `fds-stroke-const-int-active`) combine width + color. Figma has no composite border property — they must be decomposed into atomic width NV + color NV.

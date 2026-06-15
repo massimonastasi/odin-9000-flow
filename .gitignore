@@ -23,8 +23,6 @@ $RECYCLE.BIN/
 # ─── Credentials & secrets — NEVER commit ─────────────────────
 # ODIN session config (Figma PAT + last frame URL)
 .odin-session
-# Beads federation credential key
-.beads-credential-key
 # Generic secrets / tokens
 .env
 .env.*
@@ -51,6 +49,14 @@ src/
 # ─── Storybook config & build output ─────────────────────────
 .storybook/
 storybook-static/
+
+# ─── Hermes memory — volatile state + rebuildable caches ──────
+# Committed: episodes.jsonl, lessons.jsonl, memory-adapter.md
+# Ignored:   live run state + caches + synced KB/token clones
+.github/prompts/.hermes/state/*
+!.github/prompts/.hermes/state/.gitkeep
+.github/prompts/.hermes/cache/*
+!.github/prompts/.hermes/cache/.gitkeep
 
 # ─── Beads / Dolt files (added by bd init) ────────────────────
 .dolt/

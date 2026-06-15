@@ -67,7 +67,7 @@ const nodeCache = {};
   if ('children' in node) {
     for (const child of node.children) { buildCache(child); }
   }
-})(figma.getNodeById(NODE_ID) || figma.currentPage);
+})((await figma.getNodeByIdAsync(NODE_ID)) || figma.currentPage);
 
 function getNode(id) {
   if (nodeCache[id]) return nodeCache[id];

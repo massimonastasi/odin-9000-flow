@@ -17,6 +17,14 @@ Always display this at the start of the workflow:
 
 # MODI — Model-to-Object Design Instantiator
 
+## Hermes integration (run at start, every invocation)
+
+1. Read `.github/prompts/manifest.json` and `.github/prompts/.hermes/memory-adapter.md`.
+2. `lesson.recall(["modi"])` — honour returned lessons.
+3. Open an episode if standalone: `episode.append({phase:"open", skill:"modi", summary})` (ODIN opens it when dispatched).
+4. **Cache:** `data/component-map.md` is the Tier-A resolution cache — read first, append every new resolution.
+5. On finish: `episode.append({phase:"close", skill:"modi", summary})` and `lesson.append(...)` for new resolutions worth caching (attach a `ruleProposal` against `data/component-map.md` when durable).
+
 > **"Shape becomes component."**
 > Transforms wireframe placeholders into real library instances, and swaps existing instances to newer versions — with full variant axis mapping.
 
@@ -458,4 +466,4 @@ ODIN decision logic:
 | **Script load-once** | Read scripts once per session; cache content; prepend injection constants on reuse |
 | **Never use `findOne` per-op** | Use `nodeCache` map built at startup |
 | **Confirm before executing** | Always show the swap plan and ask for confirmation before Phase 3 |
-| **Beads tracking** | Open a beads issue before Phase 3, close after execution report |
+| **Hermes run tracking** | `episode.append({phase:"open"})` before Phase 3; `episode.append({phase:"close"})` after the execution report |

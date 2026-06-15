@@ -67,17 +67,20 @@ function scan(node, depth) {
 
 // ── Main ─────────────────────────────────────────────────────────────────────
 
-const root = figma.getNodeById(NODE_ID);
+const root = await figma.getNodeByIdAsync(NODE_ID);
 if (!root) { return JSON.stringify({ error: `Node not found: ${NODE_ID}` }); }
 
 // COMPONENT_SET fingerprint mode: scan samples + fingerprint all variants
 if (root.type === 'COMPONENT_SET' && 'children' in root && root.children.length > 20) {
   const variants = Array.from(root.children);
-  const fpMap = {};  // fingerprint → [variantIds]
+  const fpMap   = {};  // fingerprint → { count, ids }
+  const fpFirst = {};  // fingerprint → first variant node (sample source)
+  // Compute each variant's fingerprint EXACTLY ONCE.
   for (const v of variants) {
     const fp = fingerprint(v, DEPTH);
-    if (!fpMap[fp]) fpMap[fp] = [];
-    fpMap[fp].push(v.id);
+    if (!fpMap[fp]) { fpMap[fp] = { count: 0, ids: [] }; fpFirst[fp] = v; }
+    fpMap[fp].count++;
+    fpMap[fp].ids.push(v.id);
   }
 
   // Determine how many samples to scan (1 per unique fingerprint, or SAMPLE if set)
@@ -88,24 +91,15 @@ if (root.type === 'COMPONENT_SET' && 'children' in root && root.children.length 
     // Explicit sample count: take first N variants
     for (let i = 0; i < sampleCount; i++) sampled.push(scan(variants[i], DEPTH));
   } else {
-    // Auto: scan first variant of each unique fingerprint
-    const seen = new Set();
-    for (const v of variants) {
-      const fp = fingerprint(v, DEPTH);
-      if (!seen.has(fp)) {
-        seen.add(fp);
-        sampled.push(scan(v, DEPTH));
-      }
-    }
+    // Auto: scan the first variant captured for each unique fingerprint (no re-fingerprinting)
+    for (const fp of Object.keys(fpMap)) sampled.push(scan(fpFirst[fp], DEPTH));
   }
 
   return JSON.stringify({
     id: root.id, name: root.name, type: root.type,
     totalVariants: variants.length,
     uniqueFingerprints: Object.keys(fpMap).length,
-    fingerprintGroups: Object.fromEntries(
-      Object.entries(fpMap).map(([fp, ids]) => [fp, { count: ids.length, ids }])
-    ),
+    fingerprintGroups: fpMap,
     sampled
   }, null, 2);
 }

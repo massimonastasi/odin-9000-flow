@@ -19,6 +19,14 @@ Always display this at the start of the workflow:
 
 # SAGA — Storybook Automation & Generative Asset
 
+## Hermes integration (run at start, every invocation)
+
+1. Read `.github/prompts/manifest.json` and `.github/prompts/.hermes/memory-adapter.md`.
+2. `lesson.recall(["saga"])` — honour returned lessons.
+3. Open an episode if standalone: `episode.append({phase:"open", skill:"saga", summary})` (ODIN opens it when dispatched).
+4. **Cache & handoff:** `cache.read("dc-<nodeId>-<version>")` before re-fetching `get_design_context`; reuse MIMR's NV map (when ODIN forwards it) to derive `--fds-*` vars instead of re-resolving variables.
+5. On finish: `episode.append({phase:"close", skill:"saga", summary})` and `lesson.append(...)` for any codegen pitfall.
+
 ## Purpose
 
 Generate semantic HTML + CSS from a Figma Auto Layout node. CSS custom properties (`--fds-*`) are derived from native variable bindings — no hardcoded values unless no binding exists.
