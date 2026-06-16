@@ -8,9 +8,9 @@ A GitHub Copilot agent skill suite for automating the Figma → Design System �
 
 ## Documentation
 
-| Guide | For |
-|---|---|
-| [docs/use/USAGE.md](docs/use/USAGE.md) | **Operating ODIN Flow** — prerequisites, quickstart, the skills, worked examples, controls, troubleshooting. |
+| Guide                                            | For                                                                                                                                                       |
+| ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [docs/use/USAGE.md](docs/use/USAGE.md)           | **Operating ODIN Flow** — prerequisites, quickstart, the skills, worked examples, controls, troubleshooting.                                              |
 | [docs/tech/INTERNALS.md](docs/tech/INTERNALS.md) | **Internals** — architecture, the manifest contract, ODIN's loop, the Hermes harness, model routing, the scripts API, data formats, and how to extend it. |
 
 The sections below are a quick tour; the guides above go deeper.
@@ -101,7 +101,7 @@ Layout formatting engine. Converts Figma GROUPs and unwired FRAMEs into semantic
 ### SAGA — Storybook Automation & Generative Asset
 
 ```text
-███████╗ █████╗  ██████╗  █████╗ 
+███████╗ █████╗  ██████╗  █████╗
 ██╔════╝██╔══██╗██╔════╝ ██╔══██╗
 ███████╗███████║██║  ███╗███████║
 ╚════██║██╔══██║██║   ██║██╔══██║
@@ -134,10 +134,10 @@ A read-only subagent that owns the large external Token Studio JSON and Knowledg
 
 Librarian keeps a **local mirror** of the external repos under `.github/prompts/.hermes/cache/`, refreshed by `sync-kb.sh` with a cheap staleness check (`git ls-remote` SHA probe — only re-pulls when the remote branch SHA differs).
 
-| Source | Repo | Branch | Path |
-|---|---|---|---|
-| Token JSON | `<org>/core-design-system-variables` | `main` | `data` |
-| KB docs | `<org>/kb-docs` | `feat/fds-token-docs-refactor` | `knowledge/shared/global/design-standards/tokens` |
+| Source     | Repo                                 | Branch                         | Path                                              |
+| ---------- | ------------------------------------ | ------------------------------ | ------------------------------------------------- |
+| Token JSON | `<org>/core-design-system-variables` | `main`                         | `data`                                            |
+| KB docs    | `<org>/kb-docs`                      | `feat/fds-token-docs-refactor` | `knowledge/shared/global/design-standards/tokens` |
 
 **Invoke:** dispatched automatically (not user-invocable)
 **Model:** Claude Haiku 4.5
@@ -158,11 +158,11 @@ Librarian keeps a **local mirror** of the external repos under `.github/prompts/
 
 A persona overlay, not a workflow — it modifies how the agent narrates, never what it does. Kevin is **always on by default**: every ODIN and skill response is narrated in-persona. Three verbosity modes:
 
-| Mode | Style |
-|---|---|
-| **Lite** | Short sentences. Casual, like lunch. One analogy max. Why big talk when small talk do trick. |
-| **Normal** | Drop articles, fragments OK, short synonyms. Tables encouraged. One-liners when possible. |
-| **Ultra** | Abbreviate everything. Arrows for flow. One word when one word enough. |
+| Mode       | Style                                                                                        |
+| ---------- | -------------------------------------------------------------------------------------------- |
+| **Lite**   | Short sentences. Casual, like lunch. One analogy max. Why big talk when small talk do trick. |
+| **Normal** | Drop articles, fragments OK, short synonyms. Tables encouraged. One-liners when possible.    |
+| **Ultra**  | Abbreviate everything. Arrows for flow. One word when one word enough.                       |
 
 **Controls:**
 
@@ -180,14 +180,14 @@ On the first skill invocation per session, Kevin asks once which mode to use (de
 
 This project uses the **Hermes harness** for persistent memory instead of an external issue tracker. Everything lives locally in the repo under `.github/prompts/.hermes/`, reached through a single seam — `memory-adapter.md` — so the rest of the system never hard-codes where memory lives.
 
-| File / dir | Role |
-|---|---|
-| `memory-adapter.md` | The only place that knows where memory lives (the seam) |
-| `episodes.jsonl` | The `open → close` audit trail — every Figma write gets a paired episode |
-| `lessons.jsonl` | Durable agent lessons — read at startup, appended during Observe |
-| `state/<runId>.json` | Live, volatile run state (gitignored) |
-| `cache/` | Librarian's local mirror of external token/KB repos (gitignored) |
-| `sync-kb.sh` | Refreshes the Librarian mirror with a staleness check |
+| File / dir           | Role                                                                     |
+| -------------------- | ------------------------------------------------------------------------ |
+| `memory-adapter.md`  | The only place that knows where memory lives (the seam)                  |
+| `episodes.jsonl`     | The `open → close` audit trail — every Figma write gets a paired episode |
+| `lessons.jsonl`      | Durable agent lessons — read at startup, appended during Observe         |
+| `state/<runId>.json` | Live, volatile run state (gitignored)                                    |
+| `cache/`             | Librarian's local mirror of external token/KB repos (gitignored)         |
+| `sync-kb.sh`         | Refreshes the Librarian mirror with a staleness check                    |
 
 **Run lifecycle (per skill invocation):**
 
@@ -221,10 +221,10 @@ files that actually drive behaviour:
 
 Rule files are **never** auto-edited without explicit approval. An empty sweep finishes silently.
 
-| Control | Effect |
-|---|---|
+| Control         | Effect                                                                              |
+| --------------- | ----------------------------------------------------------------------------------- |
 | `/odin lessons` | Run the reconciliation sweep standalone (opens its own `open → close` episode pair) |
-| `/odin refine` | Alias of `/odin lessons` |
+| `/odin refine`  | Alias of `/odin lessons`                                                            |
 
 Read `.github/prompts/manifest.json` first on every invocation — it is the tiny skill→files map and the local analog of a Hermes skill-bundle.
 
@@ -237,14 +237,14 @@ ODIN resolves a model for each subagent dispatch. Two layers compose:
 1. **Per-agent default** — each `.github/agents/*.agent.md` declares a durable `model:` in frontmatter (mirrored in `manifest.json`).
 2. **Per-task escalation** — ODIN may pass a higher (or lower) model to `runSubagent` for a specific step. This never rewrites the default.
 
-| Skill | Default model | Escalates to (per task) |
-|---|---|---|
-| ODIN-9000 (orchestrator) | Claude Opus 4.8 | — |
-| Librarian | Claude Haiku 4.5 | — |
-| MODI | Claude Haiku 4.5 | Sonnet 4.6 (ambiguous variant mapping / non-trivial resolution) |
-| VALI | Claude Sonnet 4.6 | — |
-| MIMR | Claude Sonnet 4.6 | Opus 4.8 (large/ambiguous conflict audit) |
-| SAGA | Claude Sonnet 4.6 | Opus 4.8 (complex multi-state component) |
+| Skill                    | Default model     | Escalates to (per task)                                         |
+| ------------------------ | ----------------- | --------------------------------------------------------------- |
+| ODIN-9000 (orchestrator) | Claude Opus 4.8   | —                                                               |
+| Librarian                | Claude Haiku 4.5  | —                                                               |
+| MODI                     | Claude Haiku 4.5  | Sonnet 4.6 (ambiguous variant mapping / non-trivial resolution) |
+| VALI                     | Claude Sonnet 4.6 | —                                                               |
+| MIMR                     | Claude Sonnet 4.6 | Opus 4.8 (large/ambiguous conflict audit)                       |
+| SAGA                     | Claude Sonnet 4.6 | Opus 4.8 (complex multi-state component)                        |
 
 **Escalation safety gate (mandatory):** before dispatching any subagent on a model **higher** than its frontmatter default, ODIN MUST ask the user via a confirmation prompt and receive explicit approval — no silent escalation. If declined, ODIN dispatches on the default instead (the step is never blocked). Downgrades (e.g. Sonnet → Haiku for a trivial step) are exempt and need no confirmation. The chosen model and approval are recorded as `episode.escalation = { from, to, approved }`.
 
@@ -256,13 +256,13 @@ Models are passed to `runSubagent` as `"<Model Name> (copilot)"`.
 
 ### Prerequisites
 
-| Tool | Purpose | Required |
-|------|---------|----------|
-| VS Code 1.96+ | Editor | ✅ |
-| GitHub Copilot (Individual / Business / Enterprise) | Agent runtime | ✅ |
-| Figma MCP extension | Figma API bridge | ✅ |
-| Node.js + npm | Tooling | ✅ |
-| Python 3.10+ | Librarian token-lookup script | ✅ |
+| Tool                                                | Purpose                               | Required |
+| --------------------------------------------------- | ------------------------------------- | -------- |
+| VS Code 1.96+                                       | Editor                                | ✅       |
+| GitHub Copilot (Individual / Business / Enterprise) | Agent runtime                         | ✅       |
+| Figma MCP extension                                 | Figma API bridge                      | ✅       |
+| Node.js + npm                                       | Tooling                               | ✅       |
+| Python 3.10+                                        | Librarian token-lookup script         | ✅       |
 | `git` with access to the design-system source repos | Librarian mirror sync (private repos) | Optional |
 
 > The Hermes harness needs **no installation** — it is file-based and lives in `.github/prompts/.hermes/` inside this repo.
@@ -283,6 +283,7 @@ Models are passed to `runSubagent` as `"<Model Name> (copilot)"`.
 5. Authenticate with your Figma account
 
 Alternatively via CLI:
+
 ```bash
 code --install-extension figma.figma-vscode-extension
 ```
@@ -353,11 +354,11 @@ flowchart TD
 
 Each sub-skill runs as an isolated subagent. ODIN forwards handoff contracts so downstream skills avoid redundant Figma reads:
 
-| Handoff | Contract |
-|---|---|
-| VALI → MIMR | node list `[{id,type}]` forwarded as `PRIOR_SCAN` (skips MIMR tree walk) |
+| Handoff     | Contract                                                                           |
+| ----------- | ---------------------------------------------------------------------------------- |
+| VALI → MIMR | node list `[{id,type}]` forwarded as `PRIOR_SCAN` (skips MIMR tree walk)           |
 | MIMR → SAGA | NV map `{prop: shortName, value}` reused for `--fds-*` CSS vars (no re-resolution) |
-| MODI → VALI | swap report; converted instances ready for the layout pass |
+| MODI → VALI | swap report; converted instances ready for the layout pass                         |
 
 ### Technical pipeline (SAGA detail)
 
@@ -459,6 +460,7 @@ src/components/fds-notification-banner/
 ```
 
 The story uses `@storybook/web-components` + `lit` html renderer and includes:
+
 - `argTypes` auto-populated from Figma variant axes (`@Prop() type`, `@Prop() context`…)
 - Named slot args exposed as Storybook controls
 - `tags: ['autodocs']` for the auto-generated docs page
@@ -468,12 +470,12 @@ Storybook picks up the story automatically if the project's `stories` glob cover
 
 ### What the engineer does NOT need to derive manually
 
-| Normally manual | With SAGA output |
-|---|---|
-| Translate Figma padding/gap → CSS | Already `var(--fds-container-card)`, `var(--fds-gap-v-group)` |
-| Determine variant prop names | `@Prop() type`, `@Prop() context` typed as unions |
-| Write Storybook `argTypes` | Already in the story, controls auto-populated |
-| Decide slot names | Declared in the SAGA session, wired in `render()` |
+| Normally manual                           | With SAGA output                                               |
+| ----------------------------------------- | -------------------------------------------------------------- |
+| Translate Figma padding/gap → CSS         | Already `var(--fds-container-card)`, `var(--fds-gap-v-group)`  |
+| Determine variant prop names              | `@Prop() type`, `@Prop() context` typed as unions              |
+| Write Storybook `argTypes`                | Already in the story, controls auto-populated                  |
+| Decide slot names                         | Declared in the SAGA session, wired in `render()`              |
 | Inspect Figma for border-radius/elevation | Already `var(--fds-container-reg)`, bound elevation annotation |
 
 ---

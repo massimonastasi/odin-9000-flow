@@ -1,6 +1,6 @@
 # ODIN Flow — Usage Guide
 
-> **Audience:** engineers who want to *operate* ODIN Flow.
+> **Audience:** engineers who want to _operate_ ODIN Flow.
 > For how it works internally, see [../tech/INTERNALS.md](../tech/INTERNALS.md).
 
 ODIN Flow is a GitHub Copilot agent skill suite that automates the
@@ -139,15 +139,15 @@ and `nodeId` for you (it converts the `-` in the `node-id` param to `:`).
 
 ## 4. The skills
 
-| Skill | Slash command | Use it when… | Default model |
-|---|---|---|---|
-| **ODIN-9000** | `/odin-9000` | Always — the orchestrator that runs everything else | Claude Opus 4.8 |
-| **MODI** | `/modi` | A wireframe has placeholder shapes, or instances need migrating to a new component version | Claude Haiku 4.5 |
-| **VALI** | `/vali` | Layers are unstructured GROUPs / absolute frames that need semantic Auto Layout before tokenizing | Claude Sonnet 4.6 |
-| **MIMR** | `/mimr` | Tokens changed, bindings are missing, or you need a bulk token migration / audit | Claude Sonnet 4.6 |
-| **SAGA** | `/saga` | A component is ready (post-VALI + post-MIMR) and you want HTML/CSS, a StencilJS component, or a Storybook story | Claude Sonnet 4.6 |
-| **Librarian** | *(automatic)* | A token value or KB fact is missing — ODIN/MIMR dispatch it for you; not user-invocable | Claude Haiku 4.5 |
-| **Kevin** | `/kevin …` | A persona/verbosity overlay on narration — always on by default | *(no model)* |
+| Skill         | Slash command | Use it when…                                                                                                    | Default model     |
+| ------------- | ------------- | --------------------------------------------------------------------------------------------------------------- | ----------------- |
+| **ODIN-9000** | `/odin-9000`  | Always — the orchestrator that runs everything else                                                             | Claude Opus 4.8   |
+| **MODI**      | `/modi`       | A wireframe has placeholder shapes, or instances need migrating to a new component version                      | Claude Haiku 4.5  |
+| **VALI**      | `/vali`       | Layers are unstructured GROUPs / absolute frames that need semantic Auto Layout before tokenizing               | Claude Sonnet 4.6 |
+| **MIMR**      | `/mimr`       | Tokens changed, bindings are missing, or you need a bulk token migration / audit                                | Claude Sonnet 4.6 |
+| **SAGA**      | `/saga`       | A component is ready (post-VALI + post-MIMR) and you want HTML/CSS, a StencilJS component, or a Storybook story | Claude Sonnet 4.6 |
+| **Librarian** | _(automatic)_ | A token value or KB fact is missing — ODIN/MIMR dispatch it for you; not user-invocable                         | Claude Haiku 4.5  |
+| **Kevin**     | `/kevin …`    | A persona/verbosity overlay on narration — always on by default                                                 | _(no model)_      |
 
 **MODI — Model-to-Object Design Instantiator.** Resolves placeholder rectangles/ellipses to real
 FDS library components and swaps existing instances to newer versions with full variant-axis
@@ -179,15 +179,15 @@ next worker doesn't re-read Figma. This is the path that records run state and l
 
 ODIN's decision logic, in plain terms:
 
-| Your node / intent | Skills ODIN runs |
-|---|---|
-| Wireframe with placeholder shapes | MODI → VALI *(if layout needs work)* |
-| Existing instances to migrate | MODI → VALI *(if layout changed)* |
-| Layout **and** tokens needed | VALI → MIMR |
-| Tokens only | MIMR |
-| Layout only | VALI |
-| Instance swap only | MODI |
-| Full design → code | MODI → VALI → MIMR → SAGA |
+| Your node / intent                | Skills ODIN runs                     |
+| --------------------------------- | ------------------------------------ |
+| Wireframe with placeholder shapes | MODI → VALI _(if layout needs work)_ |
+| Existing instances to migrate     | MODI → VALI _(if layout changed)_    |
+| Layout **and** tokens needed      | VALI → MIMR                          |
+| Tokens only                       | MIMR                                 |
+| Layout only                       | VALI                                 |
+| Instance swap only                | MODI                                 |
+| Full design → code                | MODI → VALI → MIMR → SAGA            |
 
 ### Direct (single skill)
 
@@ -264,17 +264,17 @@ escalation, slot names) and a final lesson-reconciliation prompt if any rule pro
 
 ### ODIN controls
 
-| Command | Effect |
-|---|---|
+| Command         | Effect                                                                                                                                                       |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `/odin lessons` | Run the lesson-reconciliation sweep standalone — promote pending rule proposals into the data files behind a gated prompt. Opens its own `open → close` run. |
-| `/odin refine` | Alias of `/odin lessons`. |
+| `/odin refine`  | Alias of `/odin lessons`.                                                                                                                                    |
 
 These do no Figma work and skip the PAT/Figma pre-flight. See the self-improvement loop in
 [../tech/INTERNALS.md](../tech/INTERNALS.md#8-self-improvement-loop-lesson-reconciliation).
 
 ### Kevin controls (narration persona)
 
-Kevin changes *how* responses are narrated, never *what* the agent does. It is **on by default**.
+Kevin changes _how_ responses are narrated, never _what_ the agent does. It is **on by default**.
 
 ```text
 /kevin off                 # disable the persona for the rest of the session
@@ -312,14 +312,14 @@ mode; Hermes housekeeping and git operations are always narrated in Ultra.
 
 ## 9. Troubleshooting
 
-| Symptom | Likely cause | Fix |
-|---|---|---|
-| ODIN says Figma MCP is unavailable | Extension not signed in, or no Copilot Chat session yet | Run **"Figma: Sign In"**, reopen Chat; ODIN re-probes with `get_metadata` |
-| MIMR fails with `401`/`403` | Expired or wrong PAT | Let ODIN delete `.odin-session` and paste a fresh `figd_` token |
-| Librarian can't find tokens | No access to the private design-system repos, or mirror not primed | `gh auth login` (or add SSH key), then `bash .github/prompts/.hermes/sync-kb.sh`; otherwise it falls back to `token-registry.md` |
-| `sync-kb.sh` says "specify directories rather than patterns" | Passed a glob to sparse-checkout | Use a directory (`data`), not `data/*` |
-| Large frame: audit truncated | Response exceeded the size budget | ODIN/MIMR re-fetch with `get_metadata` then narrow to specific nodes; or sample variants |
-| Token JSON not found by code search | The large `ts-*.json` files aren't indexed remotely | Use the local mirror via Librarian — they live under `cache/tokens/data/` |
+| Symptom                                                      | Likely cause                                                       | Fix                                                                                                                              |
+| ------------------------------------------------------------ | ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------- |
+| ODIN says Figma MCP is unavailable                           | Extension not signed in, or no Copilot Chat session yet            | Run **"Figma: Sign In"**, reopen Chat; ODIN re-probes with `get_metadata`                                                        |
+| MIMR fails with `401`/`403`                                  | Expired or wrong PAT                                               | Let ODIN delete `.odin-session` and paste a fresh `figd_` token                                                                  |
+| Librarian can't find tokens                                  | No access to the private design-system repos, or mirror not primed | `gh auth login` (or add SSH key), then `bash .github/prompts/.hermes/sync-kb.sh`; otherwise it falls back to `token-registry.md` |
+| `sync-kb.sh` says "specify directories rather than patterns" | Passed a glob to sparse-checkout                                   | Use a directory (`data`), not `data/*`                                                                                           |
+| Large frame: audit truncated                                 | Response exceeded the size budget                                  | ODIN/MIMR re-fetch with `get_metadata` then narrow to specific nodes; or sample variants                                         |
+| Token JSON not found by code search                          | The large `ts-*.json` files aren't indexed remotely                | Use the local mirror via Librarian — they live under `cache/tokens/data/`                                                        |
 
 ---
 
