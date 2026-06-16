@@ -235,13 +235,13 @@ sequenceDiagram
     O->>O: 0c load .odin-session (PAT + last frame) or ask
 
     O->>M: 1 OPEN run — state.write + episode.append open
-    O->>M: 2 PLAN — lesson.recall odin; write state.plan
+    O->>M: 2 PLAN — lesson.recall odin, write state.plan
     loop per planned step
         O->>O: 3 CHOOSE next step + resolve model
-        O->>W: EXECUTE — runSubagent(model:"<Name> (copilot)")
+        O->>W: EXECUTE — runSubagent on resolved model
         W->>F: Plugin API / REST
         W-->>O: digest
-        O->>M: 4 OBSERVE — append observations/openIssues; lesson.append
+        O->>M: 4 OBSERVE — append observations + openIssues, lesson.append
         O->>O: 5 REFINE — update plan if findings invalidate it
     end
     O->>M: 6 CLOSE — episode.append close + lesson.sweep reconcile
