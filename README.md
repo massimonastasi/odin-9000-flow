@@ -325,8 +325,8 @@ The script does a sparse checkout of just the token/KB directories into `.github
 ### 4. Clone and run
 
 ```bash
-git clone git@github.com:katbinaris/odinflow.git
-cd odinflow
+git clone git@github.com:karlmalotabs/odin-9000-flow.git
+cd odin-9000-flow
 
 # (optional) prime the Librarian mirror
 bash .github/prompts/.hermes/sync-kb.sh
@@ -384,7 +384,7 @@ flowchart TD
 ## Project structure
 
 ```
-odinflow/
+odin-9000-flow/
 ├── .github/
 │   ├── copilot-instructions.md        # Global Copilot + Hermes rules
 │   └── prompts/

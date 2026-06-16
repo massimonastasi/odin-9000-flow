@@ -99,8 +99,8 @@ This sparse-checks-out only the token/KB directories into `.github/prompts/.herm
 ### 2.4 Clone and open
 
 ```bash
-git clone git@github.com:katbinaris/odinflow.git
-cd odinflow
+git clone git@github.com:karlmalotabs/odin-9000-flow.git
+cd odin-9000-flow
 code .
 ```
 
