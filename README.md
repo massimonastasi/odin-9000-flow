@@ -6,6 +6,17 @@ A GitHub Copilot agent skill suite for automating the Figma → Design System �
 
 ---
 
+## Documentation
+
+| Guide | For |
+|---|---|
+| [docs/use/USAGE.md](docs/use/USAGE.md) | **Operating ODIN Flow** — prerequisites, quickstart, the skills, worked examples, controls, troubleshooting. |
+| [docs/tech/INTERNALS.md](docs/tech/INTERNALS.md) | **Internals** — architecture, the manifest contract, ODIN's loop, the Hermes harness, model routing, the scripts API, data formats, and how to extend it. |
+
+The sections below are a quick tour; the guides above go deeper.
+
+---
+
 ## Skills
 
 ### ODIN-9000 — Orchestrator for Design Intent & Navigation
@@ -125,8 +136,8 @@ Librarian keeps a **local mirror** of the external repos under `.github/prompts/
 
 | Source | Repo | Branch | Path |
 |---|---|---|---|
-| Token JSON | `BetssonGroup/core-design-system-variables` | `main` | `data` |
-| KB docs | `BetssonGroup/betsson-kb-docs` | `feat/fds-token-docs-refactor` | `knowledge/shared/global/design-standards/tokens` |
+| Token JSON | `<org>/core-design-system-variables` | `main` | `data` |
+| KB docs | `<org>/kb-docs` | `feat/fds-token-docs-refactor` | `knowledge/shared/global/design-standards/tokens` |
 
 **Invoke:** dispatched automatically (not user-invocable)
 **Model:** Claude Haiku 4.5
@@ -252,7 +263,7 @@ Models are passed to `runSubagent` as `"<Model Name> (copilot)"`.
 | Figma MCP extension | Figma API bridge | ✅ |
 | Node.js + npm | Tooling | ✅ |
 | Python 3.10+ | Librarian token-lookup script | ✅ |
-| `git` with access to the BetssonGroup repos | Librarian mirror sync (private repos) | Optional |
+| `git` with access to the design-system source repos | Librarian mirror sync (private repos) | Optional |
 
 > The Hermes harness needs **no installation** — it is file-based and lives in `.github/prompts/.hermes/` inside this repo.
 
@@ -307,7 +318,7 @@ bash .github/prompts/.hermes/sync-kb.sh --force  # re-pull regardless of SHA
 
 The script does a sparse checkout of just the token/KB directories into `.github/prompts/.hermes/cache/` (gitignored) and records the synced SHAs in `cache/kb-manifest.json`. Re-running is idempotent — it prints `✓ up to date` when nothing changed.
 
-> The BetssonGroup source repos are **private** — the sync needs authenticated git access (SSH key or `gh auth login`). Without access, Librarian falls back to the local `token-registry.md`.
+> The design-system source repos are **private** — the sync needs authenticated git access (SSH key or `gh auth login`). Without access, Librarian falls back to the local `token-registry.md`.
 
 ---
 
