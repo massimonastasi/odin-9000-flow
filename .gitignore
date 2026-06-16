@@ -57,7 +57,3 @@ storybook-static/
 !.github/prompts/.hermes/state/.gitkeep
 .github/prompts/.hermes/cache/*
 !.github/prompts/.hermes/cache/.gitkeep
-
-# ─── Beads / Dolt files (added by bd init) ────────────────────
-.dolt/
-*.db

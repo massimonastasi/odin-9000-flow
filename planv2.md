@@ -155,6 +155,5 @@ PRIOR_SCAN handoff). Waste is concentrated here:
 ## Notes / guardrails
 - All current working-tree edits remain **staged/uncommitted** per prior instruction — do not
   commit/push without asking.
-- `.beads/` dir still exists (leftover) — out of scope; user wants it ignored on commit.
 - Every Figma write needs an `open → close` episode pair (Hermes rule). Prompt edits here are
   doc-only (no Figma writes), so no episode pair required for the editing work itself.
