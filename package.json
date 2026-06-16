@@ -1,5 +1,5 @@
 {
-  "name": "odinflow",
+  "name": "odin-9000-flow",
   "version": "1.0.0",
   "description": "Figma → Design System → Storybook pipeline — Odin Flow",
   "private": true,
@@ -9,15 +9,15 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/katbinaris/odinflow.git"
+    "url": "git+https://github.com/karlmalotabs/odin-9000-flow.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/katbinaris/odinflow/issues"
+    "url": "https://github.com/karlmalotabs/odin-9000-flow/issues"
   },
-  "homepage": "https://github.com/katbinaris/odinflow#readme",
+  "homepage": "https://github.com/karlmalotabs/odin-9000-flow#readme",
   "devDependencies": {
     "@stencil/core": "^4.43.4",
     "@storybook/addon-docs": "^10.3.5",
