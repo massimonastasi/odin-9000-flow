@@ -234,8 +234,8 @@ sequenceDiagram
     O->>F: 0b get_metadata probe (MCP live?)
     O->>O: 0c load .odin-session (PAT + last frame) or ask
 
-    O->>M: 1 OPEN run — state.write + episode.append(open)
-    O->>M: 2 PLAN — lesson.recall(["odin"]); write state.plan[]
+    O->>M: 1 OPEN run — state.write + episode.append open
+    O->>M: 2 PLAN — lesson.recall odin; write state.plan
     loop per planned step
         O->>O: 3 CHOOSE next step + resolve model
         O->>W: EXECUTE — runSubagent(model:"<Name> (copilot)")
@@ -244,7 +244,7 @@ sequenceDiagram
         O->>M: 4 OBSERVE — append observations/openIssues; lesson.append
         O->>O: 5 REFINE — update plan if findings invalidate it
     end
-    O->>M: 6 CLOSE — episode.append(close) + lesson.sweep (reconcile)
+    O->>M: 6 CLOSE — episode.append close + lesson.sweep reconcile
     O-->>U: summary + open issues
 ```
 
@@ -484,11 +484,11 @@ staleness check.
 
 ```mermaid
 flowchart LR
-    A[sync-kb.sh] --> B["git ls-remote &lt;repo&gt; &lt;branch&gt;<br/>(one round-trip → latest SHA)"]
-    B --> C{SHA == cached<br/>kb-manifest.json?}
-    C -- yes, no --force --> D[✓ up to date · skip pull]
-    C -- no / --force --> E[sparse clone or fetch+reset<br/>only configured dirs]
-    E --> F[update kb-manifest.json<br/>sha + syncedAt]
+    A[sync-kb.sh] --> B["git ls-remote repo branch<br/>(one round-trip → latest SHA)"]
+    B --> C{"SHA matches cached<br/>kb-manifest.json?"}
+    C -->|"yes / no --force"| D["✓ up to date · skip pull"]
+    C -->|"no / --force"| E["sparse clone or fetch+reset<br/>only configured dirs"]
+    E --> F["update kb-manifest.json<br/>sha + syncedAt"]
 ```
 
 ### Configuration
