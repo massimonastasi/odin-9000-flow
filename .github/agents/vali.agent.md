@@ -1,6 +1,7 @@
 ---
 description: "Use when converting Figma GROUPs / unwired FRAMEs into semantic Auto Layout frames and naming them {direction / role}. VALI worker subagent dispatched by ODIN. Isolated context, returns the converted node list for MIMR handoff."
 name: "VALI"
+model: "Claude Sonnet 4.6"
 tools: [read, search, figma/*]
 user-invocable: false
 argument-hint: "Figma frame URL or node id"

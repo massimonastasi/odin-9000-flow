@@ -1,6 +1,7 @@
 ---
 description: "Use when generating semantic HTML + CSS, StencilJS components, or Storybook stories from a Figma Auto Layout node. SAGA worker subagent dispatched by ODIN. Isolated context, writes component files and returns the emitted file list."
 name: "SAGA"
+model: "Claude Sonnet 4.6"
 tools: [read, edit, search, figma/*]
 user-invocable: false
 argument-hint: "Figma frame URL or component name"

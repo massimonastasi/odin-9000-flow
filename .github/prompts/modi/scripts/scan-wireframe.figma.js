@@ -37,6 +37,42 @@ function captureSizing(node) {
   };
 }
 
+// ── TEXT name hint ───────────────────────────────────────────────────────────
+// When a placeholder's own name is generic, the designer often labels it with a
+// nearby TEXT node. Prefer a TEXT whose bounds overlap the placeholder; else the
+// nearest same-parent TEXT sibling by centre distance.
+function rect(n) {
+  const b = n.absoluteBoundingBox;
+  return b || null;
+}
+function overlaps(a, b) {
+  if (!a || !b) return false;
+  return a.x < b.x + b.width && a.x + a.width > b.x &&
+         a.y < b.y + b.height && a.y + a.height > b.y;
+}
+function centreDist(a, b) {
+  if (!a || !b) return Infinity;
+  const ax = a.x + a.width / 2, ay = a.y + a.height / 2;
+  const bx = b.x + b.width / 2, by = b.y + b.height / 2;
+  return Math.hypot(ax - bx, ay - by);
+}
+function findTextHint(node) {
+  if (!node.parent || !('children' in node.parent)) return null;
+  const nb = rect(node);
+  const texts = node.parent.children.filter(c => c.type === 'TEXT' && c !== node);
+  if (!texts.length) return null;
+  const overlapping = texts.filter(t => overlaps(nb, rect(t)));
+  const pool = overlapping.length ? overlapping : texts;
+  let best = null, bestD = Infinity;
+  for (const t of pool) {
+    const d = centreDist(nb, rect(t));
+    if (d < bestD) { bestD = d; best = t; }
+  }
+  if (!best) return null;
+  const chars = (best.characters || '').trim();
+  return chars ? chars : null;
+}
+
 // ── Scan tree ────────────────────────────────────────────────────────────────
 
 function scan(node, depth) {
@@ -97,7 +133,8 @@ function scan(node, depth) {
       h:        Math.round(node.height),
       parentId: node.parent ? node.parent.id : null,
       index:    node.parent ? Array.from(node.parent.children).indexOf(node) : 0,
-      sizing:   captureSizing(node)
+      sizing:   captureSizing(node),
+      textHint: findTextHint(node)
     });
     return;
   }

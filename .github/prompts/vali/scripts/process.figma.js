@@ -10,7 +10,9 @@
 //   { op: 'wrap', parentId: 'PARENT_ID', childIds: ['A','B'], direction: 'VERTICAL', name: '{col / pattern}' },
 //
 //   // ③ al — convert GROUP or NONE-mode FRAME to auto-layout in-place
-//   { op: 'al', id: 'NODE_ID', direction: 'VERTICAL' },
+//   //    wrap: true            → set layoutWrap='WRAP' (HORIZONTAL only)
+//   //    absoluteChildren: []  → child ids to re-pin as layoutPositioning='ABSOLUTE'
+//   { op: 'al', id: 'NODE_ID', direction: 'VERTICAL', wrap: false, absoluteChildren: [] },
 //
 //   // ④ rename — set {direction / role} name on a node
 //   { op: 'rename', id: 'NODE_ID', to: '{col / group}' },
@@ -98,7 +100,8 @@ function applyFillCounterAxis(parent) {
   });
 }
 
-function applyALSettings(frame, direction) {
+function applyALSettings(frame, direction, opts) {
+  opts = opts || {};
   frame.layoutMode              = direction;
   frame.itemSpacing             = 0;
   frame.primaryAxisSizingMode   = 'AUTO';
@@ -107,6 +110,22 @@ function applyALSettings(frame, direction) {
   frame.paddingLeft             = frame.paddingRight  = 0;
   frame.fills                   = [];
   frame.clipsContent            = false;
+  // Wrap support (A2): only valid on HORIZONTAL layouts.
+  if (opts.wrap && direction === 'HORIZONTAL') {
+    try { frame.layoutWrap = 'WRAP'; } catch (e) {}
+  }
+}
+
+// Re-pin children that must stay absolutely positioned (A2): pinned badges,
+// notification dots, overlay icons. Call AFTER the frame has auto-layout set.
+function pinAbsoluteChildren(frame, ids) {
+  if (!ids || !ids.length) return;
+  const set = {}; ids.forEach(function (id) { set[id] = true; });
+  for (const child of frame.children) {
+    if (set[child.id]) {
+      try { child.layoutPositioning = 'ABSOLUTE'; } catch (e) {}
+    }
+  }
 }
 
 // ── op: ungroup ───────────────────────────────────────────────────────────────
@@ -185,6 +204,8 @@ function opAL(op) {
   if (!node) { failed.push({ op: 'al', id: op.id, reason: 'node not found' }); return; }
 
   const dir          = op.direction || 'VERTICAL';
+  const alOpts       = { wrap: !!op.wrap };
+  const absChildren  = op.absoluteChildren || [];
   const sizingBefore = captureSizing(node);
 
   if (node.type === 'GROUP') {
@@ -192,19 +213,21 @@ function opAL(op) {
     const idx      = Array.from(parent.children).indexOf(node);
     const frame    = figma.createFrame();
     frame.name     = node.name;
-    applyALSettings(frame, dir);
+    applyALSettings(frame, dir, alOpts);
     const snapshot = Array.from(node.children);
     for (const child of snapshot) { frame.appendChild(child); }
     parent.insertChild(idx, frame);
     try { node.remove(); } catch(e) {}
     applyFillCounterAxis(frame);
+    pinAbsoluteChildren(frame, absChildren);
     nodeCache[frame.id] = frame;  // register new frame
-    log.push({ op: 'al', type: 'group→frame', id: frame.id, name: frame.name, direction: dir });
+    log.push({ op: 'al', type: 'group→frame', id: frame.id, name: frame.name, direction: dir, wrap: alOpts.wrap, pinned: absChildren.length });
   } else {
-    applyALSettings(node, dir);
+    applyALSettings(node, dir, alOpts);
     restoreSizing(node, sizingBefore);
     applyFillCounterAxis(node);
-    log.push({ op: 'al', type: 'in-place', id: node.id, name: node.name, direction: dir });
+    pinAbsoluteChildren(node, absChildren);
+    log.push({ op: 'al', type: 'in-place', id: node.id, name: node.name, direction: dir, wrap: alOpts.wrap, pinned: absChildren.length });
   }
 }
 

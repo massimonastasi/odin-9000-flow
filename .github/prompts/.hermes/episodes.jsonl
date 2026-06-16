@@ -1,2 +1,6 @@
 {"ts":"2026-06-15T00:00:00Z","runId":"seed","skill":"odin","phase":"open","summary":"Hermes episode journal initialised — replaces the legacy bd issue trail. One {open,close} pair per skill run is the audit record.","result":"ok"}
 {"ts":"2026-06-15T00:00:00Z","runId":"seed","skill":"odin","phase":"close","summary":"Journal seeded.","result":"ok"}
+{"ts":"2026-06-15T19:24:39Z","runId":"odin-20260615-192439","skill":"odin","phase":"open","summary":"Analyse FDS-Card (COMPONENT_SET, 12 variants) — layout + tokens, no writes","result":"ok"}
+{"ts":"2026-06-15T19:31:00Z","runId":"odin-20260615-192439","skill":"odin","phase":"close","summary":"FDS-Card analysed (layout OK, tokens TS-only: 1 border bug + padding key issue + 0 NV bindings)","result":"ok","outcome":"complete"}
+{"ts":"2026-06-16T07:58:52Z","runId":"odin-20260616-075834","skill":"odin","phase":"open","summary":"lesson sweep (/odin lessons dry-run) — 2 pending proposal groups","result":"ok"}
+{"ts":"2026-06-16T08:04:55Z","runId":"odin-20260616-075834","skill":"odin","phase":"close","summary":"lesson sweep: promoted mimr card rules (2 lessons applied), vali deferred","result":"ok","outcome":"complete"}

@@ -7,12 +7,16 @@
       "role": "Orchestrator — Plan→Choose→Execute→Observe→Refine loop",
       "prompt": ".github/prompts/odin-9000/odin-9000.prompt.md",
       "agent": null,
+      "model": "Claude Opus 4.8",
+      "controls": { "/odin lessons": "run the lesson reconciliation sweep standalone", "/odin refine": "alias of /odin lessons" },
       "loadWhen": "always (entry point)"
     },
     "modi": {
       "role": "Wireframe parse + instance swap",
       "prompt": ".github/prompts/modi/modi.prompt.md",
       "agent": ".github/agents/modi.agent.md",
+      "model": "Claude Haiku 4.5",
+      "escalateTo": { "Claude Sonnet 4.6": "ambiguous variant mapping or non-trivial component resolution" },
       "scripts": [
         ".github/prompts/modi/scripts/scan-wireframe.figma.js",
         ".github/prompts/modi/scripts/swap.figma.js"
@@ -24,6 +28,7 @@
       "role": "Group/Frame → Auto Layout conversion + naming",
       "prompt": ".github/prompts/vali/vali.prompt.md",
       "agent": ".github/agents/vali.agent.md",
+      "model": "Claude Sonnet 4.6",
       "scripts": [
         ".github/prompts/vali/scripts/scan.figma.js",
         ".github/prompts/vali/scripts/process.figma.js"
@@ -35,6 +40,8 @@
       "role": "Token audit + bulk write (TS + native variables)",
       "prompt": ".github/prompts/mimr/mimr.prompt.md",
       "agent": ".github/agents/mimr.agent.md",
+      "model": "Claude Sonnet 4.6",
+      "escalateTo": { "Claude Opus 4.8": "large or ambiguous conflict audit (many nodes / overlapping token rules)" },
       "scripts": [
         ".github/prompts/mimr/scripts/audit-resolve-digest.figma.js",
         ".github/prompts/mimr/scripts/audit.figma.js",
@@ -53,6 +60,8 @@
       "role": "HTML/CSS + StencilJS + Storybook codegen",
       "prompt": ".github/prompts/saga/saga.prompt.md",
       "agent": ".github/agents/saga.agent.md",
+      "model": "Claude Sonnet 4.6",
+      "escalateTo": { "Claude Opus 4.8": "complex multi-state / multi-variant component codegen" },
       "scripts": [],
       "loadWhen": "component output needed (last; depends on MIMR+VALI)"
     },
@@ -60,11 +69,16 @@
       "role": "Owns the large external Token Studio JSON + KB .md repos; narrow query interface only",
       "prompt": null,
       "agent": ".github/agents/librarian.agent.md",
+      "model": "Claude Haiku 4.5",
       "scripts": [".github/prompts/mimr/scripts/token-lookup.py"],
       "loadWhen": "a token/value is missing from token-registry.md OR KB lookup needed",
       "sync": {
-        "tokensRepo": "core-design-system-variables",
-        "kbRepo": "{{KB_REPO}}",
+        "tokensRepo": "BetssonGroup/core-design-system-variables",
+        "tokensBranch": "main",
+        "tokensPaths": "data",
+        "kbRepo": "BetssonGroup/betsson-kb-docs",
+        "kbBranch": "feat/fds-token-docs-refactor",
+        "kbPaths": "knowledge/shared/global/design-standards/tokens",
         "clonePath": ".github/prompts/.hermes/cache",
         "manifest": ".github/prompts/.hermes/cache/kb-manifest.json",
         "stalenessCheck": "git ls-remote <repo> <branch>; re-pull only if SHA differs"
@@ -74,13 +88,41 @@
       "role": "Persona/verbosity overlay (narration only)",
       "prompt": ".github/prompts/kevin.prompt.md",
       "agent": null,
-      "loadWhen": "user chains /kevin before another skill"
+      "alwaysOn": true,
+      "loadWhen": "Always on — applied by default to every ODIN/skill response. Mode (lite/normal/ultra) is chosen on the first skill invocation per session. Disable for the rest of the session with /kevin off; re-enable with /kevin on."
     }
+  },
+  "modelRouting": {
+    "$comment": "ODIN resolves a model per dispatch in this order: (1) per-task escalation trigger in skills.<name>.escalateTo, (2) the agent's frontmatter `model:` default (mirrored by skills.<name>.model), (3) ODIN's own model. ODIN passes the resolved name to runSubagent as `model: \"<Name> (copilot)\"`. Frontmatter is the durable default; escalation is per-task only and never persisted.",
+    "orchestrator": "Claude Opus 4.8",
+    "defaults": {
+      "librarian": "Claude Haiku 4.5",
+      "modi": "Claude Haiku 4.5",
+      "vali": "Claude Sonnet 4.6",
+      "mimr": "Claude Sonnet 4.6",
+      "saga": "Claude Sonnet 4.6"
+    },
+    "escalation": "Override the default ONLY when a skill's escalateTo trigger is met for the specific task. Downgrade a Sonnet default to Claude Haiku 4.5 for trivial, mechanical steps. Record the chosen model in the step episode.",
+    "escalationSafetyGate": {
+      "required": true,
+      "rule": "MANDATORY: before dispatching any subagent on a model higher than its frontmatter default, ODIN MUST ask the user via vscode_askQuestions and receive explicit approval. Applies to every upgrade (Haiku->Sonnet, Sonnet->Opus). No silent escalation.",
+      "onDecline": "Dispatch on the frontmatter default instead; never block the step.",
+      "downgradeExempt": true,
+      "record": "episode.escalation = { from, to, approved: true|false }"
+    },
+    "runSubagentFormat": "<Model Name> (copilot)"
   },
   "pipelineOrder": ["modi", "vali", "mimr", "saga"],
   "handoffContracts": {
     "vali->mimr": "node list [{id,type}] forwarded as PRIOR_SCAN (skips MIMR tree walk)",
     "mimr->saga": "NV map {prop: shortName, value} reused for --fds-* CSS vars (no re-resolution)",
     "modi->vali": "swap report; converted instances ready for layout pass"
+  },
+  "$hermesBundle": "This manifest is the local analog of a Hermes skill-bundle (~/.hermes/skill-bundles/<slug>.yaml). The `bundle` block below mirrors that schema {name, description, skills[], instruction} so it can be emitted verbatim when syncing to a real Hermes install.",
+  "bundle": {
+    "name": "odin-9000",
+    "description": "Figma design-to-code pipeline: wireframe resolve (MODI) -> Auto Layout (VALI) -> token audit/write (MIMR) -> component codegen (SAGA), with Librarian for KB/token lookups.",
+    "skills": ["modi", "vali", "mimr", "saga", "librarian"],
+    "instruction": "Always read this manifest + the memory adapter first. Run the pipeline in pipelineOrder, honouring handoffContracts to avoid redundant Figma reads. Dispatch each skill as an isolated subagent; recall lessons before work and append lessons on Observe. Every Figma write needs an open->close episode pair."
   }
 }

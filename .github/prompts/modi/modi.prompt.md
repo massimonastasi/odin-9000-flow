@@ -6,14 +6,11 @@ argument-hint: "Figma frame URL or swap instruction"
 ---
 
 ## First Render
-Always display this at the start of the workflow:
+Always display this plain-text boot line at the start of the workflow:
 
-█▀▄▀█ █▀▀▄ █▀▄  █
-█ ▀ █ █  █ █  █ █
-▀   ▀ ▀▀▀  ▀▀   ▀
-[ MODI (Model-to-Object Design Instantiator) ]
-[ WIREFRAME & SWAP ]
-
+```
+[ MODI online · Model-to-Object Design Instantiator · wireframe & swap ]
+```
 
 # MODI — Model-to-Object Design Instantiator
 
@@ -205,6 +202,7 @@ Rules:
 
 The script identifies:
 - **Placeholders** — RECTANGLE, ELLIPSE, or FRAME nodes with no children and a text-like name (e.g. "Input", "Button/Submit", "FDS-Badge")
+- **Placeholder name fallback** — when a placeholder's own name is generic (`Rectangle`, `Ellipse`, `Frame N`, or a bare color/number), read an overlapping or sibling TEXT node as the name source: a TEXT node whose bounds sit inside the placeholder, or the nearest same-parent TEXT sibling. Use its characters as the resolution name before falling back to the layer name.
 - **Instances** — existing INSTANCE nodes with their `mainComponent` reference and current variant properties
 - **Layout context** — parent frame dimensions, positions, and auto-layout settings for sizing preservation
 
@@ -231,7 +229,7 @@ const SOURCE_KEY = null;        // swap mode: componentKey of source component s
   "mode": "parse",
   "root": { "id": "...", "name": "...", "type": "FRAME" },
   "placeholders": [
-    { "id": "...", "name": "Input", "type": "RECTANGLE", "w": 300, "h": 40, "parentId": "...", "index": 0 }
+    { "id": "...", "name": "Input", "type": "RECTANGLE", "w": 300, "h": 40, "textHint": "Email", "parentId": "...", "index": 0 }
   ],
   "instances": [
     { "id": "...", "name": "FDS-Input", "componentKey": "519c...", "variantProps": { "Size": "Medium" }, "parentId": "...", "index": 1 }
@@ -247,16 +245,17 @@ const SOURCE_KEY = null;        // swap mode: componentKey of source component s
 ### Parse mode
 
 For each placeholder:
-1. **Name parsing** — extract component name from wireframe layer name:
+1. **Name parsing** — extract component name from wireframe layer name (or the overlapping/sibling TEXT fallback above):
    - Strip common prefixes: `FDS-`, `fds-`, `Fds-`
    - Split on `/` — first segment = component, rest = variant hint (e.g. `Button/Submit` → component: `Button`, hint: `Submit`)
    - Split on `\n` or ` - ` — treat as component name (wireframes often use multi-line or dash-separated names)
    - Case-insensitive matching against component map
 2. **Resolve** using Tier A → B → C chain
-3. **Variant selection** — if the map entry has variant axes, pick the closest match based on:
-   - Placeholder dimensions (closest to a known variant's default size)
-   - Name hints from the wireframe (e.g. `/Submit` → look for a variant with that label)
-   - Default variant if no hints
+3. **Variant selection** — if the map entry has variant axes, pick the closest match by priority:
+   1. **Name hints** from the wireframe layer or TEXT fallback (e.g. `/Submit` → a variant with that label) — primary signal
+   2. **Interactive ask** — `vscode_askQuestions` when hints are absent or ambiguous (never silently guess)
+   3. **Placeholder dimensions** — closest to a known variant's default size, **last resort only** when no name hint exists and the user defers
+   4. Default variant if all of the above yield nothing
 
 ### Swap mode
 

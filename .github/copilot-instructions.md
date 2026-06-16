@@ -23,7 +23,7 @@ Whenever a skill (prompt) is invoked via `/skill-name` in chat, you MUST:
 3. **Recall**: `lesson.recall([skill])` and honour returned lessons.
 4. **Work**: execute the skill as instructed (self-check gate: confirm scripts loaded first).
 5. **Observe**: append outcomes to state; capture lesson candidates via `lesson.append`.
-6. **Close**: `episode.append({phase:"close", skill, summary})` when the skill finishes.
+6. **Close**: `episode.append({phase:"close", skill, summary})` when the skill finishes, **then reconcile** — `lesson.sweep()` for pending rule proposals (`applied=false` + non-null `ruleProposal`). If any exist, surface them in a single gated `vscode_askQuestions` prompt; apply only the approved diffs to their data files and `lesson.update` those lines to `applied=true`. Empty sweep → finish silently. Close always means "close **and** reconcile."
 
 ## Mid-session Modification Rule
 

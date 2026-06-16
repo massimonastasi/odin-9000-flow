@@ -18,12 +18,12 @@ MANIFEST="$CACHE/kb-manifest.json"
 FORCE="${1:-}"
 
 # ── Repo config (edit these or wire from manifest.json) ──────────────────────
-TOKENS_REPO="${TOKENS_REPO:-core-design-system-variables}"   # large Token Studio JSON
+TOKENS_REPO="${TOKENS_REPO:-BetssonGroup/core-design-system-variables}"   # large Token Studio JSON
 TOKENS_BRANCH="${TOKENS_BRANCH:-main}"
-TOKENS_PATHS="${TOKENS_PATHS:-*.json}"                        # sparse paths
-KB_REPO="${KB_REPO:-{{KB_REPO}}}"                            # indexed KB .md repo
-KB_BRANCH="${KB_BRANCH:-main}"
-KB_PATHS="${KB_PATHS:-*.md}"
+TOKENS_PATHS="${TOKENS_PATHS:-data}"                        # sparse dir (ts-*-fabric.json live under data/)
+KB_REPO="${KB_REPO:-BetssonGroup/betsson-kb-docs}"          # indexed KB .md repo
+KB_BRANCH="${KB_BRANCH:-feat/fds-token-docs-refactor}"      # token-docs refactor branch (default branch renamed index.md → tokens.md)
+KB_PATHS="${KB_PATHS:-knowledge/shared/global/design-standards/tokens}"
 
 mkdir -p "$CACHE"
 [ -f "$MANIFEST" ] || echo '{}' > "$MANIFEST"

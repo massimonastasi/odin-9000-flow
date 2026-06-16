@@ -5,14 +5,11 @@ agent: agent
 argument-hint: "Figma frame URL"
 ---
 ## First Render
-Always display this at the start of the workflow:
+Always display this plain-text boot line at the start of the workflow:
 
-█  █ █▀▀█ █    █
-▀▄▄▀ █▄▄█ █    █
- ▀▀  ▀  ▀ ▀▀▀  ▀
-[ VALI (Visual Alignment & Layout Instantiator) ]
-[ LAYOUT & FLEX ]
-
+```
+[ VALI online · Visual Alignment & Layout Instantiator · layout & flex ]
+```
 
 # VALI — Visual Alignment & Layout Instantiator
 
@@ -203,6 +200,16 @@ If yes, include `annotate` ops at the end of the `OPS` array — one per renamed
 1. **Direction** — infer from child positions:
    - children stacked vertically (x values close, y values spread) → `VERTICAL`
    - children side-by-side horizontally (y values close, x values spread) → `HORIZONTAL`
+   - children fill the parent width and wrap onto multiple rows (a grid of equal-ish tiles) →
+     `HORIZONTAL` with `layoutWrap: 'WRAP'`. Detect wrap when child rows repeat at a roughly
+     constant x-pitch and the row count > 1 — do **not** force a single-direction flow.
+
+> **Absolute-positioned children — preserve, do not flow.** Before inferring direction, exclude
+> any child with `layoutPositioning === 'ABSOLUTE'` (pinned badges, notification dots, overlay
+> icons) from the position spread. After conversion, re-mark those children
+> `layoutPositioning = 'ABSOLUTE'` so they keep their pin instead of being pushed into flow.
+> Express this as `{ op: 'al', id: '...', direction, absoluteChildren: ['{id}', …] }`; if any
+> such child exists, never reorder or re-parent it by primary-axis position.
 
 2. **Create frame in-place:**
    - `figma.createFrame()` at same parent slot as the group

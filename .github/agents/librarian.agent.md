@@ -1,6 +1,7 @@
 ---
 description: "Use when a design token, reference value, or token-structure detail is missing from the compact token-registry, or when KB knowledge is needed. Librarian subagent: owns the large external Token Studio JSON + indexed KB .md repos, keeps a fresh local mirror, and answers narrow lookups. Returns only matched rows — never whole files."
 name: "Librarian"
+model: "Claude Haiku 4.5"
 tools: [read, search, execute]
 user-invocable: false
 argument-hint: "token short name / TS path, or a KB query"

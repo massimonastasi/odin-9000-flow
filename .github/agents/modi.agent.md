@@ -1,6 +1,7 @@
 ---
 description: "Use when resolving wireframe placeholder shapes to FDS library components or swapping existing instances to new versions with variant mapping. MODI worker subagent dispatched by ODIN. Isolated context, returns a swap report."
 name: "MODI"
+model: "Claude Haiku 4.5"
 tools: [read, edit, search, figma/*]
 user-invocable: false
 argument-hint: "Figma frame URL + parse|swap instruction"

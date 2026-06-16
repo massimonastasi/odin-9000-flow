@@ -6,14 +6,11 @@ argument-hint: "Figma frame URL or component name"
 ---
 
 ## First Render
-Always display this at the start of the workflow:
+Always display this plain-text boot line at the start of the workflow:
 
-█▀▀▀ █▀▀█ █▀▀█ █▀▀█
-▀▀▀█ █▄▄█ █ ▄▄ █▄▄█
-▀▀▀▀ ▀  ▀ ▀▀▀▀ ▀  ▀
-[ SAGA (Storybook Automation & Generative Asset) ]
-[ CODE & DOCS ]
-
+```
+[ SAGA online · Storybook Automation & Generative Asset · code & docs ]
+```
 
 ---
 
@@ -232,6 +229,8 @@ Derive from `COMPONENT_SET.variantGroupProperties`. Each axis becomes one prop. 
 
 Each slot name provided by the user becomes a `<slot name="…">` in `render()`. Never infer slots from VALI-renamed layers.
 
+**Internal TEXT vs slot.** Render an *internal* TEXT node (fixed label, static copy owned by the component) as real markup with explicit typography — not a slot. Reserve named slots for content the consumer supplies (titles, body copy, actions). Slot only what is externally variable; bake what is intrinsic to the component.
+
 ```tsx
 render() {
   return (
@@ -285,6 +284,13 @@ Write variant overrides in the `.css` file as host-state selectors:
 :host(.success) { --fds-surface: var(--fds-color-success-surface); }
 :host(.error)   { --fds-surface: var(--fds-color-error-surface); }
 ```
+
+**Per-variant token values — required data source.** Each `:host(.variant)` override needs the *resolved* token for that variant, which a single root-frame fetch does not contain. Before writing variant CSS, obtain per-variant values from one of:
+
+1. **MIMR matrix** — when ODIN forwards MIMR's per-variant NV map, use it directly (no extra fetches).
+2. **Standalone fetch** — when running standalone (no MIMR handoff), first detect the **color-bearing axis** (the axis whose values change fills/strokes), then run `get_design_context` once per distinct value of that axis and read the bound token from each. Never invent variant token names from the axis label alone.
+
+If neither source is available, stop and ask the user via `vscode_askQuestions` rather than guessing variant values.
 
 Never branch on props in `render()` for visual differences — use CSS classes mapped from prop values via `Host class={…}`.
 
@@ -449,22 +455,22 @@ html`<fds-{name} action-button="${actionButton}">`
 
 | Rule | Detail |
 |---|---|
-| Explicit trigger only | Never activate unless the user explicitly requests code generation — do not auto-trigger after a MIMR audit |
-| INSTANCE nodes are CE references | Never reconstruct a Figma INSTANCE node's internals. Emit a self-closing CE tag (`<fds-badge></fds-badge>`) at the position the instance occupies. Derive tag from `mainComponent.name` (preferred) or layer name. Always confirm the tag mapping with the user via `vscode_askQuestions` before generating files. |
-| INSTANCE children — never descend | Stop at the INSTANCE boundary. Children of an INSTANCE are read-only overrides — do not walk them, do not generate HTML/TSX for them. |
-| CSS vars with fallbacks | Every `--fds-*` var must include the resolved pixel/hex value as a fallback: `var(--fds-token, 16px)`. Component must render correctly even when design tokens are not loaded. |
-| User input | Use `vscode_askQuestions` for any ambiguous decision (e.g. which variant to scaffold, output file location). Never use inline chat text. |
-| CLAUDE.md assets | If Figma MCP returns a localhost image/SVG source, use it directly — do not create placeholders or import new icon packages |
-| Shadow DOM always | StencilJS output always uses `shadow: true` — never `shadow: false` |
-| Slots are explicit | Named slots come from the user's answer at Step 3 — never infer from VALI layer names |
-| No JS variant logic | Visual variant differences go in CSS (`:host(.class)`) — never branch in `render()` |
-| Stencil tag prefix | All generated tags must be prefixed `fds-` |
-| Story renderer | Always use `lit` `html` tag in stories — required by `@storybook/web-components` |
-| Boolean props — `?attr` binding | Boolean props must use `?attr=${bool}` in lit templates. The CE stub must use `hasAttribute()`, never `getAttribute() !== 'false'` (attribute is absent, not `"false"`, when lit unbinds it). |
-| `::slotted` typography always explicit | Write `::slotted([slot="name"])` rules for every text slot. Shadow DOM does not inherit typography. Use TS token vars with resolved fallbacks; raw resolved values if no token exists. |
-| No-chrome action slot | If Figma has no background/border/padding on the action area, `::slotted([slot="actions"])` must reset `appearance`, `background`, `border`, and `padding` to none. |
-| CE stub must mirror Stencil CSS | `register-components.ts` is a parallel implementation. Every `::slotted`, variant, icon, or layout rule added to the Stencil CSS file must also appear in the stub's inline `<style>`. Keep them in sync. |
-| GFM tables — `remark-gfm` required | Any MDX handoff doc that uses `\|---|---|` table syntax requires `remark-gfm`. Install it and register via `addon-docs` `mdxPluginOptions.mdxCompileOptions.remarkPlugins`. Without it, tables render as raw text. |
+| Explicit trigger only | Never activate unless the user explicitly requests code generation — not after a MIMR audit |
+| INSTANCE nodes are CE references | Emit a self-closing CE tag at the instance position; never reconstruct internals. Tag from `mainComponent.name`. Confirm mapping via `vscode_askQuestions`. |
+| INSTANCE children — never descend | Stop at the INSTANCE boundary — children are read-only overrides |
+| CSS vars with fallbacks | Every `--fds-*` var carries a resolved fallback: `var(--fds-token, 16px)` |
+| User input | Use `vscode_askQuestions` for any ambiguous decision — never inline chat text |
+| CLAUDE.md assets | Use a localhost image/SVG source directly — no placeholders, no new icon packages |
+| Shadow DOM always | StencilJS output always `shadow: true` |
+| Slots are explicit | Named slots come from the user's Step 3 answer — never inferred from layer names |
+| No JS variant logic | Variant differences in CSS (`:host(.class)`) — never branch in `render()` |
+| Stencil tag prefix | All generated tags prefixed `fds-` |
+| Story renderer | Always the `lit` `html` tag in stories |
+| Boolean props — `?attr` binding | `?attr=${bool}` in lit; CE stub uses `hasAttribute()` — see § StencilJS output |
+| `::slotted` typography always explicit | One `::slotted([slot])` rule per text slot — see § `::slotted()` typography rules |
+| No-chrome action slot | Reset `appearance`/`background`/`border`/`padding` on a chromeless action slot |
+| CE stub must mirror Stencil CSS | Keep `register-components.ts` styles in sync with the Stencil CSS file |
+| GFM tables — `remark-gfm` required | MDX tables need `remark-gfm` registered via `addon-docs` — see § Storybook project setup |
 
 ---
 

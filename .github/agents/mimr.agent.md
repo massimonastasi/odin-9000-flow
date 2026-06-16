@@ -1,6 +1,7 @@
 ---
 description: "Use when applying or auditing Figma design tokens — Token Studio (TS) + native variable (NV) bindings, conflict detection, bulk token writes. MIMR worker subagent dispatched by ODIN. Isolated context, returns a compact audit/write digest."
 name: "MIMR"
+model: "Claude Sonnet 4.6"
 tools: [read, search, execute, figma/*]
 user-invocable: false
 argument-hint: "Figma frame URL or node id + scope"

@@ -5,16 +5,11 @@ agent: agent
 argument-hint: "Figma frame URL"
 ---
 ## First Render
-Always start from displaying following at beginning of the workflow:
+Always display this plain-text boot line at the beginning of the workflow:
 
-█▀▄▀█ █ █▀▄▀█ █▀▄
-█ ▀ █ █ █ ▀ █ █▀▄
-▀   ▀ ▀ ▀   ▀ ▀  ▀
-[ MIMR (Metadata Inventory & Mapping Repository) ]
-[ DATA & TOKENS ]
-
-Color it yellow in console output if possible, or just print as plain text if not.
-
+```
+[ MIMR online · Metadata Inventory & Mapping Repository · data & tokens ]
+```
 
 # MIMR — Metadata Inventory & Mapping Repository
 
@@ -90,7 +85,15 @@ Before running either script, determine whether variant sampling is needed:
 1. Use `get_metadata` (Figma MCP) or a shallow REST call with `depth=1` to read the node type and direct child count.
 2. **If the root is a `COMPONENT_SET` with > 20 direct COMPONENT children:**
    - Read `variantGroupProperties` from the COMPONENT_SET.
-   - **Sample variants** — select 1 variant per unique value of the **primary axis** (the axis with the most values). Keep all other axes at their default (first) value.
+   - **Sample the union of every axis's values** — for each axis, pick one variant per distinct
+     value of that axis (other axes held at their default/first value). This guarantees a sample
+     for every value of a *semantic* axis (`Context = success/error/alert/info`,
+     `Theme = surface/alternate-surface`), whose tokens differ per value. **Do not** sample only
+     the largest axis — the token-bearing axis in FDS sets is usually semantic, not the largest,
+     so holding it at default would leave error/alert/info fills unaudited.
+   - When unsure which axis carries the tokens, detect the **color-bearing axis**: a cheap probe
+     reads `fills` across one variant per axis value and picks the axis whose `fills` actually
+     change. Always include every value of that axis in the sample.
    - Pass sampled IDs via `SAMPLE_IDS` injection slot.
 3. **If ≤ 20 children** → set `SAMPLE_IDS = null` for full audit.
 
@@ -127,13 +130,6 @@ When ODIN runs VALI before MIMR, ODIN forwards the VALI scan as a `PRIOR_SCAN` a
 ### REST supplemental pass (optional)
 
 Use a REST `depth=1` + `plugin_data=shared` pass **in addition to** the Plugin API when you need TS coverage for ALL variants (not just sampled ones). Run REST and Plugin API **in the same LLM turn** — they are independent.
-
-```
-GET https://api.figma.com/v1/files/{file_key}/nodes?ids={node_id_param}&plugin_data=shared&depth=1
-X-Figma-Token: {pat}
-```
-
-`plugin_data=shared` is mandatory — without it `sharedPluginData` is silently absent.
 
 ```
 GET https://api.figma.com/v1/files/{file_key}/nodes?ids={node_id_param}&plugin_data=shared&depth={depth}
@@ -183,8 +179,6 @@ The script returns the report pre-built. Render it directly — no additional pa
 
 No tree traversal, no python, no file reads. The script has already done the analysis.
 
-### Write path (audit.figma.js + resolve.figma.js)
-
 ### Token registry lookup
 
 **Never read `data/token-registry.md` in full — it is large and will fill the context window.**
@@ -198,7 +192,22 @@ For every `⚠️ CONFLICT` row: grep the short name and surface the **canonical
 
 ### Conflict detection
 
-Emit `⚠️ CONFLICT` when a node has **both** TS and NV on the same logical property **and the last path segments differ**:
+A conflict exists when a node has **both** TS and NV on the same logical property **and they
+resolve to different values**. Compare **resolved values** as the primary test — name divergence
+is only a secondary hint, because:
+
+- Different token names can resolve to the **same** value (name-only comparison = false positive).
+- The same last path segment can resolve to **different** values across collections/modes
+  (name-only comparison = missed conflict).
+
+**Procedure per shared property:**
+1. Resolve the TS token to its value (via `token-index.json` / Librarian) and read the NV's
+   resolved value (already in the digest's `resolved` field).
+2. If both resolve and the values **differ** → emit `⚠️ CONFLICT`.
+3. If a value cannot be resolved, fall back to comparing the **last path segments** and mark the
+   row `⚠️ CONFLICT?` (unverified) rather than a hard conflict.
+
+Logical-property pairing (which TS key maps to which NV property):
 
 | TS key | NV property |
 |---|---|

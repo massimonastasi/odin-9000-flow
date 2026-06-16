@@ -235,6 +235,50 @@ When a button component has custom fill properties (e.g. a product-specific acce
 
 ---
 
+## Card / container token rules
+
+Apply when the target is a **card** or **container** component (layer name contains `Card`,
+`Container`, `Panel`, `Tile`, or a `Padding` variant axis with a surrounding `Theme` axis).
+
+### Padding insets — use the correct TS keys
+
+> **Rule: card padding insets use `verticalPadding` + `horizontalPadding` keys — NOT `spacing`.**
+> The `spacing` TS key maps to `itemSpacing` (the gap between children), not the container's
+> inset padding. A card whose insets are written under `spacing` will set the wrong property.
+
+| Property | TS key | Token | Notes |
+|---|---|---|---|
+| Top/bottom inset | `verticalPadding` | `spacing.fds-spacing-const.container.fds-spacing-const-container-card` | Prefer the component-specific card token |
+| Left/right inset | `horizontalPadding` | `spacing.fds-spacing-const.container.fds-spacing-const-container-card` | Same card token |
+| Gap between children | `spacing` (→ `itemSpacing`) | `fds-spacing-*` per design | Only the gap belongs under `spacing` |
+
+> **Prefer `fds-spacing-const-container-card` over the generic `fds-spacing-200`** for card
+> internal padding. The generic scale step happens to resolve to the same value today, but the
+> component-specific token survives scale retuning.
+
+### Border colour — must match the variant's surface theme
+
+> **Rule: the card border colour token MUST match the `Theme` axis** (same detection as the
+> global content-fill rule). A frequent copy-paste error is `surface`-theme variants carrying
+> `var.fds.fds-on-alternate-surface-ulow`.
+
+| Theme | borderColor token |
+|---|---|
+| `Theme=surface`, `Theme=surface-variant` | `var.fds.fds-on-surface-ulow` |
+| `Theme=alternate-surface` | `var.fds.fds-on-alternate-surface-ulow` |
+
+**Audit check:** in Phase 2, flag any `surface`-theme variant whose `borderColor` resolves to an
+`alternate-surface` token (or vice versa) as a semantic error before writing.
+
+### NV binding intent
+
+> A `var.fds.*` TS path prefix signals that a **native variable binding is intended** for that
+> property — but the binding may never have been applied (`varMap` empty = "TS-draft" state).
+> When a card audit returns TS tokens with zero NV bindings, treat Phase 3 NV binding as required,
+> not optional.
+
+---
+
 ## Elevation (box shadow) rules
 
 Elevation is applied via **Figma Effect Styles** (`effectStyleId`), not variables. TS metadata key is `boxShadow`.

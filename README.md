@@ -2,7 +2,7 @@
 
 ![Odin Flow](docs/images/header_odin.png)
 
-A GitHub Copilot agent skill suite for automating the Figma → Design System → Storybook pipeline. Powered by [Beads](https://github.com/gastownhall/beads) for persistent memory across agent sessions.
+A GitHub Copilot agent skill suite for automating the Figma → Design System → Storybook pipeline. Powered by the **Hermes harness** for persistent run state, an episode journal, and agent lessons — all stored locally in the repo, no external service required.
 
 ---
 
@@ -10,101 +10,79 @@ A GitHub Copilot agent skill suite for automating the Figma → Design System �
 
 ### ODIN-9000 — Orchestrator for Design Intent & Navigation
 
-```
-.       .
-        .   |   .       
-    .   \   |   /   .   
-     \   \  |  /   /    
-  ____\   \ | /   /____
- █  ▄  █ █▀▀▄ █ █▄  █   ▄▀▀▄ ▄▀▀▄ ▄▀▀▄ █▀▀▄
- █  █  █ █  █ █ █ █ █   ▀▀▄█ █  █ █  █ █  █
- █  ▀  █ █▄▄▀ █ █  ▀█   ▀▀▀  ▀▀▀  ▀▀▀  ▀▀▀ 
-  ‾‾‾‾/   / | \   \‾‾‾‾
-     /   /  |  \   \
-    '   /   |   \   '
-        '   |   '
-            '
-```
+The top-level orchestrator. Reads design intent from a Figma URL or brief, decides which sub-skills to run, and sequences them in dependency order. Dispatches each sub-skill as an isolated subagent, resolves the model per task, and records every decision in the Hermes episode journal for future sessions.
 
-The top-level orchestrator. Reads design intent from a Figma URL or brief, decides which sub-skills to run, and sequences them in dependency order. Records every decision in Beads for future sessions.
-
-**Invoke:** `/odin-9000`  
+**Invoke:** `/odin-9000`
 **Pipeline:** MODI → VALI → MIMR → SAGA
+**Model:** Claude Opus 4.8 (orchestrator)
 
 ---
 
 ### MODI — Model-to-Object Design Instantiator
 
-```
-█▀▄▀█ █▀▀▄ █▀▄ █
-█ ▀ █ █  █ █  █ █
-▀   ▀ ▀▀▀  ▀▀  ▀
-```
-
 Wireframe parsing and instance swapping engine. Resolves placeholder shapes (rectangles, ellipses) to real FDS library components and swaps existing instances to newer versions with full variant axis mapping. Uses a hybrid resolution strategy: cached component map → design system search → interactive user prompt.
 
-**Invoke:** `/modi`  
-**Inputs:** Figma frame URL + mode selection (parse / swap / scan-library)  
-**Outputs:** Swapped component instances in Figma, updated component map  
+**Invoke:** `/modi`
+**Inputs:** Figma frame URL + mode selection (parse / swap / scan-library)
+**Outputs:** Swapped component instances in Figma, updated component map
 **Use when:** A wireframe has placeholder shapes, or existing instances need to be migrated to a different component version
 
 ---
 
 ### MIMR — Metadata Inventory & Mapping Repository
 
-```
-█▀▄▀█ █ █▀▄▀█ █▀▄
-█ ▀ █ █ █ ▀ █ █▀▄
-▀   ▀ ▀ ▀   ▀ ▀  ▀
-```
-
 Hybrid two-pass token audit engine. Combines Figma REST API + Token Studio shared plugin data with Plugin API native variable resolution to produce a merged conflict report and perform bulk token writes via mapping rules.
 
-**Invoke:** `/mimr`  
-**Inputs:** Figma frame URL + Personal Access Token  
-**Outputs:** Token audit report, conflict detection, bulk write log  
+**Invoke:** `/mimr`
+**Inputs:** Figma frame URL + Personal Access Token
+**Outputs:** Token audit report, conflict detection, bulk write log
 **Use when:** Tokens have changed, bindings are missing, or a bulk migration is needed
 
 ---
 
 ### VALI — Visual Alignment & Layout Instantiator
 
-```
-█  █ █▀▀█ █    █
-▀▄▄▀ █▄▄█ █    █
- ▀▀  ▀  ▀ ▀▀▀  ▀
-```
-
 Layout formatting engine. Converts Figma GROUPs and unwired FRAMEs into semantic auto-layout frames named using the `{direction / role}` convention (`section`, `group`, `pattern`). Prepares structure for MIMR token handoff.
 
-**Invoke:** `/vali`  
-**Inputs:** Figma frame URL  
-**Outputs:** Converted + renamed auto-layout frames in Figma  
+**Invoke:** `/vali`
+**Inputs:** Figma frame URL
+**Outputs:** Converted + renamed auto-layout frames in Figma
 **Use when:** Layers are unstructured groups or absolute-position frames before tokenizing
 
 ---
 
 ### SAGA — Storybook Automation & Generative Asset
 
-```
-█▀▀▀ █▀▀█ █▀▀█ █▀▀█
-▀▀▀█ █▄▄█ █ ▄▄ █▄▄█
-▀▀▀▀ ▀  ▀ ▀▀▀▀ ▀  ▀
-```
-
 Code generation engine. Scaffolds semantic HTML + vanilla CSS + CSS Modules, **or** a StencilJS Web Component folder (`fds-{name}.tsx` + `fds-{name}.css` + `fds-{name}.stories.ts`) from a Figma Auto Layout node. Derives `--fds-*` CSS custom properties directly from native variable (NV) bindings — no hardcoded values. StencilJS output includes shadow DOM, typed `@Prop()` per variant axis, named slots, and a Storybook 9/10 CSF3 story file ready to drop into a Stencil project.
 
-**Invoke:** `/saga`  
-**Inputs:** Figma frame URL  
-**Outputs (vanilla):** `{name}.html`, `{name}.css`, `{name}.module.css`  
-**Outputs (StencilJS):** `fds-{name}/fds-{name}.tsx`, `fds-{name}.css`, `fds-{name}.stories.ts`  
+**Invoke:** `/saga`
+**Inputs:** Figma frame URL
+**Outputs (vanilla):** `{name}.html`, `{name}.css`, `{name}.module.css`
+**Outputs (StencilJS):** `fds-{name}/fds-{name}.tsx`, `fds-{name}.css`, `fds-{name}.stories.ts`
 **Use when:** A component is ready (post-VALI + post-MIMR) and code output or Storybook handoff is needed
+
+---
+
+### Librarian — KB & Token Registry
+
+A read-only subagent that owns the large external Token Studio JSON and Knowledge Base `.md` repos behind a narrow query interface. When a token value is missing from the local `token-registry.md`, or a KB lookup is needed, ODIN (or MIMR) dispatches Librarian instead of loading the multi-megabyte source files into context.
+
+Librarian keeps a **local mirror** of the external repos under `.github/prompts/.hermes/cache/`, refreshed by `sync-kb.sh` with a cheap staleness check (`git ls-remote` SHA probe — only re-pulls when the remote branch SHA differs).
+
+| Source | Repo | Branch | Path |
+|---|---|---|---|
+| Token JSON | `BetssonGroup/core-design-system-variables` | `main` | `data` |
+| KB docs | `BetssonGroup/betsson-kb-docs` | `feat/fds-token-docs-refactor` | `knowledge/shared/global/design-standards/tokens` |
+
+**Invoke:** dispatched automatically (not user-invocable)
+**Model:** Claude Haiku 4.5
+**Refresh mirror:** `bash .github/prompts/.hermes/sync-kb.sh` (add `--force` to re-pull regardless of SHA)
 
 ---
 
 ### Kevin — Response Style Modifier 🌶️
 
-A persona overlay, not a workflow. Chain before any skill to modify how the agent narrates — not what it does. Three verbosity modes:
+A persona overlay, not a workflow — it modifies how the agent narrates, never what it does. Kevin is **always on by default**: every ODIN and skill response is narrated in-persona. Three verbosity modes:
 
 | Mode | Style |
 |---|---|
@@ -112,39 +90,91 @@ A persona overlay, not a workflow. Chain before any skill to modify how the agen
 | **Normal** | Drop articles, fragments OK, short synonyms. Tables encouraged. One-liners when possible. |
 | **Ultra** | Abbreviate everything. Arrows for flow. One word when one word enough. |
 
-**Invoke:** `/kevin /modi parse`, `/kevin /vali`, `/kevin /mimr`
+**Controls:**
 
-Technical data (node IDs, variant props, counts) stays 100% accurate in every mode. Beads and git operations always run in Ultra — nobody needs a story about a git push.
+```
+/kevin off                 # disable the persona for the rest of the session
+/kevin on                  # re-enable after /kevin off
+/kevin lite|normal|ultra   # switch mode at any time
+```
+
+On the first skill invocation per session, Kevin asks once which mode to use (default: Normal), then caches it. Technical data (node IDs, variant props, counts) stays 100% accurate in every mode. Hermes housekeeping (`state.write`, `episode.append`, `lesson.append`) and git operations always run in Ultra — nobody needs a story about an episode append.
 
 ---
 
-## Memory — Beads
+## Memory — Hermes harness
 
+This project uses the **Hermes harness** for persistent memory instead of an external issue tracker. Everything lives locally in the repo under `.github/prompts/.hermes/`, reached through a single seam — `memory-adapter.md` — so the rest of the system never hard-codes where memory lives.
+
+| File / dir | Role |
+|---|---|
+| `memory-adapter.md` | The only place that knows where memory lives (the seam) |
+| `episodes.jsonl` | The `open → close` audit trail — every Figma write gets a paired episode |
+| `lessons.jsonl` | Durable agent lessons — read at startup, appended during Observe |
+| `state/<runId>.json` | Live, volatile run state (gitignored) |
+| `cache/` | Librarian's local mirror of external token/KB repos (gitignored) |
+| `sync-kb.sh` | Refreshes the Librarian mirror with a staleness check |
+
+**Run lifecycle (per skill invocation):**
+
+```mermaid
+flowchart LR
+    A[Read manifest.json<br/>+ memory-adapter] --> B[Open run<br/>state.write + episode open]
+    B --> C[Recall lessons<br/>lesson.recall]
+    C --> D[Do the work]
+    D --> E[Observe<br/>append lessons]
+    E --> F[Close run<br/>episode close]
+    F --> G[Reconcile<br/>lesson.sweep → gated promote → writeback]
 ```
- ██████╗ ███████╗ █████╗ ██████╗ ███████╗
- ██╔══██╗██╔════╝██╔══██╗██╔══██╗██╔════╝
- ██████╔╝█████╗  ███████║██║  ██║███████╗
- ██╔══██╗██╔══╝  ██╔══██║██║  ██║╚════██║
- ██████╔╝███████╗██║  ██║██████╔╝███████║
- ╚═════╝ ╚══════╝╚═╝  ╚═╝╚═════╝ ╚══════╝
-```
 
-Every skill invocation is automatically tracked in [Beads](https://github.com/gastownhall/beads) — a Dolt-powered persistent issue tracker built for AI agents. This means:
+- **Open** a run → `state.write` + `episode.append({phase:"open", skill, summary})`.
+- **Recall** lessons → `lesson.recall([skill])` before doing work; honour what returns.
+- **Close** a run → `episode.append({phase:"close", skill, summary})`, **then reconcile**.
 
-- Agent context survives across chat sessions
-- Every decision, conflict, and output is logged with a timestamp
-- You can query history: `bd list`, `bd show <id>`
-- Multi-session work picks up exactly where it left off
+### Self-improvement loop
 
-**Quick reference:**
+Recalling and appending lessons is only the first half. On **every** run close (and on demand via
+`/odin lessons`), ODIN runs a **reconciliation** sweep that promotes pending lessons into the rule
+files that actually drive behaviour:
 
-```bash
-bd ready                              # What can I work on?
-bd create "fix button tokens" -p 1    # Create an issue
-bd update <id> --claim                # Claim it
-bd close <id> "done"                  # Complete it
-bd dolt push                          # Sync to remote
-```
+1. `lesson.sweep()` collects lessons with `applied:false` and a non-null `ruleProposal`, grouped
+   by target file with near-duplicates collapsed.
+2. If any are pending, ODIN surfaces a single **gated** `vscode_askQuestions` prompt (multi-select,
+   opt-in) listing each proposal as `skill · file · one-line lesson`.
+3. Approved proposals are written into their data file (`mimr/data/mapping-rules.md`,
+   `vali/data/layout-rules.md`, `modi/data/component-map.md`), then `lesson.update` flips that
+   line to `applied:true` + stamps `appliedAt`. Declined proposals resurface next sweep.
+
+Rule files are **never** auto-edited without explicit approval. An empty sweep finishes silently.
+
+| Control | Effect |
+|---|---|
+| `/odin lessons` | Run the reconciliation sweep standalone (opens its own `open → close` episode pair) |
+| `/odin refine` | Alias of `/odin lessons` |
+
+Read `.github/prompts/manifest.json` first on every invocation — it is the tiny skill→files map and the local analog of a Hermes skill-bundle.
+
+---
+
+## Model routing & escalation safety
+
+ODIN resolves a model for each subagent dispatch. Two layers compose:
+
+1. **Per-agent default** — each `.github/agents/*.agent.md` declares a durable `model:` in frontmatter (mirrored in `manifest.json`).
+2. **Per-task escalation** — ODIN may pass a higher (or lower) model to `runSubagent` for a specific step. This never rewrites the default.
+
+| Skill | Default model | Escalates to (per task) |
+|---|---|---|
+| ODIN-9000 (orchestrator) | Claude Opus 4.8 | — |
+| Librarian | Claude Haiku 4.5 | — |
+| MODI | Claude Haiku 4.5 | Sonnet 4.6 (ambiguous variant mapping / non-trivial resolution) |
+| VALI | Claude Sonnet 4.6 | — |
+| MIMR | Claude Sonnet 4.6 | Opus 4.8 (large/ambiguous conflict audit) |
+| SAGA | Claude Sonnet 4.6 | Opus 4.8 (complex multi-state component) |
+
+**Escalation safety gate (mandatory):** before dispatching any subagent on a model **higher** than its frontmatter default, ODIN MUST ask the user via a confirmation prompt and receive explicit approval — no silent escalation. If declined, ODIN dispatches on the default instead (the step is never blocked). Downgrades (e.g. Sonnet → Haiku for a trivial step) are exempt and need no confirmation. The chosen model and approval are recorded as `episode.escalation = { from, to, approved }`.
+
+Models are passed to `runSubagent` as `"<Model Name> (copilot)"`.
 
 ---
 
@@ -157,16 +187,18 @@ bd dolt push                          # Sync to remote
 | VS Code 1.96+ | Editor | ✅ |
 | GitHub Copilot (Individual / Business / Enterprise) | Agent runtime | ✅ |
 | Figma MCP extension | Figma API bridge | ✅ |
-| `bd` CLI | Beads issue tracker | ✅ |
-| `beads-mcp` | Beads MCP server for Copilot | ✅ |
-| Node.js + npm | For bd install via npm | ✅ |
+| Node.js + npm | Tooling | ✅ |
+| Python 3.10+ | Librarian token-lookup script | ✅ |
+| `git` with access to the BetssonGroup repos | Librarian mirror sync (private repos) | Optional |
+
+> The Hermes harness needs **no installation** — it is file-based and lives in `.github/prompts/.hermes/` inside this repo.
 
 ---
 
 ### 1. Install Figma MCP in VS Code
 
-> **Can this be automated?**  
-> Partially — the `.vscode/mcp.json` in this repo pre-configures the Beads MCP server. The Figma MCP extension must be installed manually through the VS Code marketplace (extensions cannot be auto-installed by a repo).
+> **Can this be automated?**
+> The Figma MCP extension must be installed manually through the VS Code marketplace (extensions cannot be auto-installed by a repo).
 
 **Steps:**
 
@@ -201,80 +233,18 @@ MIMR uses the Figma REST API directly (for `sharedPluginData` access), which req
 
 ---
 
-### 3. Install Beads
+### 3. (Optional) Prime the Librarian mirror
 
-Beads is a system-wide CLI tool — install it once, use it in any project.
-
-#### Install `bd` CLI
-
-**macOS / Linux (Homebrew — recommended):**
-```bash
-brew install beads
-```
-
-**npm:**
-```bash
-npm install -g @beads/bd
-```
-
-**Manual (if the above fail):**
-```bash
-# Download the binary for your platform from:
-# https://github.com/gastownhall/beads/releases/latest
-# Then move to your PATH, e.g.:
-cp bd /usr/local/bin/bd && chmod +x /usr/local/bin/bd
-```
-
-#### Install `beads-mcp` (Copilot integration)
+Librarian queries a **local clone** of the external Token Studio JSON and KB repos rather than loading the large source files into context. To populate or refresh that mirror:
 
 ```bash
-# Recommended (uv — manages its own Python)
-curl -LsSf https://astral.sh/uv/install.sh | sh
-uv tool install beads-mcp
-
-# Or with pip (requires Python 3.10+)
-pip install beads-mcp
+bash .github/prompts/.hermes/sync-kb.sh          # refresh only if remote SHA changed
+bash .github/prompts/.hermes/sync-kb.sh --force  # re-pull regardless of SHA
 ```
 
-#### Initialize Beads in this repo
+The script does a sparse checkout of just the token/KB directories into `.github/prompts/.hermes/cache/` (gitignored) and records the synced SHAs in `cache/kb-manifest.json`. Re-running is idempotent — it prints `✓ up to date` when nothing changed.
 
-```bash
-cd odinflow
-bd init --quiet --skip-hooks
-```
-
-This creates the `.beads/` database directory. The issue history lives here and is tracked by Dolt (version-controlled SQL).
-
-#### Configure VS Code MCP
-
-The `.vscode/mcp.json` in this repo is pre-configured. Update the paths to match your system:
-
-```json
-{
-  "servers": {
-    "beads": {
-      "command": "/Users/<you>/.local/bin/beads-mcp",
-      "env": {
-        "BEADS_PATH": "/usr/local/bin/bd"
-      }
-    }
-  }
-}
-```
-
-Find your actual paths with:
-```bash
-which beads-mcp   # e.g. ~/.local/bin/beads-mcp
-which bd          # e.g. /usr/local/bin/bd
-```
-
-#### Reload VS Code
-
-```
-Cmd+Shift+P → "Developer: Reload Window"
-```
-
-MCP servers load on window start. After reload, Beads tools will appear in Copilot Chat.
+> The BetssonGroup source repos are **private** — the sync needs authenticated git access (SSH key or `gh auth login`). Without access, Librarian falls back to the local `token-registry.md`.
 
 ---
 
@@ -284,146 +254,55 @@ MCP servers load on window start. After reload, Beads tools will appear in Copil
 git clone git@github.com:katbinaris/odinflow.git
 cd odinflow
 
-# Install bd + beads-mcp (see above)
-bd init --quiet --skip-hooks
-
-# Verify everything works
-bd ready
+# (optional) prime the Librarian mirror
+bash .github/prompts/.hermes/sync-kb.sh
 ```
 
-Then open VS Code, reload the window, and type `/odin-9000` in Copilot Chat.
+Then open VS Code and type `/odin-9000` in Copilot Chat.
 
 ---
 
 ## Skill pipeline
 
+```mermaid
+flowchart TD
+    U["User: Figma URL or design brief"] --> O["/odin-9000"]
+    O --> S1["1. Assess scope"]
+    S1 --> S2["2. Open Hermes run (state.write + episode open)"]
+    S2 --> M["/modi → wireframe → components"]
+    M --> V["/vali → layout conversion"]
+    V --> I["/mimr → token audit + writes"]
+    I --> G["/saga → HTML + CSS or StencilJS"]
+    G --> S3["3. Close run (episode close)"]
+    S3 --> OUT["Storybook-ready component folder<br/>+ full Hermes episode trail"]
 ```
-User: "Figma URL or design brief"
-          │
-          ▼
-     /odin-9000
-    ┌─────────────────────────────────────────┐
-    │  1. Assess scope                        │
-    │  2. bd create + claim issue             │
-    │         │                               │
-    │         ▼                               │
-    │      /modi ──► wireframe → components   │
-    │         │                               │
-    │         ▼                               │
-    │      /vali ──► layout conversion        │
-    │         │                               │
-    │         ▼                               │
-    │      /mimr ──► token audit + writes     │
-    │         │                               │
-    │         ▼                               │
-    │      /saga ──► HTML + CSS or StencilJS  │
-    │         │                               │
-    │  3. bd close + dolt push                │
-    └─────────────────────────────────────────┘
-          │
-          ▼
-    Storybook-ready component folder
-    (HTML/CSS or StencilJS Web Component)
-    + full Beads audit trail
-```
+
+Each sub-skill runs as an isolated subagent. ODIN forwards handoff contracts so downstream skills avoid redundant Figma reads:
+
+| Handoff | Contract |
+|---|---|
+| VALI → MIMR | node list `[{id,type}]` forwarded as `PRIOR_SCAN` (skips MIMR tree walk) |
+| MIMR → SAGA | NV map `{prop: shortName, value}` reused for `--fds-*` CSS vars (no re-resolution) |
+| MODI → VALI | swap report; converted instances ready for the layout pass |
 
 ### Technical pipeline (SAGA detail)
 
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                          FIGMA FILE                                  │
-│                  (COMPONENT_SET + token bindings)                    │
-└─────────────────────────┬───────────────────────────────────────────┘
-                          │  Figma URL
-                          ▼
-                   ┌─────────────┐
-                   │ /odin-9000  │  orchestrates, creates bd issue
-                   └──────┬──────┘
-                          │
-          ┌────────┬──────┼───────────────┐
-          ▼        ▼      ▼               ▼
-   ┌────────────┐┌─────────────┐┌─────────────┐┌─────────────┐
-   │    MODI    ││    VALI     ││    MIMR     ││    SAGA     │
-   │ (wireframe)││  (layout)   ││  (tokens)   ││   (code)    │
-   └─────┬──────┘└──────┬──────┘└──────┬──────┘└──────┬──────┘
-         │              │              │              │
-         ▼              ▼              ▼              │
-   Swaps shapes   Converts GROUPs  Binds --fds-*     │
-   & instances    to Auto Layout   vars to Figma     │
-   to library     frames, renames  nodes via NV      │
-   components     layers:                            │
-                  {col/row / role}                    │
-                        │                            │
-                        └────────────────────────────┤
-                                          │  get_design_context
-                                          │  (NV bindings + layout)
-                                          ▼
-                               ┌──────────────────────┐
-                               │  Step 3 asks user:   │
-                               │  Output format?      │
-                               └──────────┬───────────┘
-                                          │
-                    ┌─────────────────────┼──────────────────────┐
-                    ▼                     ▼                       ▼
-           ┌──────────────┐    ┌────────────────────┐   ┌──────────────┐
-           │   Vanilla    │    │     StencilJS      │   │    Both      │
-           └──────┬───────┘    └─────────┬──────────┘   └──────┬───────┘
-                  │                      │                      │
-                  ▼                      ▼                      ▼
-         ┌────────────────┐   ┌──────────────────────┐  (runs both
-         │ {name}.html    │   │ fds-{name}/          │   branches)
-         │ {name}.css     │   │   fds-{name}.tsx     │
-         │ {name}         │   │   fds-{name}.css     │
-         │  .module.css   │   │   fds-{name}         │
-         └────────────────┘   │     .stories.ts      │
-                              └──────────┬───────────┘
-                                         │
-                              ┌──────────▼───────────┐
-                              │  @Component          │
-                              │    tag: fds-{name}   │
-                              │    shadow: true      │
-                              │                      │
-                              │  @Prop() type        │  ← variant axes
-                              │  @Prop() context     │    from Figma
-                              │                      │
-                              │  render() {          │
-                              │    <Host class=...>  │
-                              │      <slot name="icon">   │
-                              │      <slot name="content">│
-                              │      <slot name="actions">│
-                              │    </Host>           │  ← slots from
-                              │  }                   │    user input
-                              └──────────┬───────────┘
-                                         │
-                              ┌──────────▼───────────┐
-                              │  .stories.ts         │
-                              │                      │
-                              │  meta: {             │
-                              │    tags:['autodocs'] │
-                              │    argTypes: {       │
-                              │      type: select    │  ← from @Prop()
-                              │      context: select │
-                              │      iconSlot: text  │  ← from slots
-                              │    }                 │
-                              │  }                   │
-                              │                      │
-                              │  export Default      │
-                              │  export Error        │  ← one story
-                              │  export Alert  ...   │    per variant
-                              └──────────┬───────────┘
-                                         │
-                                         ▼
-                              ┌──────────────────────┐
-                              │   Stencil project    │
-                              │   src/components/    │
-                              │                      │
-                              │   storybook dev      │
-                              │        │             │
-                              │        ▼             │
-                              │   [Autodocs page]    │
-                              │   [Default story]    │
-                              │   [Error story]  ... │
-                              └──────────────────────┘
+```mermaid
+flowchart TD
+    F["FIGMA FILE<br/>(COMPONENT_SET + token bindings)"] --> O["/odin-9000<br/>orchestrates, opens Hermes run"]
+    O --> MODI["MODI (wireframe)<br/>swaps shapes & instances to library components"]
+    O --> VALI["VALI (layout)<br/>converts GROUPs to Auto Layout, renames layers"]
+    O --> MIMR["MIMR (tokens)<br/>binds --fds-* vars to Figma nodes via NV"]
+    MODI --> SAGA
+    VALI --> SAGA
+    MIMR --> SAGA["SAGA (code)<br/>get_design_context: NV bindings + layout"]
+    SAGA --> Q{"Output format?"}
+    Q -->|Vanilla| VAN["{name}.html<br/>{name}.css<br/>{name}.module.css"]
+    Q -->|StencilJS| STEN["fds-{name}/<br/>  fds-{name}.tsx<br/>  fds-{name}.css<br/>  fds-{name}.stories.ts"]
+    Q -->|Both| BOTH["runs both branches"]
+    STEN --> COMP["@Component (shadow DOM)<br/>@Prop() variant axes<br/>named slots in render()"]
+    COMP --> STORY[".stories.ts<br/>argTypes from @Prop() + slots<br/>one story per variant"]
+    STORY --> SB["Stencil project → storybook dev<br/>Autodocs + per-variant stories"]
 ```
 
 ---
@@ -432,134 +311,76 @@ User: "Figma URL or design brief"
 
 ```
 odinflow/
-├── .beads/                        # Beads issue database (Dolt)
 ├── .github/
-│   ├── copilot-instructions.md    # Global Copilot + Beads rules
+│   ├── copilot-instructions.md        # Global Copilot + Hermes rules
 │   └── prompts/
-│       ├── odin-9000.prompt.md    # /odin-9000 entry point
-│       ├── modi.prompt.md         # /modi entry point
-│       ├── mimr.prompt.md         # /mimr entry point
-│       ├── vali.prompt.md         # /vali entry point
-│       ├── saga.prompt.md         # /saga entry point
+│       ├── manifest.json              # Skill→files map + model routing (read FIRST)
+│       ├── .hermes/                   # Hermes harness (memory & run state)
+│       │   ├── memory-adapter.md      # The memory seam
+│       │   ├── episodes.jsonl         # open → close audit trail
+│       │   ├── lessons.jsonl          # durable agent lessons
+│       │   ├── state/                 # live run state (gitignored)
+│       │   ├── cache/                 # Librarian mirror (gitignored)
+│       │   └── sync-kb.sh             # mirror refresh + staleness check
+│       ├── odin-9000.prompt.md        # /odin-9000 entry point
+│       ├── modi.prompt.md             # /modi entry point
+│       ├── mimr.prompt.md             # /mimr entry point
+│       ├── vali.prompt.md             # /vali entry point
+│       ├── saga.prompt.md             # /saga entry point
+│       ├── kevin.prompt.md            # /kevin persona overlay
 │       ├── odin-9000/
 │       │   └── odin-9000.prompt.md
 │       ├── modi/
 │       │   ├── modi.prompt.md
-│       │   ├── data/              # component-map.md
-│       │   └── scripts/           # scan-wireframe.figma.js, swap.figma.js
+│       │   ├── data/                  # component-map.md
+│       │   └── scripts/               # scan-wireframe.figma.js, swap.figma.js
 │       ├── mimr/
 │       │   ├── mimr.prompt.md
-│       │   ├── data/              # token-registry, mapping-rules, token-index
-│       │   └── scripts/           # resolve.figma.js, bulk-update.figma.js
+│       │   ├── data/                  # token-registry, mapping-rules, token-index
+│       │   └── scripts/               # resolve.figma.js, bulk-update.figma.js, token-lookup.py
 │       ├── vali/
 │       │   ├── vali.prompt.md
-│       │   ├── data/              # layout-rules.md
-│       │   └── scripts/           # scan.figma.js, process.figma.js
+│       │   ├── data/                  # layout-rules.md
+│       │   └── scripts/               # scan.figma.js, process.figma.js
 │       └── saga/
 │           └── saga.prompt.md
-│       └── kevin.prompt.md        # /kevin persona overlay
-├── .vscode/
-│   └── mcp.json                   # Beads MCP server config
-├── AGENTS.md                      # Agent workflow reference
-└── CLAUDE.md                      # Claude Code integration
+├── .github/agents/                    # Subagent definitions (model + tools per agent)
+│   ├── librarian.agent.md
+│   ├── modi.agent.md
+│   ├── vali.agent.md
+│   ├── mimr.agent.md
+│   └── saga.agent.md
+├── AGENTS.md                          # Agent workflow reference
+└── CLAUDE.md                          # Claude Code integration
 ```
 
 ---
 
 ## Designer → Engineer handoff
 
-### The designer's journey
-
-```
-  THE DESIGNER'S JOURNEY
-  ──────────────────────────────────────────────────────────────────
-
-
-   FIGMA                          VS CODE                  STORYBOOK
-   ──────                         ───────                  ─────────
-
-  ┌──────────────────┐
-  │                  │   "Here's my
-  │  Component       │    Figma link"
-  │  designed with   │ ──────────────►  /odin-9000
-  │  tokens + layout │                      │
-  │                  │                      │
-  └──────────────────┘                      │
-
-  ┌──────────────────┐            ┌─────────▼──────────────────────┐
-  │                  │◄───────────│                                │
-  │  Tokens are      │  binds     │  Reads the design              │
-  │  connected to    │  colours,  │  Checks token coverage         │
-  │  the right       │  spacing,  │  Fills any gaps                │
-  │  design values   │  radius    │                                │
-  │                  │            └─────────┬──────────────────────┘
-  └──────────────────┘                      │
-
-  ┌──────────────────┐            ┌─────────▼──────────────────────┐
-  │                  │◄───────────│                                │
-  │  Layers are      │  renames   │  Reads the layout              │
-  │  named and       │  + fixes   │  Converts loose groups         │
-  │  structured      │  layout    │  into structured frames        │
-  │  consistently    │            │                                │
-  │                  │            └─────────┬──────────────────────┘
-  └──────────────────┘                      │
-                                            │
-                                   "What format do
-                                    you need?"
-                                            │
-                              ┌─────────────┴─────────────┐
-                              │                           │
-                              ▼                           ▼
-                       For the web team            For Storybook
-                       ─────────────              ─────────────
-                       HTML + CSS files           Web Component
-                       ready to paste             with all variants
-                       into any project           as interactive
-                                                  controls
-                                                       │
-                                                       ▼
-
-                                            ┌──────────────────────┐
-                                            │  ● Default           │
-                                            │  ● Error             │
-                                            │  ● Alert             │
-                                            │  ● Info              │
-                                            │                      │
-                                            │  [ type    ▼ ]       │
-                                            │  [ context ▼ ]       │
-                                            │  [ icon slot ... ]   │
-                                            │                      │
-                                            │  Auto-generated      │
-                                            │  documentation page  │
-                                            └──────────────────────┘
-
-
-  ──────────────────────────────────────────────────────────────────
-  THE HANDOFF
-
-  Designer                                        Engineer
-  ────────                                        ────────
-
-  Opens a pull request                            Opens Storybook
-  with a link to the                              Sees every variant
-  Figma component                                 as a live story
-        │                                                │
-        │           No Figma access needed              │
-        │           No spec-reading needed    ◄──────────┘
-        │           Spacing and colour are
-        │           already in the code
-        │
-        └─── One conversation.  One source of truth.  No back-and-forth.
-```
-
 SAGA is the bridge between design and engineering. Once MIMR has bound tokens and VALI has structured the layers, a designer can run `/saga` on any Figma component and produce a folder that drops directly into an existing Stencil project.
+
+```mermaid
+flowchart LR
+    subgraph Figma
+      D["Component designed<br/>with tokens + layout"]
+    end
+    subgraph "VS Code (/odin-9000)"
+      P["Reads design · checks token coverage<br/>structures layers · generates code"]
+    end
+    subgraph Storybook
+      S["Every variant as a live story<br/>+ auto-generated docs"]
+    end
+    D -->|Figma link| P
+    P -->|HTML+CSS or Web Component| S
+```
 
 ### What gets generated
 
 ```
 src/components/fds-notification-banner/
-  fds-notification-banner.tsx       ← Stencil Web Component (shadow DOM)
-  fds-notification-banner.css       ← scoped styles, --fds-* vars only
+  fds-notification-banner.tsx        ← Stencil Web Component (shadow DOM)
+  fds-notification-banner.css        ← scoped styles, --fds-* vars only
   fds-notification-banner.stories.ts ← Storybook 9/10 CSF3 story
 ```
 
@@ -570,26 +391,6 @@ The story uses `@storybook/web-components` + `lit` html renderer and includes:
 - One named story per primary variant (Success, Error, Alert…)
 
 Storybook picks up the story automatically if the project's `stories` glob covers `src/components/**/*.stories.ts` — no manual import needed.
-
-### Handoff steps
-
-```
-Designer (Figma + VS Code)              Engineer (codebase)
-────────────────────────────────────────────────────────────
-1. /odin-9000 on Figma URL
-   └─ MODI  → wireframe → real components  Shapes become instances
-   └─ VALI  → layout structured            Layer semantics documented
-   └─ MIMR  → tokens bound in Figma       Token values = source of truth
-   └─ SAGA  → component folder written     Drop into src/components/
-                                          storybook dev
-                                          Component renders in isolation
-                                          Controls = every @Prop()
-
-2. Designer opens PR linking Figma URL
-
-3. Engineer reviews story in Storybook,
-   wires component into consuming app
-```
 
 ### What the engineer does NOT need to derive manually
 
@@ -607,8 +408,8 @@ Designer (Figma + VS Code)              Engineer (codebase)
 
 © 2026. All rights reserved.
 
-This project is licensed under the **PolyForm Noncommercial License 1.0.0**.  
-You may use, modify, and share this software for **non-commercial purposes only**.  
+This project is licensed under the **PolyForm Noncommercial License 1.0.0**.
+You may use, modify, and share this software for **non-commercial purposes only**.
 Commercial use of any kind requires explicit written permission from the author.
 
 See [LICENSE](./LICENSE) for full terms.
