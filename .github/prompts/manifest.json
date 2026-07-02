@@ -47,6 +47,7 @@
         ".github/prompts/mimr/scripts/audit.figma.js",
         ".github/prompts/mimr/scripts/resolve.figma.js",
         ".github/prompts/mimr/scripts/bulk-update.figma.js",
+        ".github/prompts/mimr/scripts/generate-phase3.mjs",
         ".github/prompts/mimr/scripts/token-lookup.py"
       ],
       "data": [

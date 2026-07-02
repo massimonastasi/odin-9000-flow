@@ -41,11 +41,12 @@ Audit, compare and bulk-update token bindings across Token Studio (TS) and nativ
 | `scripts/audit.figma.js` | Phase 1 — raw tree walk only. Use when Phase 3 writes are planned (bulk-update needs full node lists). | No |
 | `scripts/resolve.figma.js` | Phase 1b — variable resolution only. Use paired with audit.figma.js for write-path runs. | No |
 | `scripts/bulk-update.figma.js` | Phase 3 — write engine (Plugin API), chunked in batches of 100 | No |
+| `scripts/generate-phase3.mjs` | **Phase 3 script generator** — stamps a JSON write plan into a ready-to-run .figma.js script in ONE call. Eliminates iterative script building. Use this instead of manually assembling the script. | No |
 | `data/token-registry.md` | All available tokens — human-readable reference | **User** |
 | `data/token-index.json` | All available tokens — compact machine index for agent lookups | **Auto-generated** |
 | `data/mapping-rules.md` | Bulk-update rules (YAML blocks) | **User** |
 | `data/ts-core-fabric.json` | Raw Token Studio export — source for registry/index generation | **No — never load** (21K lines, context overflow risk) |
-| `scripts/token-lookup.py` | CLI tool to search ts-core-fabric.json — use `--decompose` for composite border tokens | No |
+| `scripts/token-lookup.py` | CLI tool to search ts-core-fabric.json — use `--batch` for multiple tokens in one call, `--decompose` for composite border tokens | No |
 
 ---
 
@@ -281,6 +282,30 @@ When the user describes a change directly (e.g. "update all Square nodes' gap to
 > Never write ad-hoc Plugin API code to apply tokens, bind variables, or modify node properties.
 > The script handles TS metadata, auto NV resolution, fill binding, chunked execution,
 > and skip-if-already-bound logic. Ad-hoc code bypasses all of these safeguards.
+
+> **Execution context:** `mcp_figma_use_figma` (Plugin API execution) is only available in the
+> ODIN main session context — NOT in MIMR/VALI/SAGA subagent contexts. When MIMR is dispatched
+> as a subagent, it builds the Phase 3 script and returns it to ODIN. ODIN then either executes
+> the script via its own `use_figma` call, or instructs the user to paste the script in the
+> Figma Plugin Console (Plugins → Development → Open Console).
+
+> **Performance: use `generate-phase3.mjs` instead of building scripts manually.**
+> Once you have the write plan (array of `{nodeId, prop, token, rawValue?, styleName?}`),
+> generate the final script in ONE terminal call:
+> ```bash
+> echo '<write-plan-json>' | node .github/prompts/mimr/scripts/generate-phase3.mjs \
+>   --root <rootNodeId> --file <fileKey> --out .github/prompts/mimr/scripts/phase3-<nodeId>.figma.js
+> ```
+> This replaces the old iterative 30+ turn script-assembly loop. Do NOT manually build
+> the script line-by-line or read `bulk-update.figma.js` multiple times.
+
+> **Performance: use `--batch` for token lookups.**
+> When resolving multiple tokens, call `token-lookup.py` ONCE with `--batch`:
+> ```bash
+> python3 .github/prompts/mimr/scripts/token-lookup.py --batch "fds-info,fds-round-150,fds-spacing-200,..."
+> ```
+> This returns all results in one JSON object. Do NOT call token-lookup.py separately for
+> each token — that creates one LLM round-trip per lookup.
 
 ### 1 — Parse rules
 

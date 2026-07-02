@@ -4,6 +4,7 @@ token-lookup.py — Search ts-core-fabric.json WITHOUT loading into agent contex
 
 Usage (run via terminal, not imported):
   python3 token-lookup.py <query> [--brand Betsson] [--type border] [--decompose]
+  python3 token-lookup.py --batch "fds-info,fds-spacing-200,fds-round-150"
 
 Examples:
   python3 token-lookup.py "fds-stroke-const-int-rest"
@@ -11,6 +12,11 @@ Examples:
   python3 token-lookup.py "btn-accent" --type color
   python3 token-lookup.py "fds-spacing-const" --type spacing
   python3 token-lookup.py "*" --type border --decompose   # all border tokens
+  python3 token-lookup.py --batch "fds-info,fds-round-150,fds-spacing-200,fds-on-info-alternate"
+
+The --batch flag accepts a comma-separated list of token names and resolves
+ALL of them in a single invocation, returning a JSON object keyed by query.
+This eliminates the need for multiple sequential calls.
 
 The --decompose flag is only meaningful for type:border tokens. It outputs
 the atomic width + color references that can be fed directly into
@@ -85,12 +91,16 @@ def decompose_border(token):
 
 def main():
     parser = argparse.ArgumentParser(description='Search ts-core-fabric.json tokens')
-    parser.add_argument('query', help='Token name substring to search for (* = all)')
+    parser.add_argument('query', nargs='?', default=None, help='Token name substring to search for (* = all)')
+    parser.add_argument('--batch', dest='batch', help='Comma-separated list of token names to resolve in one call')
     parser.add_argument('--brand', default='Betsson', help='Brand/theme key (default: Betsson)')
     parser.add_argument('--type', dest='token_type', help='Filter by token type (e.g. border, color, spacing)')
     parser.add_argument('--decompose', action='store_true', help='Decompose border tokens into atomic width+color')
     parser.add_argument('--compact', action='store_true', help='Single-line JSON per result')
     args = parser.parse_args()
+
+    if not args.query and not args.batch:
+        parser.error('Either a query argument or --batch is required')
 
     if not os.path.exists(FABRIC_PATH):
         print(json.dumps({'error': f'File not found: {FABRIC_PATH}'}))
@@ -104,7 +114,33 @@ def main():
         print(json.dumps({'error': f'Brand "{args.brand}" not found', 'available': list(data.keys())}))
         sys.exit(1)
 
-    tokens = flatten_tokens(brand_data)
+    all_tokens = flatten_tokens(brand_data)
+
+    # ── Batch mode: resolve multiple tokens in one call ──
+    if args.batch:
+        queries = [q.strip() for q in args.batch.split(',') if q.strip()]
+        batch_results = {}
+        for q in queries:
+            q_lower = q.lower()
+            matches = [t for t in all_tokens if q_lower in t['path'].lower()]
+            if args.token_type:
+                matches = [t for t in matches if t['type'] == args.token_type]
+            if args.decompose:
+                batch_results[q] = [decompose_border(t) for t in matches if t['type'] == 'border']
+            else:
+                batch_results[q] = [{
+                    'path': t['path'],
+                    'type': t['type'],
+                    'value': t['value'] if not isinstance(t['value'], (dict, list)) else t['value'],
+                    'description': t['description'][:80] if t['description'] else '',
+                } for t in matches]
+        print(json.dumps(batch_results, indent=2, ensure_ascii=False))
+        total = sum(len(v) for v in batch_results.values())
+        print(f'\n# batch: {len(queries)} queries, {total} total results', file=sys.stderr)
+        return
+
+    # ── Single query mode (original behavior) ──
+    tokens = all_tokens
 
     # Filter by query
     if args.query != '*':
