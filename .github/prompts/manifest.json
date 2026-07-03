@@ -8,7 +8,10 @@
       "prompt": ".github/prompts/odin-9000/odin-9000.prompt.md",
       "agent": null,
       "model": "Claude Opus 4.8",
-      "controls": { "/odin lessons": "run the lesson reconciliation sweep standalone", "/odin refine": "alias of /odin lessons" },
+      "controls": {
+        "/odin lessons": "run the lesson reconciliation sweep standalone",
+        "/odin refine": "alias of /odin lessons"
+      },
       "loadWhen": "always (entry point)"
     },
     "modi": {
@@ -16,7 +19,9 @@
       "prompt": ".github/prompts/modi/modi.prompt.md",
       "agent": ".github/agents/modi.agent.md",
       "model": "Claude Haiku 4.5",
-      "escalateTo": { "Claude Sonnet 4.6": "ambiguous variant mapping or non-trivial component resolution" },
+      "escalateTo": {
+        "Claude Sonnet 4.6": "ambiguous variant mapping or non-trivial component resolution"
+      },
       "scripts": [
         ".github/prompts/modi/scripts/scan-wireframe.figma.js",
         ".github/prompts/modi/scripts/swap.figma.js"
@@ -41,7 +46,9 @@
       "prompt": ".github/prompts/mimr/mimr.prompt.md",
       "agent": ".github/agents/mimr.agent.md",
       "model": "Claude Sonnet 4.6",
-      "escalateTo": { "Claude Opus 4.8": "large or ambiguous conflict audit (many nodes / overlapping token rules)" },
+      "escalateTo": {
+        "Claude Opus 4.8": "large or ambiguous conflict audit (many nodes / overlapping token rules)"
+      },
       "scripts": [
         ".github/prompts/mimr/scripts/audit-resolve-digest.figma.js",
         ".github/prompts/mimr/scripts/audit.figma.js",
@@ -62,8 +69,10 @@
       "prompt": ".github/prompts/saga/saga.prompt.md",
       "agent": ".github/agents/saga.agent.md",
       "model": "Claude Sonnet 4.6",
-      "escalateTo": { "Claude Opus 4.8": "complex multi-state / multi-variant component codegen" },
-      "scripts": [],
+      "escalateTo": {
+        "Claude Opus 4.8": "complex multi-state / multi-variant component codegen"
+      },
+      "scripts": [".github/prompts/saga/scripts/generate-component-css.mjs"],
       "loadWhen": "component output needed (last; depends on MIMR+VALI)"
     },
     "librarian": {
