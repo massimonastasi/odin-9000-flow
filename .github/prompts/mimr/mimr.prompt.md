@@ -4,7 +4,9 @@ description: "**FIGMA WORKFLOW SKILL** — MIMR (Metadata Inventory & Mapping Re
 agent: agent
 argument-hint: "Figma frame URL"
 ---
+
 ## First Render
+
 Always display this plain-text boot line at the beginning of the workflow:
 
 ```
@@ -26,39 +28,39 @@ Always display this plain-text boot line at the beginning of the workflow:
 
 Audit, compare and bulk-update token bindings across Token Studio (TS) and native Figma variables (NV).
 
-| Workflow | Trigger | Phases |
-|---|---|---|
-| **Audit** | user provides a Figma URL | 1 → 1b → 2 |
-| **Bulk update** | "apply mapping rules" after an audit | 3 |
+| Workflow        | Trigger                              | Phases     |
+| --------------- | ------------------------------------ | ---------- |
+| **Audit**       | user provides a Figma URL            | 1 → 1b → 2 |
+| **Bulk update** | "apply mapping rules" after an audit | 3          |
 
 ---
 
 ## External files
 
-| File | Purpose | Edit? |
-|---|---|---|
-| `scripts/audit-resolve-digest.figma.js` | **Phase 1+1b — DEFAULT for audit-only runs.** Single-pass: tree walk + variable resolution + anomaly detection. Returns a pre-digested `{ summary, matrix, sizes, issues, varMap }`. Target output <8KB inline (avoids file-write threshold); typical 2-4KB for small components, 6-7KB for large COMPONENT_SETs. Eliminates file writes, python parsing, read_file chunks, and the separate resolve call. Use this unless Phase 3 (bulk write) is planned. | No |
-| `scripts/audit.figma.js` | Phase 1 — raw tree walk only. Use when Phase 3 writes are planned (bulk-update needs full node lists). | No |
-| `scripts/resolve.figma.js` | Phase 1b — variable resolution only. Use paired with audit.figma.js for write-path runs. | No |
-| `scripts/bulk-update.figma.js` | Phase 3 — write engine (Plugin API), chunked in batches of 100 | No |
-| `scripts/generate-phase3.mjs` | **Phase 3 script generator** — stamps a JSON write plan into a ready-to-run .figma.js script in ONE call. Eliminates iterative script building. Use this instead of manually assembling the script. | No |
-| `data/token-registry.md` | All available tokens — human-readable reference | **User** |
-| `data/token-index.json` | All available tokens — compact machine index for agent lookups | **Auto-generated** |
-| `data/mapping-rules.md` | Bulk-update rules (YAML blocks) | **User** |
-| `data/ts-core-fabric.json` | Raw Token Studio export — source for registry/index generation | **No — never load** (21K lines, context overflow risk) |
-| `scripts/token-lookup.py` | CLI tool to search ts-core-fabric.json — use `--batch` for multiple tokens in one call, `--decompose` for composite border tokens | No |
+| File                                    | Purpose                                                                                                                                                                                                                                                                                                                                                                                                                                                     | Edit?                                                  |
+| --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| `scripts/audit-resolve-digest.figma.js` | **Phase 1+1b — DEFAULT for audit-only runs.** Single-pass: tree walk + variable resolution + anomaly detection. Returns a pre-digested `{ summary, matrix, sizes, issues, varMap }`. Target output <8KB inline (avoids file-write threshold); typical 2-4KB for small components, 6-7KB for large COMPONENT_SETs. Eliminates file writes, python parsing, read_file chunks, and the separate resolve call. Use this unless Phase 3 (bulk write) is planned. | No                                                     |
+| `scripts/audit.figma.js`                | Phase 1 — raw tree walk only. Use when Phase 3 writes are planned (bulk-update needs full node lists).                                                                                                                                                                                                                                                                                                                                                      | No                                                     |
+| `scripts/resolve.figma.js`              | Phase 1b — variable resolution only. Use paired with audit.figma.js for write-path runs.                                                                                                                                                                                                                                                                                                                                                                    | No                                                     |
+| `scripts/bulk-update.figma.js`          | Phase 3 — write engine (Plugin API), chunked in batches of 100                                                                                                                                                                                                                                                                                                                                                                                              | No                                                     |
+| `scripts/generate-phase3.mjs`           | **Phase 3 script generator** — stamps a JSON write plan into a ready-to-run .figma.js script in ONE call. Eliminates iterative script building. Use this instead of manually assembling the script.                                                                                                                                                                                                                                                         | No                                                     |
+| `data/token-registry.md`                | All available tokens — human-readable reference                                                                                                                                                                                                                                                                                                                                                                                                             | **User**                                               |
+| `data/token-index.json`                 | All available tokens — compact machine index for agent lookups                                                                                                                                                                                                                                                                                                                                                                                              | **Auto-generated**                                     |
+| `data/mapping-rules.md`                 | Bulk-update rules (YAML blocks)                                                                                                                                                                                                                                                                                                                                                                                                                             | **User**                                               |
+| `data/ts-core-fabric.json`              | Raw Token Studio export — source for registry/index generation                                                                                                                                                                                                                                                                                                                                                                                              | **No — never load** (21K lines, context overflow risk) |
+| `scripts/token-lookup.py`               | CLI tool to search ts-core-fabric.json — use `--batch` for multiple tokens in one call, `--decompose` for composite border tokens                                                                                                                                                                                                                                                                                                                           | No                                                     |
 
 ---
 
 ## Slots
 
-| Slot | Source | Format |
-|---|---|---|
-| `{frame_url}` | User | Full Figma URL |
-| `{file_key}` | Extracted from URL | path segment after `/design/` |
-| `{node_id}` | Extracted from URL `node-id` param | replace `-` → `:` |
-| `{node_id_param}` | REST URL param | keep `-` (e.g. `21774-64113`) |
-| `{pat}` | User provides directly — never guess | `figd_xxxx…` |
+| Slot              | Source                               | Format                        |
+| ----------------- | ------------------------------------ | ----------------------------- |
+| `{frame_url}`     | User                                 | Full Figma URL                |
+| `{file_key}`      | Extracted from URL                   | path segment after `/design/` |
+| `{node_id}`       | Extracted from URL `node-id` param   | replace `-` → `:`             |
+| `{node_id_param}` | REST URL param                       | keep `-` (e.g. `21774-64113`) |
+| `{pat}`           | User provides directly — never guess | `figd_xxxx…`                  |
 
 **Before Phase 1:** verify `{frame_url}` and `{pat}`.
 **Before Phase 3:** verify `data/mapping-rules.md` has at least one rule block.
@@ -71,6 +73,7 @@ Audit, compare and bulk-update token bindings across Token Studio (TS) and nativ
 > Never write ad-hoc Plugin API code to walk the tree or inspect nodes.
 > Never make multiple `getNodeByIdAsync` calls in a loop.
 > **Script selection rule:**
+>
 > - **Audit-only (no writes planned)** → use `audit-resolve-digest.figma.js`. Single call, inline result, no file writes, no python parsing needed.
 > - **Write-path (Phase 3 bulk-update planned)** → use `audit.figma.js` + `resolve.figma.js`. Full node lists are required by `bulk-update.figma.js`.
 
@@ -88,7 +91,7 @@ Before running either script, determine whether variant sampling is needed:
    - Read `variantGroupProperties` from the COMPONENT_SET.
    - **Sample the union of every axis's values** — for each axis, pick one variant per distinct
      value of that axis (other axes held at their default/first value). This guarantees a sample
-     for every value of a *semantic* axis (`Context = success/error/alert/info`,
+     for every value of a _semantic_ axis (`Context = success/error/alert/info`,
      `Theme = surface/alternate-surface`), whose tokens differ per value. **Do not** sample only
      the largest axis — the token-bearing axis in FDS sets is usually semantic, not the largest,
      so holding it at default would leave error/alert/info fills unaudited.
@@ -101,11 +104,12 @@ Before running either script, determine whether variant sampling is needed:
 ### Injection slots (both scripts share the same four constants)
 
 Inject at the top of the script before execution:
+
 ```js
-const ROOT_ID    = "{node_id}";
-const MAX_DEPTH  = 4;
-const SAMPLE_IDS = [{sampled_ids}];  // null for full audit, or array of variant IDs
-const PRIOR_SCAN = null;             // or array of {id, type} from VALI scan (ODIN only)
+const ROOT_ID = "{node_id}";
+const MAX_DEPTH = 4;
+const SAMPLE_IDS = [{ sampled_ids }]; // null for full audit, or array of variant IDs
+const PRIOR_SCAN = null; // or array of {id, type} from VALI scan (ODIN only)
 ```
 
 **`PRIOR_SCAN` fast path (ODIN pipeline only):**
@@ -114,6 +118,7 @@ When ODIN runs VALI before MIMR, ODIN forwards the VALI scan as a `PRIOR_SCAN` a
 ### Script output — digest path
 
 `audit-resolve-digest.figma.js` returns `{ root, stats, summary, varMap, matrix, sizes, issues, fromPriorScan }` as an inline result (no file written, always <3KB).
+
 - `summary` — one-line stats string, use directly in Phase 2 header
 - `matrix` — one row per Colour+Theme combo: `{ variant, n, fill_ts, fill_nv, border_ts, border_nv, text_fill_ts, text_fill_nv }`
 - `sizes` — one row per Size: spacing, radius, stroke, typography tokens (TS + NV short names)
@@ -125,6 +130,7 @@ When ODIN runs VALI before MIMR, ODIN forwards the VALI scan as a `PRIOR_SCAN` a
 ### Script output — write path
 
 `audit.figma.js` returns `{ root, variantGroupProperties, nodes, varIds, stats, fromPriorScan }`.
+
 - Use `nodes` as Phase 1 results; use `varIds` as input to Phase 1b (`resolve.figma.js`).
 - Output is written to disk (20KB cap). Read in line-range chunks via `read_file`.
 
@@ -140,6 +146,7 @@ X-Figma-Token: {pat}
 `plugin_data=shared` is mandatory — without it `sharedPluginData` is silently absent.
 
 **Depth parameter:**
+
 - Default: omit `depth` (full tree)
 - **For COMPONENT_SET with > 20 variants:** use `depth=3` + variant sampling
 - For single frames or small components: omit `depth`
@@ -156,8 +163,12 @@ X-Figma-Token: {pat}
 Inject at the top of the cached script content, then execute via `mcp_figma_use_figma`:
 
 ```js
-const VAR_IDS  = [ /* allVarIds from Phase 1 */ ];
-const NODE_IDS = [ /* ids where hasBoundVars === true */ ];
+const VAR_IDS = [
+  /* allVarIds from Phase 1 */
+];
+const NODE_IDS = [
+  /* ids where hasBoundVars === true */
+];
 ```
 
 Node resolution is batched internally (chunks of 50 via `Promise.all`). Use `fileKey = {file_key}`.
@@ -185,6 +196,7 @@ No tree traversal, no python, no file reads. The script has already done the ana
 **Never read `data/token-registry.md` in full — it is large and will fill the context window.**
 
 Use this lookup strategy:
+
 1. **grep_search first** — search `data/token-registry.md` by the token short name or partial TS path. This returns only matching rows at negligible cost.
 2. **JSON index fallback** — if programmatic access is needed (e.g. to resolve NV from a TS path in a script), `require('data/token-index.json')`. Schema: `{ tokens: [[shortName, tsPath, type, nv?, desc?], ...] }`.
 3. **Never load the full MD** — only use grep_search or the JSON index.
@@ -202,6 +214,7 @@ is only a secondary hint, because:
   (name-only comparison = missed conflict).
 
 **Procedure per shared property:**
+
 1. Resolve the TS token to its value (via `token-index.json` / Librarian) and read the NV's
    resolved value (already in the digest's `resolved` field).
 2. If both resolve and the values **differ** → emit `⚠️ CONFLICT`.
@@ -210,13 +223,13 @@ is only a secondary hint, because:
 
 Logical-property pairing (which TS key maps to which NV property):
 
-| TS key | NV property |
-|---|---|
-| `paddingLeft` / `horizontalPadding` / `spacing` | `paddingLeft`, `paddingRight` |
-| `itemSpacing` | `itemSpacing` |
-| `borderRadius` | `cornerRadius` / corner radius variants |
-| `fill` | `fills` |
-| `border` | `strokes` |
+| TS key                                          | NV property                             |
+| ----------------------------------------------- | --------------------------------------- |
+| `paddingLeft` / `horizontalPadding` / `spacing` | `paddingLeft`, `paddingRight`           |
+| `itemSpacing`                                   | `itemSpacing`                           |
+| `borderRadius`                                  | `cornerRadius` / corner radius variants |
+| `fill`                                          | `fills`                                 |
+| `border`                                        | `strokes`                               |
 
 ### Tree format
 
@@ -236,6 +249,7 @@ Append `(prop1/prop2/…)` when multiple native props share the same variable.
 Legend printed once at the top.
 
 **Truncation rules (apply when node count > 40):**
+
 - **Collapse ∅ subtrees** — if a parent and all its descendants are `∅`, replace the entire subtree with a single `└── ∅ ({N} unbound children)` line.
 - **Group identical siblings** — if 3 or more consecutive siblings have the exact same binding pattern, collapse to `├── {pattern}  ×{N}` and show only the first and last node names.
 - **Cap depth at 4 levels** — beyond level 4, print `… ({N} deeper nodes, {M} with bindings)` and stop descending. If any deeper nodes have conflicts, note `{K} conflicts deeper` on the same line.
@@ -264,9 +278,9 @@ When the user describes a change directly (e.g. "update all Square nodes' gap to
 
 2. **Show a derived rule preview** before executing:
 
-   | Rule ID | Layer Pattern | Match | Key | Token Path |
-   |---|---|---|---|---|
-   | `ad-hoc-{key}` | `{layerPattern}` | `{matchType}` | `{key}` | `{value}` |
+   | Rule ID        | Layer Pattern    | Match         | Key     | Token Path |
+   | -------------- | ---------------- | ------------- | ------- | ---------- |
+   | `ad-hoc-{key}` | `{layerPattern}` | `{matchType}` | `{key}` | `{value}`  |
 
    Ask: **"Apply this rule? (yes/no)"**
 
@@ -292,18 +306,22 @@ When the user describes a change directly (e.g. "update all Square nodes' gap to
 > **Performance: use `generate-phase3.mjs` instead of building scripts manually.**
 > Once you have the write plan (array of `{nodeId, prop, token, rawValue?, styleName?}`),
 > generate the final script in ONE terminal call:
+>
 > ```bash
 > echo '<write-plan-json>' | node .github/prompts/mimr/scripts/generate-phase3.mjs \
 >   --root <rootNodeId> --file <fileKey> --out .github/prompts/mimr/scripts/phase3-<nodeId>.figma.js
 > ```
+>
 > This replaces the old iterative 30+ turn script-assembly loop. Do NOT manually build
 > the script line-by-line or read `bulk-update.figma.js` multiple times.
 
 > **Performance: use `--batch` for token lookups.**
 > When resolving multiple tokens, call `token-lookup.py` ONCE with `--batch`:
+>
 > ```bash
 > python3 .github/prompts/mimr/scripts/token-lookup.py --batch "fds-info,fds-round-150,fds-spacing-200,..."
 > ```
+>
 > This returns all results in one JSON object. Do NOT call token-lookup.py separately for
 > each token — that creates one LLM round-trip per lookup.
 
@@ -321,9 +339,9 @@ If a rule uses `type: "nv"` with a `varId` field, verify the `varId` string is a
 
 ### 2 — Preview (mandatory)
 
-| Rule ID | Layer Pattern | Match | Matched Nodes | Writes |
-|---|---|---|---|---|
-| `{id}` | `{layer_pattern}` | `{match}` | N | `{key} → {value}` |
+| Rule ID | Layer Pattern     | Match     | Matched Nodes | Writes            |
+| ------- | ----------------- | --------- | ------------- | ----------------- |
+| `{id}`  | `{layer_pattern}` | `{match}` | N             | `{key} → {value}` |
 
 Ask: **"Apply these N rules to X nodes? (yes/no)"**
 
@@ -334,8 +352,10 @@ Ask: **"Apply these N rules to X nodes? (yes/no)"**
 Inject at the top of the cached script content:
 
 ```js
-const ROOT_ID = "{node_id}";    // colon format
-const RULES   = [ /* parsed rules */ ];
+const ROOT_ID = "{node_id}"; // colon format
+const RULES = [
+  /* parsed rules */
+];
 // Optional fast-path cache (from cache.read("vars-<fileKey>-<version>")):
 // const CACHE_VAR_IDS   = { "fds/fds-on-surface-low": "VariableID:…", … };
 // const CACHE_STYLE_IDS = { "…/some-gradient": "S:…", … };
@@ -346,16 +366,19 @@ Execute via `mcp_figma_use_figma` with `fileKey = {file_key}`.
 **Variable cache fast-path (perf):** if `cache.valid("vars-<fileKey>-<version>")`, inject its `name→id` maps as `CACHE_VAR_IDS` / `CACHE_STYLE_IDS`. The script then resolves ONLY the names it needs via `getVariableByIdAsync` and skips `getLocalVariablesAsync()` (500+ vars) and `getLocalPaintStylesAsync()` entirely. If the cache is stale or absent, omit the injection — the script falls back to a one-time full load and you should `cache.write` the resulting map.
 
 **Auto-NV resolution** happens inside the script for every `ts` write:
+
 1. The TS dot-path is converted to slash-name (`a.b.c` → `a/b/c`)
 2. The variable is resolved by name — via `CACHE_VAR_IDS` + `getVariableByIdAsync` when injected, else `getLocalVariablesAsync()` (loaded once)
 3. If found → `setBoundVariable` is called for each mapped prop (`borderRadius` → all 4 corners, etc.) — Figma resolves the value natively
 4. If not found → `rawValue` is applied directly to the node style
 
 **Fill handling — solid vs gradient:**
+
 - **Solid fills:** excluded from auto-NV (`setBoundVariableForPaint` is needed); rawValue fallback applies the color.
 - **Gradient fills (`-shade` / `-g` suffix):** TS tokens ending with `-shade` or `-g` are gradient paint styles, NOT variables. The script auto-detects these and applies via `node.fillStyleId = style.id`, resolving the style by name through `CACHE_STYLE_IDS` + `getStyleByIdAsync` when injected, else `getLocalPaintStylesAsync()`. No rawValue needed.
 
 **Composite border handling (`type: "border"`):**
+
 - Composite border tokens (e.g. `fds-stroke-const-int-active`) combine width + color. Figma has no composite border property — they must be decomposed into atomic width NV + color NV.
 - Use `scripts/token-lookup.py "token-name" --type border --decompose` to resolve any composite border token.
 - In the RULES array, use `{ type: "border", widthToken: "...", colorToken: "..." }` with the atomic TS paths from the decomposition table in `data/mapping-rules.md`.
@@ -364,14 +387,14 @@ Execute via `mcp_figma_use_figma` with `fileKey = {file_key}`.
 
 ### 4 — Audit log
 
-| Result | Count |
-|---|---|
-| ✅ Applied | N |
-| ✅ NV auto-bound | N |
-| ✅ Component value updated | N |
-| ⚠️ Component value skipped (has NV / unparseable) | N |
-| ⚠️ Already same value | N |
-| ❌ Failed | N |
+| Result                                            | Count |
+| ------------------------------------------------- | ----- |
+| ✅ Applied                                        | N     |
+| ✅ NV auto-bound                                  | N     |
+| ✅ Component value updated                        | N     |
+| ⚠️ Component value skipped (has NV / unparseable) | N     |
+| ⚠️ Already same value                             | N     |
+| ❌ Failed                                         | N     |
 
 For each `nv-auto` entry with `status: 'ok'`, show: node name, prop, varName.
 For each `component-value` entry with `status: 'ok'`, show: node name, key, rawValue applied.
@@ -386,26 +409,26 @@ List `status: 'error'` entries with `nodeId`, `rule`, `error`.
 
 ## Critical rules
 
-| Rule | Detail |
-|---|---|
-| REST `node_id` | `-` separator in URL param, e.g. `21774-64113`. Plugin API: replace `-` → `:` in JS code |
-| `plugin_data=shared` | Required — omitting silently drops `sharedPluginData` |
-| TS namespace | Always `"tokens"` |
-| TS value encoding | Stored as `'"token.path"'` — includes surrounding double-quotes |
-| `resolveLastSegment` | Split on `/`, take last; strip surrounding quotes first |
-| Variable ID prefix | Pass `VariableID:abc/123` as-is to `getVariableByIdAsync` |
-| Library variables | `getVariableByIdAsync` resolves local + library — always use it |
-| Null-guard children | Always `node.children ?? []` |
-| Confirm before write | Hard stop between Phase 2 and Phase 3 — no exceptions. **Padding writes require extra confirmation:** before applying any padding token (`paddingTop`, `paddingBottom`, `paddingLeft`, `paddingRight`, `verticalPadding`, `horizontalPadding`) to any COMPONENT or FRAME node, always stop and confirm with the user via `vscode_askQuestions`. Present the exact candidate token path(s) and the list of affected node ids/names. Do not proceed until explicit approval is received. |
-| Phase 4 is opt-in | Never scaffold unless user explicitly requests it |
-| PAT security | Never log or expose `{pat}` in any output |
-| Page switching | `await figma.setCurrentPageAsync(page)` — never assign `figma.currentPage =` |
-| Conflict vs chain | TS+NV on same property = direct-apply chain. Only `⚠️` when last segments differ |
-| Content fills | **Never omit.** After binding background fill on the COMPONENT, always bind `fds-on-*-hi` (or chosen emphasis) on every TEXT and `icon` VECTOR inside each variant. Omitting content fills is a checklist failure. |
-| `on-*` ≠ background | `fds-btn-on-surface-*`, `fds-on-btn-*`, `fds-on-surface-*` — all `on-*` tokens are content colours. **Never** apply them as a COMPONENT background fill. |
-| Gradient fills (`-shade`/`-g`) | TS tokens whose last path segment ends with `-shade` or `-g` are **gradient paint styles**, not NV variables. Figma variables only support solid colours. The `bulk-update.figma.js` script auto-detects these and applies via `fillStyleId`. In audit reports, gradient fills appear as `fillStyleId: "S:..."` instead of `boundVariables.fills`. |
-| Composite borders (`fds-stroke-const-*`) | Composite border tokens have `type: "border"` with `{width, color}` sub-values. **Never bind the composite token directly** — decompose into atomic width NV + color NV. Use `token-lookup.py --decompose` or the decomposition table in `data/mapping-rules.md`. In RULES, use `type: "border"` writes (not `type: "ts"`). |
-| Token suggestions | Never guess a token path. Always use `grep_search` on `data/token-registry.md` by short name or partial TS path. Never read the full file. |
-| ts-core-fabric.json | **Never read or load** `data/ts-core-fabric.json` — it is 21K lines and will overflow the context window. Use `token-registry.md` (grep_search) or `token-index.json` instead. For composite token decomposition, use `scripts/token-lookup.py`. |
-| User input | **Always use `vscode_askQuestions` for any decision or confirmation needed from the user** — never use inline chat text. Specific decision points in `data/mapping-rules.md` provide the exact question + options; use those templates directly. For any unexpected decision not covered by a template, construct a `vscode_askQuestions` call on the spot. |
-| Annotations | **Never use `setSharedPluginData` for annotations.** When `Annotations: True` is requested, write Figma native annotations via `node.setAnnotations([{ label, properties }])`. If `setAnnotations` is not available in the current API context, log a warning and skip — do not fall back to shared plugin data. |
+| Rule                                     | Detail                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| REST `node_id`                           | `-` separator in URL param, e.g. `21774-64113`. Plugin API: replace `-` → `:` in JS code                                                                                                                                                                                                                                                                                                                                                                                               |
+| `plugin_data=shared`                     | Required — omitting silently drops `sharedPluginData`                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| TS namespace                             | Always `"tokens"`                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| TS value encoding                        | Stored as `'"token.path"'` — includes surrounding double-quotes                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `resolveLastSegment`                     | Split on `/`, take last; strip surrounding quotes first                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| Variable ID prefix                       | Pass `VariableID:abc/123` as-is to `getVariableByIdAsync`                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| Library variables                        | `getVariableByIdAsync` resolves local + library — always use it                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| Null-guard children                      | Always `node.children ?? []`                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| Confirm before write                     | Hard stop between Phase 2 and Phase 3 — no exceptions. **Padding writes require extra confirmation:** before applying any padding token (`paddingTop`, `paddingBottom`, `paddingLeft`, `paddingRight`, `verticalPadding`, `horizontalPadding`) to any COMPONENT or FRAME node, always stop and confirm with the user via `vscode_askQuestions`. Present the exact candidate token path(s) and the list of affected node ids/names. Do not proceed until explicit approval is received. |
+| Phase 4 is opt-in                        | Never scaffold unless user explicitly requests it                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| PAT security                             | Never log or expose `{pat}` in any output                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| Page switching                           | `await figma.setCurrentPageAsync(page)` — never assign `figma.currentPage =`                                                                                                                                                                                                                                                                                                                                                                                                           |
+| Conflict vs chain                        | TS+NV on same property = direct-apply chain. Only `⚠️` when last segments differ                                                                                                                                                                                                                                                                                                                                                                                                       |
+| Content fills                            | **Never omit.** After binding background fill on the COMPONENT, always bind `fds-on-*-hi` (or chosen emphasis) on every TEXT and `icon` VECTOR inside each variant. Omitting content fills is a checklist failure.                                                                                                                                                                                                                                                                     |
+| `on-*` ≠ background                      | `fds-btn-on-surface-*`, `fds-on-btn-*`, `fds-on-surface-*` — all `on-*` tokens are content colours. **Never** apply them as a COMPONENT background fill.                                                                                                                                                                                                                                                                                                                               |
+| Gradient fills (`-shade`/`-g`)           | TS tokens whose last path segment ends with `-shade` or `-g` are **gradient paint styles**, not NV variables. Figma variables only support solid colours. The `bulk-update.figma.js` script auto-detects these and applies via `fillStyleId`. In audit reports, gradient fills appear as `fillStyleId: "S:..."` instead of `boundVariables.fills`.                                                                                                                                     |
+| Composite borders (`fds-stroke-const-*`) | Composite border tokens have `type: "border"` with `{width, color}` sub-values. **Never bind the composite token directly** — decompose into atomic width NV + color NV. Use `token-lookup.py --decompose` or the decomposition table in `data/mapping-rules.md`. In RULES, use `type: "border"` writes (not `type: "ts"`).                                                                                                                                                            |
+| Token suggestions                        | Never guess a token path. Always use `grep_search` on `data/token-registry.md` by short name or partial TS path. Never read the full file.                                                                                                                                                                                                                                                                                                                                             |
+| ts-core-fabric.json                      | **Never read or load** `data/ts-core-fabric.json` — it is 21K lines and will overflow the context window. Use `token-registry.md` (grep_search) or `token-index.json` instead. For composite token decomposition, use `scripts/token-lookup.py`.                                                                                                                                                                                                                                       |
+| User input                               | **Always use `vscode_askQuestions` for any decision or confirmation needed from the user** — never use inline chat text. Specific decision points in `data/mapping-rules.md` provide the exact question + options; use those templates directly. For any unexpected decision not covered by a template, construct a `vscode_askQuestions` call on the spot.                                                                                                                            |
+| Annotations                              | **Never use `setSharedPluginData` for annotations.** When `Annotations: True` is requested, write Figma native annotations via `node.setAnnotations([{ label, properties }])`. If `setAnnotations` is not available in the current API context, log a warning and skip — do not fall back to shared plugin data.                                                                                                                                                                       |

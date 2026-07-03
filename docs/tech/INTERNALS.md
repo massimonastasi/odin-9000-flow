@@ -644,10 +644,53 @@ bindings are never cleared. Returns `{ applied, failed, report:[{rule,nodeId,nod
 python3 token-lookup.py "fds-stroke-const-int-rest"
 python3 token-lookup.py "stroke-const" --type border --decompose
 python3 token-lookup.py "*" --type border --decompose   # all borders
+python3 token-lookup.py --batch "fds-info,fds-round-150,fds-spacing-200"  # multi-token in one call
 ```
 
 Emits compact JSON (one object per result, jq-friendly); `--decompose` splits composite border
 tokens into `{ width:{tsRef,nvName}, color:{tsRef,nvName} }`.
+
+The `--batch` flag accepts a comma-separated list and returns a JSON object keyed by query name,
+resolving all tokens in a single process invocation. This eliminates the per-token sequential
+terminal calls that previously required one LLM round-trip each (~15 calls saved per audit).
+
+**`generate-phase3.mjs`** — a Node.js CLI that stamps a JSON write plan into a ready-to-run
+Figma Plugin API script. Eliminates the iterative 39-call script-building loop.
+
+```bash
+echo '[{"nodeId":"9371:85245","prop":"fills","token":"var/fds/fds-info"}]' \
+  | node generate-phase3.mjs --root 9371:85244 --file Ahvb... --out phase3.figma.js
+```
+
+Input: JSON array of `{ nodeId, prop, token, rawValue?, styleName? }`.
+Supported props: `fills`, `strokes`, `cornerRadius`, `padding`, `paddingH`, `paddingV`,
+`strokeWeight`, `itemSpacing`, `textStyle`, or any scalar Figma property.
+Output: complete `(async () => { ... })()` script with `getNodeByIdAsync`, `getLocalVariablesAsync`,
+`getLocalTextStylesAsync`, per-node binding blocks, and a JSON report.
+
+### SAGA scripts
+
+**`generate-component-css.mjs`** — a Node.js CLI that produces shadow-DOM scoped CSS from a
+component spec JSON, with all `--fds-*` custom properties and resolved fallbacks.
+
+```bash
+echo '<spec-json>' | node generate-component-css.mjs --name fds-bonus-bar --out path.css
+```
+
+Input spec shape:
+```json
+{
+  "shadow": true,
+  "host": { "tokens": { "paddingH": {"var":"--fds-*","fallback":"20px"} } },
+  "nodes": [
+    { "class": "card", "layout": "flex-col", "tokens": { "background": {"var":"--fds-info","fallback":"#608df2"} } },
+    { "class": "subtitle", "typography": {"fontFamily":"Open Sans","fontSize":"12px","lineHeight":"16px","fontWeight":"400"} }
+  ]
+}
+```
+
+SAGA uses this as its CSS base when ODIN passes a `PRE_GENERATED_CSS` path. The LLM only adds
+rules the template can't express (variant states, media queries, animations).
 
 ### VALI scripts
 

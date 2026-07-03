@@ -1,4 +1,5 @@
 # Mapping Rules
+
 <!-- schema-version: 1 -->
 
 > **Bulk-update rules for token migrations.**
@@ -16,9 +17,9 @@
 
 When binding fill tokens to content nodes (TEXT, VECTOR icons), the token MUST match the variant's surface context:
 
-| Variant property value | Content fill token (`hi` emphasis) | Content fill token (`m` emphasis) |
-|---|---|---|
-| `Theme=Surface`, `Theme=Surface-Variant`, `Surface=on-surface`, `Appearance=onSurface` | `var/fds/fds-on-surface-hi` | `var/fds/fds-on-surface-m` |
+| Variant property value                                                                                                 | Content fill token (`hi` emphasis)    | Content fill token (`m` emphasis)    |
+| ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------- | ------------------------------------ |
+| `Theme=Surface`, `Theme=Surface-Variant`, `Surface=on-surface`, `Appearance=onSurface`                                 | `var/fds/fds-on-surface-hi`           | `var/fds/fds-on-surface-m`           |
 | `Theme=Alternate-Surface`, `Theme=Alternate-Surface-Variant`, `Surface=on-alternate-surface`, `Appearance=onAlternate` | `var/fds/fds-on-alternate-surface-hi` | `var/fds/fds-on-alternate-surface-m` |
 
 **Detection:** Extract the theme from the variant name. If it contains `Alternate` → use `fds-on-alternate-surface-*`. Otherwise → use `fds-on-surface-*`.
@@ -33,20 +34,20 @@ Use this schema when generating `RULES` for `bulk-update.figma.js`. Each YAML bl
 
 ```yaml
 # ─── Template ────────────────────────────────────────────────────────────────
-- id: "rule-id"                  # unique, kebab-case identifier
-  layer_pattern: "pattern"       # string to match against node.name
-  matchType: "exact"             # exact | contains | regex
+- id: "rule-id" # unique, kebab-case identifier
+  layer_pattern: "pattern" # string to match against node.name
+  matchType: "exact" # exact | contains | regex
   writes:
     # Token Studio write (sets plugin data + auto-NV resolution)
     - type: ts
-      key: fill                  # TS property key (fill, borderRadius, paddingTop, etc.)
-      value: "var.fds.fds-surface-variant"  # full TS dot-path
-      rawValue: "#1a1a2e"        # optional CSS fallback if NV not found
+      key: fill # TS property key (fill, borderRadius, paddingTop, etc.)
+      value: "var.fds.fds-surface-variant" # full TS dot-path
+      rawValue: "#1a1a2e" # optional CSS fallback if NV not found
 
     # Native variable write (manual override — use only when auto-NV fails)
     - type: nv
-      prop: "fills"              # Figma node property to bind
-      varId: "VariableID:..."    # exact Figma variable ID
+      prop: "fills" # Figma node property to bind
+      varId: "VariableID:..." # exact Figma variable ID
 ```
 
 **Example — button fill + radius + spacing:**
@@ -99,12 +100,12 @@ Apply these rules whenever the target component is a button (layer name contains
 
 > **Rule: `fds-btn-on-*` and `fds-on-btn-*` are NEVER background fills.** `on-*` tokens are always for content rendered ON TOP of a surface (text, icons, borders). Button background fill uses `fds-surface-variant` / `fds-alternate-surface-variant` (or a custom team token).
 
-| Use case | Background fill token | Content (`on-*`) token |
-|---|---|---|
-| **Surface-style button on surface** (`Appearance=onSurface`) | `var.fds.fds-surface-variant` | `fds-on-surface-*` for text/icon |
-| **Surface-style button on alternate surface** (`Appearance=onAlternate`) | `var.fds.fds-alternate-surface-variant` | `fds-on-alternate-surface-*` for text/icon |
-| **Core FDS standard button** | `fds-btn-*` (e.g. `fds-btn-default`) | `fds-on-btn-*` for text/icon on top |
-| **Custom team button** | Keep the team's fill token — do **not** overwrite. Ask the user to confirm which fill token to use. | |
+| Use case                                                                 | Background fill token                                                                               | Content (`on-*`) token                     |
+| ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| **Surface-style button on surface** (`Appearance=onSurface`)             | `var.fds.fds-surface-variant`                                                                       | `fds-on-surface-*` for text/icon           |
+| **Surface-style button on alternate surface** (`Appearance=onAlternate`) | `var.fds.fds-alternate-surface-variant`                                                             | `fds-on-alternate-surface-*` for text/icon |
+| **Core FDS standard button**                                             | `fds-btn-*` (e.g. `fds-btn-default`)                                                                | `fds-on-btn-*` for text/icon on top        |
+| **Custom team button**                                                   | Keep the team's fill token — do **not** overwrite. Ask the user to confirm which fill token to use. |                                            |
 
 > **Per-state fill:** `fds-surface-variant` is a single variable — state changes (hover/active/default) are resolved via Figma variable modes, not by switching to a different fill token. Do **not** use `fds-btn-on-surface-default/active` etc. as fill — those are wrong.
 
@@ -114,32 +115,32 @@ Apply these rules whenever the target component is a button (layer name contains
 
 Use `fds-round-const-btn-*` — **never** `fds-border-radius-btn-*` for radius on buttons.
 
-| Button size tier | Token |
-|---|---|
-| Small / compact | `fds-round-const-btn-sm` → `fds-round-const.ui-controls.btn.fds-round-const-btn-sm` |
+| Button size tier  | Token                                                                                 |
+| ----------------- | ------------------------------------------------------------------------------------- |
+| Small / compact   | `fds-round-const-btn-sm` → `fds-round-const.ui-controls.btn.fds-round-const-btn-sm`   |
 | Regular (default) | `fds-round-const-btn-reg` → `fds-round-const.ui-controls.btn.fds-round-const-btn-reg` |
-| Large / hero | `fds-round-const-btn-lg` → `fds-round-const.ui-controls.btn.fds-round-const-btn-lg` |
+| Large / hero      | `fds-round-const-btn-lg` → `fds-round-const.ui-controls.btn.fds-round-const-btn-lg`   |
 
 ### Spacing (padding + gap)
 
-| Property | Token family | Notes |
-|---|---|---|
-| `paddingTop/Bottom` | `fds-spacing-const-btn-{size}-v` | Match size tier to the button's visual density |
-| `paddingLeft/Right` | `fds-spacing-const-btn-{size}-h` | Same size tier as vertical |
-| `itemSpacing` inside button (icon + label) | `fds-spacing-const-ui-gap` | Always `ui-gap` — this is a UI-level spacing, not a pattern gap |
+| Property                                   | Token family                     | Notes                                                           |
+| ------------------------------------------ | -------------------------------- | --------------------------------------------------------------- |
+| `paddingTop/Bottom`                        | `fds-spacing-const-btn-{size}-v` | Match size tier to the button's visual density                  |
+| `paddingLeft/Right`                        | `fds-spacing-const-btn-{size}-h` | Same size tier as vertical                                      |
+| `itemSpacing` inside button (icon + label) | `fds-spacing-const-ui-gap`       | Always `ui-gap` — this is a UI-level spacing, not a pattern gap |
 
 ### Button borders (stroke)
 
 Border tokens for buttons depend on **Type** (Primary/Secondary/Tertiary) and **Theme**. All borders use `type: "border"` writes with decomposed width + color.
 
-| Type | Theme | Composite token | Width NV (TS path) | Color NV (TS path) |
-|---|---|---|---|---|
-| **Primary** | On header / On surface | `fds-stroke-const-ui-reg-on-surface` | `fds-stroke/fds-stroke-100` (`fds-stroke.fds-stroke-100`) | `var/fds/fds-on-surface-ulow` (`var.fds.fds-on-surface-ulow`) |
-| **Primary** | On alternate surface | `fds-stroke-const-ui-reg-on-alternate-surface` | `fds-stroke/fds-stroke-100` (`fds-stroke.fds-stroke-100`) | `var/fds/fds-on-alternate-surface-ulow` (`var.fds.fds-on-alternate-surface-ulow`) |
-| **Secondary** | On header | `fds-stroke-const-ghost-on-surface-color` | `fds-stroke/fds-stroke-100` (`fds-stroke.fds-stroke-100`) | `ref/text/white/opacity100` (`ref.text.white.opacity100`) |
-| **Secondary** | On surface | `fds-stroke-const-ghost-on-surface` | `fds-stroke/fds-stroke-100` (`fds-stroke.fds-stroke-100`) | `ref/brand/primary/primary40` (`ref.brand.primary.primary40`) |
-| **Secondary** | On alternate surface | `fds-stroke-const-ghost-on-alternate-surface` | `fds-stroke/fds-stroke-100` (`fds-stroke.fds-stroke-100`) | `ref/text/white/opacity100` (`ref.text.white.opacity100`) |
-| **Tertiary** | all | **none** | — | — |
+| Type          | Theme                  | Composite token                                | Width NV (TS path)                                        | Color NV (TS path)                                                                |
+| ------------- | ---------------------- | ---------------------------------------------- | --------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| **Primary**   | On header / On surface | `fds-stroke-const-ui-reg-on-surface`           | `fds-stroke/fds-stroke-100` (`fds-stroke.fds-stroke-100`) | `var/fds/fds-on-surface-ulow` (`var.fds.fds-on-surface-ulow`)                     |
+| **Primary**   | On alternate surface   | `fds-stroke-const-ui-reg-on-alternate-surface` | `fds-stroke/fds-stroke-100` (`fds-stroke.fds-stroke-100`) | `var/fds/fds-on-alternate-surface-ulow` (`var.fds.fds-on-alternate-surface-ulow`) |
+| **Secondary** | On header              | `fds-stroke-const-ghost-on-surface-color`      | `fds-stroke/fds-stroke-100` (`fds-stroke.fds-stroke-100`) | `ref/text/white/opacity100` (`ref.text.white.opacity100`)                         |
+| **Secondary** | On surface             | `fds-stroke-const-ghost-on-surface`            | `fds-stroke/fds-stroke-100` (`fds-stroke.fds-stroke-100`) | `ref/brand/primary/primary40` (`ref.brand.primary.primary40`)                     |
+| **Secondary** | On alternate surface   | `fds-stroke-const-ghost-on-alternate-surface`  | `fds-stroke/fds-stroke-100` (`fds-stroke.fds-stroke-100`) | `ref/text/white/opacity100` (`ref.text.white.opacity100`)                         |
+| **Tertiary**  | all                    | **none**                                       | —                                                         | —                                                                                 |
 
 > **Tertiary note:** Tertiary buttons may have a phantom `strokeWeight` (e.g. 2px) with an empty `strokes` array. This is intentional — leave it as-is. Do not bind border tokens to Tertiary.
 
@@ -153,16 +154,28 @@ Border tokens for buttons depend on **Type** (Primary/Secondary/Tertiary) and **
 
 ```json
 {
-  "questions": [{
-    "header": "btn-size-tier",
-    "question": "Which button size tier should I use for spacing and radius tokens?",
-    "allowFreeformInput": false,
-    "options": [
-      { "label": "sm — Small / compact / toolbar", "description": "fds-spacing-const-btn-sm-v/h + fds-round-const-btn-sm" },
-      { "label": "reg — Regular / standard (default)", "description": "fds-spacing-const-btn-reg-v/h + fds-round-const-btn-reg", "recommended": true },
-      { "label": "lg — Large / hero CTA", "description": "fds-spacing-const-btn-lg-v/h + fds-round-const-btn-lg" }
-    ]
-  }]
+  "questions": [
+    {
+      "header": "btn-size-tier",
+      "question": "Which button size tier should I use for spacing and radius tokens?",
+      "allowFreeformInput": false,
+      "options": [
+        {
+          "label": "sm — Small / compact / toolbar",
+          "description": "fds-spacing-const-btn-sm-v/h + fds-round-const-btn-sm"
+        },
+        {
+          "label": "reg — Regular / standard (default)",
+          "description": "fds-spacing-const-btn-reg-v/h + fds-round-const-btn-reg",
+          "recommended": true
+        },
+        {
+          "label": "lg — Large / hero CTA",
+          "description": "fds-spacing-const-btn-lg-v/h + fds-round-const-btn-lg"
+        }
+      ]
+    }
+  ]
 }
 ```
 
@@ -174,23 +187,23 @@ After binding the background fill on the COMPONENT frame, you **must** also bind
 
 #### Surface-style buttons (Appearance-based)
 
-| Appearance | Content fill token | Variable name |
-|---|---|---|
-| `onSurface` | `var.fds.fds-on-surface-hi` | `var/fds/fds-on-surface-hi` |
+| Appearance    | Content fill token                    | Variable name                         |
+| ------------- | ------------------------------------- | ------------------------------------- |
+| `onSurface`   | `var.fds.fds-on-surface-hi`           | `var/fds/fds-on-surface-hi`           |
 | `onAlternate` | `var.fds.fds-on-alternate-surface-hi` | `var/fds/fds-on-alternate-surface-hi` |
 
 #### Core FDS buttons (Colour-variant-based)
 
 The **Colour** variant axis determines which `fds-on-btn-*` / `fds-btn-on-*` token to use. These tokens exist as **NV COLOR variables** (not just paint styles) — bind via `setBoundVariableForPaint(fills[0], 'color', var)`.
 
-| Colour variant value | Content fill NV name | TS path | Resolves to |
-|---|---|---|---|
-| `accent` | `var/btn/fds-on-btn-accent` | `var.btn.fds-on-btn-accent` | white @ 87% |
-| `default` | `var/btn/fds-on-btn-default` | `var.btn.fds-on-btn-default` | white @ 87% |
-| `alternate accent` | `var/btn/fds-on-btn-alternate-accent` | `var.btn.fds-on-btn-alternate-accent` | white @ 100% |
-| `header default` | `var/btn/fds-btn-on-header-default` | `var.btn.fds-btn-on-header-default` | white @ 100% |
-| `surface default` | `var/btn/fds-btn-on-surface-default` | `var.btn.fds-btn-on-surface-default` | brand primary |
-| `alternate surface default` | `var/btn/fds-btn-on-alternate-surface-default` | `var.btn.fds-btn-on-alternate-surface-default` | white @ 100% |
+| Colour variant value        | Content fill NV name                           | TS path                                        | Resolves to   |
+| --------------------------- | ---------------------------------------------- | ---------------------------------------------- | ------------- |
+| `accent`                    | `var/btn/fds-on-btn-accent`                    | `var.btn.fds-on-btn-accent`                    | white @ 87%   |
+| `default`                   | `var/btn/fds-on-btn-default`                   | `var.btn.fds-on-btn-default`                   | white @ 87%   |
+| `alternate accent`          | `var/btn/fds-on-btn-alternate-accent`          | `var.btn.fds-on-btn-alternate-accent`          | white @ 100%  |
+| `header default`            | `var/btn/fds-btn-on-header-default`            | `var.btn.fds-btn-on-header-default`            | white @ 100%  |
+| `surface default`           | `var/btn/fds-btn-on-surface-default`           | `var.btn.fds-btn-on-surface-default`           | brand primary |
+| `alternate surface default` | `var/btn/fds-btn-on-alternate-surface-default` | `var.btn.fds-btn-on-alternate-surface-default` | white @ 100%  |
 
 > **Important:** These tokens apply to **all button types** (Primary, Secondary, Tertiary) — the Colour axis, not Type, determines content color.
 
@@ -203,7 +216,10 @@ The **Colour** variant axis determines which `fds-on-btn-*` / `fds-btn-on-*` tok
       "header": "Text fill token",
       "question": "Which emphasis level for the label text?",
       "options": [
-        { "label": "fds-on-surface-hi / fds-on-alternate-surface-hi", "recommended": true },
+        {
+          "label": "fds-on-surface-hi / fds-on-alternate-surface-hi",
+          "recommended": true
+        },
         { "label": "fds-on-surface-m / fds-on-alternate-surface-m" },
         { "label": "fds-on-surface-color / fds-on-alternate-surface-color" }
       ]
@@ -246,11 +262,11 @@ Apply when the target is a **card** or **container** component (layer name conta
 > The `spacing` TS key maps to `itemSpacing` (the gap between children), not the container's
 > inset padding. A card whose insets are written under `spacing` will set the wrong property.
 
-| Property | TS key | Token | Notes |
-|---|---|---|---|
-| Top/bottom inset | `verticalPadding` | `spacing.fds-spacing-const.container.fds-spacing-const-container-card` | Prefer the component-specific card token |
-| Left/right inset | `horizontalPadding` | `spacing.fds-spacing-const.container.fds-spacing-const-container-card` | Same card token |
-| Gap between children | `spacing` (→ `itemSpacing`) | `fds-spacing-*` per design | Only the gap belongs under `spacing` |
+| Property             | TS key                      | Token                                                                  | Notes                                    |
+| -------------------- | --------------------------- | ---------------------------------------------------------------------- | ---------------------------------------- |
+| Top/bottom inset     | `verticalPadding`           | `spacing.fds-spacing-const.container.fds-spacing-const-container-card` | Prefer the component-specific card token |
+| Left/right inset     | `horizontalPadding`         | `spacing.fds-spacing-const.container.fds-spacing-const-container-card` | Same card token                          |
+| Gap between children | `spacing` (→ `itemSpacing`) | `fds-spacing-*` per design                                             | Only the gap belongs under `spacing`     |
 
 > **Prefer `fds-spacing-const-container-card` over the generic `fds-spacing-200`** for card
 > internal padding. The generic scale step happens to resolve to the same value today, but the
@@ -262,10 +278,10 @@ Apply when the target is a **card** or **container** component (layer name conta
 > global content-fill rule). A frequent copy-paste error is `surface`-theme variants carrying
 > `var.fds.fds-on-alternate-surface-ulow`.
 
-| Theme | borderColor token |
-|---|---|
-| `Theme=surface`, `Theme=surface-variant` | `var.fds.fds-on-surface-ulow` |
-| `Theme=alternate-surface` | `var.fds.fds-on-alternate-surface-ulow` |
+| Theme                                    | borderColor token                       |
+| ---------------------------------------- | --------------------------------------- |
+| `Theme=surface`, `Theme=surface-variant` | `var.fds.fds-on-surface-ulow`           |
+| `Theme=alternate-surface`                | `var.fds.fds-on-alternate-surface-ulow` |
 
 **Audit check:** in Phase 2, flag any `surface`-theme variant whose `borderColor` resolves to an
 `alternate-surface` token (or vice versa) as a semantic error before writing.
@@ -285,11 +301,11 @@ Elevation is applied via **Figma Effect Styles** (`effectStyleId`), not variable
 
 ### Tier selection
 
-| Component size / context | Token | Effect style name |
-|---|---|---|
-| **Heavy** — large cards, hero panels | `fds-elevation-const-surface-heavy` | `on-surface/fds-elevation-const-surface-heavy` |
+| Component size / context                                  | Token                                | Effect style name                               |
+| --------------------------------------------------------- | ------------------------------------ | ----------------------------------------------- |
+| **Heavy** — large cards, hero panels                      | `fds-elevation-const-surface-heavy`  | `on-surface/fds-elevation-const-surface-heavy`  |
 | **Medium** — popovers, dropdowns, sort overlays, tooltips | `fds-elevation-const-surface-medium` | `on-surface/fds-elevation-const-surface-medium` |
-| **Light** — badges, buttons, chips, tiny elements | `fds-elevation-const-surface-light` | `on-surface/fds-elevation-const-surface-light` |
+| **Light** — badges, buttons, chips, tiny elements         | `fds-elevation-const-surface-light`  | `on-surface/fds-elevation-const-surface-light`  |
 
 Choose `on-alternate-surface/*` variants when component sits on an alternate surface.
 
@@ -297,9 +313,15 @@ Choose `on-alternate-surface/*` variants when component sits on an alternate sur
 
 ```js
 var allEffectStyles = figma.getLocalEffectStyles();
-var style = allEffectStyles.find(function(s) { return s.name === 'on-surface/fds-elevation-const-surface-medium'; });
+var style = allEffectStyles.find(function (s) {
+  return s.name === "on-surface/fds-elevation-const-surface-medium";
+});
 node.effectStyleId = style.id;
-node.setSharedPluginData('tokens', 'boxShadow', '"on-surface.fds-elevation-const-surface-medium"');
+node.setSharedPluginData(
+  "tokens",
+  "boxShadow",
+  '"on-surface.fds-elevation-const-surface-medium"',
+);
 ```
 
 > **TS path encoding:** replace `/` with `.` when writing the effect style name as a TS token path.
@@ -311,6 +333,7 @@ node.setSharedPluginData('tokens', 'boxShadow', '"on-surface.fds-elevation-const
 Apply when the target component is a **header row** or **section strip** (layer name contains `Header`, `Section Header`, `Navigation Strip`, or component variants use `Surface=on-surface` / `Surface=on-alternate-surface` without a list or overlay context).
 
 ### Identifying characteristics
+
 - Horizontal layout row, typically 32–48px tall
 - No background fill on the COMPONENT itself (fills = 0) → **no background fill binding needed**
 - Zero corner radius → **no radius binding needed**
@@ -318,15 +341,16 @@ Apply when the target component is a **header row** or **section strip** (layer 
 
 ### Spacing tokens
 
-| Property | Typical design value | Token strategy |
-|---|---|---|
-| `paddingTop/Bottom` | 4px | Use `fds-spacing-050` primitive — no semantic header-v token exists |
-| `paddingLeft/Right` | 16px | Use `fds-spacing-200` primitive — no semantic header-h token exists |
-| `itemSpacing` | 8px (gap between title group and action group) | `fds-spacing-const-ui-gap` → `fds-spacing-100` = 8px |
+| Property            | Typical design value                           | Token strategy                                                      |
+| ------------------- | ---------------------------------------------- | ------------------------------------------------------------------- |
+| `paddingTop/Bottom` | 4px                                            | Use `fds-spacing-050` primitive — no semantic header-v token exists |
+| `paddingLeft/Right` | 16px                                           | Use `fds-spacing-200` primitive — no semantic header-h token exists |
+| `itemSpacing`       | 8px (gap between title group and action group) | `fds-spacing-const-ui-gap` → `fds-spacing-100` = 8px                |
 
 > **When no semantic header token exists for a given design value, use the matching spacing primitive** (`fds-spacing-050` / `fds-spacing-100` / `fds-spacing-150` / `fds-spacing-200`). Do not force a `btn-*` or `density-*` token onto a header component.
 
 > **Confirmed variable IDs for this file:**
+>
 > - `fds-spacing-050`: `VariableID:8094:59602` (4px)
 > - `fds-spacing-200`: `VariableID:8094:59605` (16px)
 > - `fds-spacing-const-ui-gap`: `VariableID:8094:59638` (→ `fds-spacing-100`, 8px)
@@ -345,11 +369,11 @@ List items inside containers (popovers, menus, dropdowns, drawers) use **density
 
 ### Density token tier selection
 
-| Token | Resolves to | Description | Use when |
-|---|---|---|---|
-| `fds-spacing-const-density-compact` | `fds-spacing-050` = **4px** | Maximizes data density; power-user views | Very dense data tables, compact lists |
-| `fds-spacing-const-density-reg` | `fds-spacing-100` = **8px** | Balanced; standard lists & menus | **Default** — sort menus, dropdowns, navigation lists |
-| `fds-spacing-const-density-wide` | `fds-spacing-200` = **16px** | Editorial; high-value items | Feature lists, onboarding, premium cards |
+| Token                               | Resolves to                  | Description                              | Use when                                              |
+| ----------------------------------- | ---------------------------- | ---------------------------------------- | ----------------------------------------------------- |
+| `fds-spacing-const-density-compact` | `fds-spacing-050` = **4px**  | Maximizes data density; power-user views | Very dense data tables, compact lists                 |
+| `fds-spacing-const-density-reg`     | `fds-spacing-100` = **8px**  | Balanced; standard lists & menus         | **Default** — sort menus, dropdowns, navigation lists |
+| `fds-spacing-const-density-wide`    | `fds-spacing-200` = **16px** | Editorial; high-value items              | Feature lists, onboarding, premium cards              |
 
 TS path: `spacing.fds-spacing-const.density.fds-spacing-const-density-{compact|reg|wide}`
 
@@ -371,12 +395,12 @@ Before applying, check that all sibling rows in the same component have matching
 
 ## Border radius — container/overlay rules
 
-| Use case | Token | TS path |
-|---|---|---|
-| **Standard containers** — lists, panels, cards, popovers, overlays | `fds-round-const-container-reg` | `fds-round-const.containers.standard.fds-round-const-container-reg` |
-| **Large containers** — wide/tall card variants | `fds-round-const-container-lg` | `fds-round-const.containers.standard.fds-round-const-container-lg` |
-| **Modal-class** — full-screen drawers, modal dialogs | `fds-round-const-modal-reg` / `fds-round-const-modal-lg` | `fds-round-const.containers.modal-class.*` |
-| **Buttons** | see Button token rules section — `fds-round-const-btn-*` | |
+| Use case                                                           | Token                                                    | TS path                                                             |
+| ------------------------------------------------------------------ | -------------------------------------------------------- | ------------------------------------------------------------------- |
+| **Standard containers** — lists, panels, cards, popovers, overlays | `fds-round-const-container-reg`                          | `fds-round-const.containers.standard.fds-round-const-container-reg` |
+| **Large containers** — wide/tall card variants                     | `fds-round-const-container-lg`                           | `fds-round-const.containers.standard.fds-round-const-container-lg`  |
+| **Modal-class** — full-screen drawers, modal dialogs               | `fds-round-const-modal-reg` / `fds-round-const-modal-lg` | `fds-round-const.containers.modal-class.*`                          |
+| **Buttons**                                                        | see Button token rules section — `fds-round-const-btn-*` |                                                                     |
 
 > **Note:** `fds-round-const-container-reg` resolves to **16px** and `fds-round-const-modal-reg` also resolves to **16px** — they have distinct semantic meaning despite the same value. Use `container-reg` for overlay/popover panels; reserve `modal-reg` for true modal dialogs.
 
@@ -388,19 +412,19 @@ Apply when the target component is an **input field** (layer name contains `Inpu
 
 ### Border radius
 
-| Token | TS path |
-|---|---|
+| Token                       | TS path                                                       |
+| --------------------------- | ------------------------------------------------------------- |
 | `fds-round-const-input-reg` | `fds-round-const.ui-controls.input.fds-round-const-input-reg` |
 
 Confirmed Variable ID: `VariableID:8094:59655` (resolves to 8px)
 
 ### Spacing
 
-| Property | Token | TS path |
-|---|---|---|
-| `paddingTop` / `paddingBottom` | `fds-spacing-const-input-v` | `spacing.fds-spacing-const.input.fds-spacing-const-input-v` |
-| `paddingLeft` / `paddingRight` | `fds-spacing-const-input-h` | `spacing.fds-spacing-const.input.fds-spacing-const-input-h` |
-| `itemSpacing` (icon + text gap) | `fds-spacing-const-ui-gap` | `spacing.fds-spacing-const.utility.fds-spacing-const-ui-gap` |
+| Property                        | Token                       | TS path                                                      |
+| ------------------------------- | --------------------------- | ------------------------------------------------------------ |
+| `paddingTop` / `paddingBottom`  | `fds-spacing-const-input-v` | `spacing.fds-spacing-const.input.fds-spacing-const-input-v`  |
+| `paddingLeft` / `paddingRight`  | `fds-spacing-const-input-h` | `spacing.fds-spacing-const.input.fds-spacing-const-input-h`  |
+| `itemSpacing` (icon + text gap) | `fds-spacing-const-ui-gap`  | `spacing.fds-spacing-const.utility.fds-spacing-const-ui-gap` |
 
 ### Layout sizing
 
@@ -411,11 +435,11 @@ Confirmed Variable ID: `VariableID:8094:59655` (resolves to 8px)
 
 After binding spacing/radius on the Input FRAME, you **must** also bind fill NV on every TEXT and `icon` VECTOR node inside each variant. The token depends on the variant's **Theme** property:
 
-| Theme variant | Content fill token | Variable ID | Resolves to |
-|---|---|---|---|
-| `Theme=Surface` | `var/fds/fds-on-surface-hi` | `VariableID:8094:59349` | `ref/text/black/opacity87` |
-| `Theme=Surface-Variant` | `var/fds/fds-on-surface-hi` | `VariableID:8094:59349` | `ref/text/black/opacity87` |
-| `Theme=Alternate-Surface` | `var/fds/fds-on-alternate-surface-hi` | `VariableID:8094:59357` | `ref/text/white/opacity100` |
+| Theme variant                     | Content fill token                    | Variable ID             | Resolves to                 |
+| --------------------------------- | ------------------------------------- | ----------------------- | --------------------------- |
+| `Theme=Surface`                   | `var/fds/fds-on-surface-hi`           | `VariableID:8094:59349` | `ref/text/black/opacity87`  |
+| `Theme=Surface-Variant`           | `var/fds/fds-on-surface-hi`           | `VariableID:8094:59349` | `ref/text/black/opacity87`  |
+| `Theme=Alternate-Surface`         | `var/fds/fds-on-alternate-surface-hi` | `VariableID:8094:59357` | `ref/text/white/opacity100` |
 | `Theme=Alternate-Surface-Variant` | `var/fds/fds-on-alternate-surface-hi` | `VariableID:8094:59357` | `ref/text/white/opacity100` |
 
 > **Rule:** `Surface` and `Surface-Variant` → `fds-on-surface-hi`. `Alternate-*` → `fds-on-alternate-surface-hi`. Extract Theme from the variant name: `Theme=([^,]+)`. If starts with `Alternate` → alternate token.
@@ -441,6 +465,7 @@ TS path last segment ends with "-shade" or "-g"  →  paint style (not NV variab
 ```
 
 Examples:
+
 - `var.btn.fds-btn-accent-shade` → paint style `btn/fds-btn-accent-shade`
 - `var.btn.fds-btn-default-shade` → paint style `btn/fds-btn-default-shade`
 - `var.btn.fds-btn-alternate-accent-shade` → paint style `btn/fds-btn-alternate-accent-shade`
@@ -448,13 +473,13 @@ Examples:
 
 ### Binding mechanism
 
-| Property | Solid color | Gradient |
-|---|---|---|
-| **Storage** | Figma variable | Figma paint style |
-| **API** | `setBoundVariable('fills', 0, v)` | `node.fillStyleId = style.id` |
-| **Lookup** | `getLocalVariablesAsync()` by name | `getLocalPaintStylesAsync()` by name |
+| Property                 | Solid color                           | Gradient                                            |
+| ------------------------ | ------------------------------------- | --------------------------------------------------- |
+| **Storage**              | Figma variable                        | Figma paint style                                   |
+| **API**                  | `setBoundVariable('fills', 0, v)`     | `node.fillStyleId = style.id`                       |
+| **Lookup**               | `getLocalVariablesAsync()` by name    | `getLocalPaintStylesAsync()` by name                |
 | **bulk-update.figma.js** | Auto-NV resolution (skipped for fill) | Auto paint style resolution via `isGradientToken()` |
-| **audit.figma.js** | `boundVariables.fills` | `node.fillStyleId` |
+| **audit.figma.js**       | `boundVariables.fills`                | `node.fillStyleId`                                  |
 
 ### TS path → paint style name conversion
 
@@ -474,35 +499,35 @@ Stroke width tokens control `strokeWeight` in Figma. Like border radius, Figma s
 
 ### Available tokens
 
-| Token | Variable ID | Resolves to |
-|---|---|---|
-| `fds-stroke/fds-stroke-050` | `VariableID:8094:59675` | 0.5px |
-| `fds-stroke/fds-stroke-100` | `VariableID:8094:59676` | 1px |
-| `fds-stroke/fds-stroke-150` | `VariableID:8094:59677` | 1.5px |
-| `fds-stroke/fds-stroke-200` | `VariableID:8094:59678` | 2px |
+| Token                       | Variable ID             | Resolves to |
+| --------------------------- | ----------------------- | ----------- |
+| `fds-stroke/fds-stroke-050` | `VariableID:8094:59675` | 0.5px       |
+| `fds-stroke/fds-stroke-100` | `VariableID:8094:59676` | 1px         |
+| `fds-stroke/fds-stroke-150` | `VariableID:8094:59677` | 1.5px       |
+| `fds-stroke/fds-stroke-200` | `VariableID:8094:59678` | 2px         |
 
 TS path format: `fds-stroke.fds-stroke-{tier}` (e.g. `fds-stroke.fds-stroke-150`)
 
 ### TS key mapping
 
-| TS key | Figma property bound | Scope |
-|---|---|---|
-| `borderWidth` | `strokeTopWeight` + `strokeBottomWeight` + `strokeLeftWeight` + `strokeRightWeight` | All 4 sides (uniform) |
-| `borderWidthTop` | `strokeTopWeight` | Top only |
-| `borderWidthBottom` | `strokeBottomWeight` | Bottom only |
-| `borderWidthLeft` | `strokeLeftWeight` | Left only |
-| `borderWidthRight` | `strokeRightWeight` | Right only |
+| TS key              | Figma property bound                                                                | Scope                 |
+| ------------------- | ----------------------------------------------------------------------------------- | --------------------- |
+| `borderWidth`       | `strokeTopWeight` + `strokeBottomWeight` + `strokeLeftWeight` + `strokeRightWeight` | All 4 sides (uniform) |
+| `borderWidthTop`    | `strokeTopWeight`                                                                   | Top only              |
+| `borderWidthBottom` | `strokeBottomWeight`                                                                | Bottom only           |
+| `borderWidthLeft`   | `strokeLeftWeight`                                                                  | Left only             |
+| `borderWidthRight`  | `strokeRightWeight`                                                                 | Right only            |
 
 > **Note:** `setBoundVariable('strokeWeight', v)` silently maps to all 4 individual weight properties. `boundVariables.strokeWeight` does NOT appear in read-back — check the 4 individual props instead.
 
 ### Typical usage by component
 
-| Component | Stroke token | Notes |
-|---|---|---|
-| Input field (all states) | `fds-stroke-150` | Uniform 1.5px, INSIDE stroke align |
-| Buttons | Usually none | Buttons typically have no stroke |
-| Cards / containers | `fds-stroke-100` or none | Thin border or borderless |
-| Dividers / separators | `fds-stroke-050` | Hairline |
+| Component                | Stroke token             | Notes                              |
+| ------------------------ | ------------------------ | ---------------------------------- |
+| Input field (all states) | `fds-stroke-150`         | Uniform 1.5px, INSIDE stroke align |
+| Buttons                  | Usually none             | Buttons typically have no stroke   |
+| Cards / containers       | `fds-stroke-100` or none | Thin border or borderless          |
+| Dividers / separators    | `fds-stroke-050`         | Hairline                           |
 
 ---
 
@@ -512,8 +537,8 @@ Apply when the target layer name contains `Thumb`, `thumbnail`, `media`, `_image
 
 ### Border radius
 
-| Use case | Token | TS path |
-|---|---|---|
+| Use case          | Token                             | TS path                                                 |
+| ----------------- | --------------------------------- | ------------------------------------------------------- |
 | Regular thumbnail | `fds-round-const-media-thumb-reg` | `fds-round-const.media.fds-round-const-media-thumb-reg` |
 
 Confirmed Variable ID: `VariableID:8094:59666` (resolves to 16px)
@@ -532,12 +557,12 @@ Apply when the target is a **sportsbook betting card** — layer name contains `
 
 ### Token bindings
 
-| Property | Token | Variable ID | Resolved value |
-|---|---|---|---|
-| `cornerRadius` | `fds-round-const-container-lg` | `VariableID:8094:59660` | 20px |
-| `paddingLeft/Right/Top/Bottom` | `fds-spacing-const-container-group` | `VariableID:8094:59628` | 8px |
-| `itemSpacing` | `fds-spacing-const-ui-gap` | `VariableID:8094:59638` | 8px |
-| `effectStyleId` | `on-surface/fds-elevation-const-surface-heavy` | `S:e159aab36df57d0689998f8c12591e55836e7fb7,` | — |
+| Property                       | Token                                          | Variable ID                                   | Resolved value |
+| ------------------------------ | ---------------------------------------------- | --------------------------------------------- | -------------- |
+| `cornerRadius`                 | `fds-round-const-container-lg`                 | `VariableID:8094:59660`                       | 20px           |
+| `paddingLeft/Right/Top/Bottom` | `fds-spacing-const-container-group`            | `VariableID:8094:59628`                       | 8px            |
+| `itemSpacing`                  | `fds-spacing-const-ui-gap`                     | `VariableID:8094:59638`                       | 8px            |
+| `effectStyleId`                | `on-surface/fds-elevation-const-surface-heavy` | `S:e159aab36df57d0689998f8c12591e55836e7fb7,` | —              |
 
 ### Layout sizing
 
@@ -560,26 +585,26 @@ These rules govern when to set `primaryAxisSizingMode` / `counterAxisSizingMode`
 
 > **Only change sizing mode if the current value is `FIXED` and the archetype rule requires `AUTO` (hug).** Never change a node that is already `AUTO` or `FILL`.
 
-| Archetype | Primary axis (height for VERTICAL) | Counter axis (width for VERTICAL) |
-|---|---|---|
-| **Sportsbook card** | `AUTO` (hug) | `FIXED` |
-| **Sort overlay / popover panel** | `AUTO` (hug) | `FIXED` |
-| **Input field** | `FIXED` | `FILL` or `FIXED` (confirm with user) |
-| **List item row** | `AUTO` (hug) | `FILL` |
-| **Header / section strip** | `FIXED` | `FILL` |
-| **Media thumb tile** | `FIXED` | `FIXED` |
+| Archetype                        | Primary axis (height for VERTICAL) | Counter axis (width for VERTICAL)     |
+| -------------------------------- | ---------------------------------- | ------------------------------------- |
+| **Sportsbook card**              | `AUTO` (hug)                       | `FIXED`                               |
+| **Sort overlay / popover panel** | `AUTO` (hug)                       | `FIXED`                               |
+| **Input field**                  | `FIXED`                            | `FILL` or `FIXED` (confirm with user) |
+| **List item row**                | `AUTO` (hug)                       | `FILL`                                |
+| **Header / section strip**       | `FIXED`                            | `FILL`                                |
+| **Media thumb tile**             | `FIXED`                            | `FIXED`                               |
 
 ### How to apply
 
 ```js
 // Hug height (VERTICAL layout)
-node.primaryAxisSizingMode = 'AUTO';
+node.primaryAxisSizingMode = "AUTO";
 
 // Fixed height
-node.primaryAxisSizingMode = 'FIXED';
+node.primaryAxisSizingMode = "FIXED";
 
 // Fill width
-node.counterAxisSizingMode = 'FILL_CONTAINER';
+node.counterAxisSizingMode = "FILL_CONTAINER";
 ```
 
 > **Ask before changing sizing** if the archetype is ambiguous or if the node is a COMPONENT_SET child that differs across variants.
@@ -593,30 +618,32 @@ When `Annotations: True` is passed to ODIN-9000 or MIMR, write Figma **native an
 ### API
 
 ```js
-node.annotations = [{
-  label: 'Token bindings applied',
-  properties: [
-    { type: 'cornerRadius' },  // border radius bound
-    { type: 'padding' },       // padding bound
-    { type: 'fills' },         // fill color bound  ← use 'fills', NOT 'fill'
-    { type: 'effects' },       // elevation/effect style bound
-    { type: 'itemSpacing' },   // gap bound
-  ],
-}];
+node.annotations = [
+  {
+    label: "Token bindings applied",
+    properties: [
+      { type: "cornerRadius" }, // border radius bound
+      { type: "padding" }, // padding bound
+      { type: "fills" }, // fill color bound  ← use 'fills', NOT 'fill'
+      { type: "effects" }, // elevation/effect style bound
+      { type: "itemSpacing" }, // gap bound
+    ],
+  },
+];
 ```
 
 ### Valid `type` values (confirmed by API)
 
-| Type string | Use for |
-|---|---|
-| `cornerRadius` | `setBoundVariable('cornerRadius', ...)` |
-| `padding` | `setBoundVariable('paddingLeft/Right/Top/Bottom', ...)` |
-| `fills` | `setBoundVariableForPaint(fill, 'color', ...)` — **use `fills`, NOT `fill`** |
-| `effects` | `effectStyleId` binding |
-| `itemSpacing` | `setBoundVariable('itemSpacing', ...)` |
-| `width` | width sizing |
-| `height` | height sizing |
-| `layoutMode` | layout direction |
+| Type string    | Use for                                                                      |
+| -------------- | ---------------------------------------------------------------------------- |
+| `cornerRadius` | `setBoundVariable('cornerRadius', ...)`                                      |
+| `padding`      | `setBoundVariable('paddingLeft/Right/Top/Bottom', ...)`                      |
+| `fills`        | `setBoundVariableForPaint(fill, 'color', ...)` — **use `fills`, NOT `fill`** |
+| `effects`      | `effectStyleId` binding                                                      |
+| `itemSpacing`  | `setBoundVariable('itemSpacing', ...)`                                       |
+| `width`        | width sizing                                                                 |
+| `height`       | height sizing                                                                |
+| `layoutMode`   | layout direction                                                             |
 
 > **Common mistake:** `type: 'fill'` throws a validation error. Always use `type: 'fills'` (plural).
 
@@ -627,6 +654,7 @@ Only include `properties` entries that were actually bound on the node. Omit unb
 ### Failure handling
 
 If `node.setAnnotations` throws or is unavailable in the current API context:
+
 1. Log `{ nodeId, error }` to the audit report under a `⚠️ annotation-skipped` row.
 2. **Do not fall back to `setSharedPluginData`.** Shared plugin data is only for Token Studio (`tokens` namespace) and verified workflow metadata — never for display annotations.
 
@@ -647,24 +675,24 @@ OR TS path contains "fds-stroke-const" (composite namespace)
 
 ### Decomposition table
 
-| Composite TS token | Width ref → NV name | Color ref → NV name | Description |
-|---|---|---|---|
-| `fds-stroke-const-ui-s-on-surface` | `fds-stroke.fds-stroke-050` → `fds-stroke/fds-stroke-050` | `var.fds.fds-on-surface-ulow` → `var/fds/fds-on-surface-ulow` | Subtle hairline border on primary surfaces |
-| `fds-stroke-const-ui-reg-on-surface` | `fds-stroke.fds-stroke-100` → `fds-stroke/fds-stroke-100` | `var.fds.fds-on-surface-ulow` → `var/fds/fds-on-surface-ulow` | Standard baseline border on primary surfaces |
-| `fds-stroke-const-ui-s-on-alternate-surface` | `fds-stroke.fds-stroke-100` → `fds-stroke/fds-stroke-100` | `var.fds.fds-on-alternate-surface-ulow` → `var/fds/fds-on-alternate-surface-ulow` | Subtle border on alternate surfaces |
-| `fds-stroke-const-ui-reg-on-alternate-surface` | `fds-stroke.fds-stroke-100` → `fds-stroke/fds-stroke-100` | `var.fds.fds-on-alternate-surface-ulow` → `var/fds/fds-on-alternate-surface-ulow` | Standard border on alternate surfaces |
-| `fds-stroke-const-int-rest` | `fds-stroke.fds-stroke-100` → `fds-stroke/fds-stroke-100` | `var.fds.fds-on-surface-low` → `var/fds/fds-on-surface-low` | Input/interactive rest state |
-| `fds-stroke-const-int-active` | `fds-stroke.fds-stroke-150` → `fds-stroke/fds-stroke-150` | `ref.brand.primary.primary40` → `ref/brand/primary/primary40` | Focus/active state (brand primary) |
-| `fds-stroke-const-int-error` | `fds-stroke.fds-stroke-150` → `fds-stroke/fds-stroke-150` | `ref.system.error.error40` → `ref/system/error/error40` | Error validation state |
-| `fds-stroke-const-int-success` | `fds-stroke.fds-stroke-150` → `fds-stroke/fds-stroke-150` | `ref.system.success.success50` → `ref/system/success/success50` | Success validation state |
-| `fds-stroke-const-int-disabled` | `fds-stroke.fds-stroke-100` → `fds-stroke/fds-stroke-100` | `var.fds.fds-on-surface-ulow` → `var/fds/fds-on-surface-ulow` | Disabled/inert state |
-| `fds-stroke-const-ghost-on-surface` | `fds-stroke.fds-stroke-100` → `fds-stroke/fds-stroke-100` | `ref.brand.primary.primary40` → `ref/brand/primary/primary40` | Ghost button on standard surfaces |
-| `fds-stroke-const-ghost-on-alternate-surface` | `fds-stroke.fds-stroke-100` → `fds-stroke/fds-stroke-100` | `ref.text.white.opacity100` → `ref/text/white/opacity100` | Ghost button on dark surfaces |
-| `fds-stroke-const-ghost-on-surface-color` | `fds-stroke.fds-stroke-100` → `fds-stroke/fds-stroke-100` | `ref.text.white.opacity100` → `ref/text/white/opacity100` | Ghost button on colored surfaces |
-| `fds-stroke-const-divider-reg` | `fds-stroke.fds-stroke-050` → `fds-stroke/fds-stroke-050` | `var.fds.fds-on-surface-ulow` → `var/fds/fds-on-surface-ulow` | Hairline list separator |
-| `fds-stroke-const-divider-heavy` | `fds-stroke.fds-stroke-100` → `fds-stroke/fds-stroke-100` | `var.fds.fds-on-surface-low` → `var/fds/fds-on-surface-low` | Heavy section separator |
-| `fds-stroke-const-ui-transparent` | `fds-stroke.fds-stroke-100` → `fds-stroke/fds-stroke-100` | `transparent` | Layout-preserving invisible border |
-| `fds-stroke-const-ui-focus-ring` | `fds-stroke.fds-stroke-150` → `fds-stroke/fds-stroke-150` | `ref.brand.primary.primary40` → `ref/brand/primary/primary40` | Accessibility focus ring |
+| Composite TS token                             | Width ref → NV name                                       | Color ref → NV name                                                               | Description                                  |
+| ---------------------------------------------- | --------------------------------------------------------- | --------------------------------------------------------------------------------- | -------------------------------------------- |
+| `fds-stroke-const-ui-s-on-surface`             | `fds-stroke.fds-stroke-050` → `fds-stroke/fds-stroke-050` | `var.fds.fds-on-surface-ulow` → `var/fds/fds-on-surface-ulow`                     | Subtle hairline border on primary surfaces   |
+| `fds-stroke-const-ui-reg-on-surface`           | `fds-stroke.fds-stroke-100` → `fds-stroke/fds-stroke-100` | `var.fds.fds-on-surface-ulow` → `var/fds/fds-on-surface-ulow`                     | Standard baseline border on primary surfaces |
+| `fds-stroke-const-ui-s-on-alternate-surface`   | `fds-stroke.fds-stroke-100` → `fds-stroke/fds-stroke-100` | `var.fds.fds-on-alternate-surface-ulow` → `var/fds/fds-on-alternate-surface-ulow` | Subtle border on alternate surfaces          |
+| `fds-stroke-const-ui-reg-on-alternate-surface` | `fds-stroke.fds-stroke-100` → `fds-stroke/fds-stroke-100` | `var.fds.fds-on-alternate-surface-ulow` → `var/fds/fds-on-alternate-surface-ulow` | Standard border on alternate surfaces        |
+| `fds-stroke-const-int-rest`                    | `fds-stroke.fds-stroke-100` → `fds-stroke/fds-stroke-100` | `var.fds.fds-on-surface-low` → `var/fds/fds-on-surface-low`                       | Input/interactive rest state                 |
+| `fds-stroke-const-int-active`                  | `fds-stroke.fds-stroke-150` → `fds-stroke/fds-stroke-150` | `ref.brand.primary.primary40` → `ref/brand/primary/primary40`                     | Focus/active state (brand primary)           |
+| `fds-stroke-const-int-error`                   | `fds-stroke.fds-stroke-150` → `fds-stroke/fds-stroke-150` | `ref.system.error.error40` → `ref/system/error/error40`                           | Error validation state                       |
+| `fds-stroke-const-int-success`                 | `fds-stroke.fds-stroke-150` → `fds-stroke/fds-stroke-150` | `ref.system.success.success50` → `ref/system/success/success50`                   | Success validation state                     |
+| `fds-stroke-const-int-disabled`                | `fds-stroke.fds-stroke-100` → `fds-stroke/fds-stroke-100` | `var.fds.fds-on-surface-ulow` → `var/fds/fds-on-surface-ulow`                     | Disabled/inert state                         |
+| `fds-stroke-const-ghost-on-surface`            | `fds-stroke.fds-stroke-100` → `fds-stroke/fds-stroke-100` | `ref.brand.primary.primary40` → `ref/brand/primary/primary40`                     | Ghost button on standard surfaces            |
+| `fds-stroke-const-ghost-on-alternate-surface`  | `fds-stroke.fds-stroke-100` → `fds-stroke/fds-stroke-100` | `ref.text.white.opacity100` → `ref/text/white/opacity100`                         | Ghost button on dark surfaces                |
+| `fds-stroke-const-ghost-on-surface-color`      | `fds-stroke.fds-stroke-100` → `fds-stroke/fds-stroke-100` | `ref.text.white.opacity100` → `ref/text/white/opacity100`                         | Ghost button on colored surfaces             |
+| `fds-stroke-const-divider-reg`                 | `fds-stroke.fds-stroke-050` → `fds-stroke/fds-stroke-050` | `var.fds.fds-on-surface-ulow` → `var/fds/fds-on-surface-ulow`                     | Hairline list separator                      |
+| `fds-stroke-const-divider-heavy`               | `fds-stroke.fds-stroke-100` → `fds-stroke/fds-stroke-100` | `var.fds.fds-on-surface-low` → `var/fds/fds-on-surface-low`                       | Heavy section separator                      |
+| `fds-stroke-const-ui-transparent`              | `fds-stroke.fds-stroke-100` → `fds-stroke/fds-stroke-100` | `transparent`                                                                     | Layout-preserving invisible border           |
+| `fds-stroke-const-ui-focus-ring`               | `fds-stroke.fds-stroke-150` → `fds-stroke/fds-stroke-150` | `ref.brand.primary.primary40` → `ref/brand/primary/primary40`                     | Accessibility focus ring                     |
 
 ### YAML rule template for composite borders
 
@@ -676,11 +704,12 @@ Use `type: "border"` writes to apply decomposed width + color in a single rule:
   matchType: contains
   writes:
     - type: border
-      widthToken: "fds-stroke.fds-stroke-100"     # atomic width TS path
-      colorToken: "var.fds.fds-on-surface-low"     # atomic color TS path
+      widthToken: "fds-stroke.fds-stroke-100" # atomic width TS path
+      colorToken: "var.fds.fds-on-surface-low" # atomic color TS path
 ```
 
 The `bulk-update.figma.js` script handles `type: "border"` by:
+
 1. Resolving `widthToken` → NV name → `setBoundVariable` on all 4 stroke weight props
 2. Resolving `colorToken` → NV name → `setBoundVariableForPaint(strokes[0], 'color', v)` on stroke paint
 3. Writing TS metadata: `borderWidth` ← widthToken, `border` ← composite token path (optional)
@@ -688,9 +717,41 @@ The `bulk-update.figma.js` script handles `type: "border"` by:
 ### Transparent color exception
 
 `fds-stroke-const-ui-transparent` has `color: "transparent"` — no color NV exists. The script:
+
 1. Binds the width token normally
 2. Sets `node.strokes = [{ type: 'SOLID', color: {r:0,g:0,b:0}, opacity: 0 }]` for the transparent color
 3. Logs `color-transparent` in the report
+
+---
+
+## NV discovery pass on first write to a new file
+
+On the **first** native-variable (NV) write to any new `fileKey`, run a
+`getLocalVariablesAsync()` discovery pass to capture the EXACT variable names before binding.
+Do **not** assume the dot→slash shorthand equals the Figma variable name — some files prefix all
+NV names with a namespace (e.g. file `Ahvbwk0dUHeHazrQX2XtGd` prefixes everything with `var/`,
+so audit shorthand `fds/fds-surface-variant` must be looked up as `var/fds/fds-surface-variant`).
+Cache the resulting `name → VariableID` map per `fileKey + version` and reuse it for the write
+pass.
+
+---
+
+## Component-specific audit notes
+
+### FDS-Input (nested token architecture)
+
+FDS-Input nests structural tokens on a child FRAME named `Input` at depth ≥ 1. The COMPONENT
+root carries only `itemSpacing`. Root-only token reads give false `MISSING_*` results for fills,
+border, padding, and radius. Always probe inner frames by name (`Input`) for the full binding picture.
+
+### FDS-Input label TS/NV emphasis drift
+
+The floating Label TEXT on FDS-Input has systematic TS/NV emphasis drift: TS fill = `fds-on-surface-m`
+(or `fds-on-alternate-surface-m`) while NV is bound to `fds-on-surface-hi` (or `fds-on-alternate-surface-hi`)
+on ALL non-focus variants. Only the Focus variant aligns both at `-hi`. The Success/Alt-Surf-Var
+label incorrectly uses `fds-success` as its TS fill (wrong category — should be text-emphasis).
+**Flag as `TS_NV_CONFLICT`, do not auto-rebind.** Never use semantic state tokens (`fds-success`,
+`fds-error`) as label TEXT fill — use text-emphasis tokens.
 
 ---
 

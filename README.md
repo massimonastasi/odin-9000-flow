@@ -412,13 +412,14 @@ odin-9000-flow/
 │       ├── mimr/
 │       │   ├── mimr.prompt.md
 │       │   ├── data/                  # token-registry, mapping-rules, token-index
-│       │   └── scripts/               # resolve.figma.js, bulk-update.figma.js, token-lookup.py
+│       │   └── scripts/               # audit*.figma.js, bulk-update.figma.js, generate-phase3.mjs, token-lookup.py
 │       ├── vali/
 │       │   ├── vali.prompt.md
 │       │   ├── data/                  # layout-rules.md
 │       │   └── scripts/               # scan.figma.js, process.figma.js
 │       └── saga/
-│           └── saga.prompt.md
+│           ├── saga.prompt.md
+│           └── scripts/               # generate-component-css.mjs
 ├── .github/agents/                    # Subagent definitions (model + tools per agent)
 │   ├── librarian.agent.md
 │   ├── modi.agent.md
@@ -477,6 +478,32 @@ Storybook picks up the story automatically if the project's `stories` glob cover
 | Write Storybook `argTypes`                | Already in the story, controls auto-populated                  |
 | Decide slot names                         | Declared in the SAGA session, wired in `render()`              |
 | Inspect Figma for border-radius/elevation | Already `var(--fds-container-reg)`, bound elevation annotation |
+
+---
+
+## Performance
+
+ODIN Flow includes deterministic CLI tools that short-circuit the LLM for mechanical tasks,
+reducing pipeline time from ~22 minutes to ~2–3 minutes for a simple component.
+
+| Tool | Path | Purpose | Saves |
+|---|---|---|---|
+| `token-lookup.py --batch` | `mimr/scripts/` | Resolve multiple tokens in one call | ~15 LLM round-trips |
+| `generate-phase3.mjs` | `mimr/scripts/` | Stamp a write plan into a ready-to-run Figma plugin script | ~39 LLM calls / 10 min |
+| `generate-component-css.mjs` | `saga/scripts/` | Produce shadow-DOM CSS from a component spec JSON | ~11 re-reads + 117s generation |
+
+### How they compose (optimized pipeline)
+
+```mermaid
+flowchart LR
+    A["get_design_context"] --> B["token-lookup.py --batch"]
+    B --> C["generate-phase3.mjs"]
+    B --> D["generate-component-css.mjs"]
+    C --> E["Paste in Figma Plugin Console"]
+    D --> F["SAGA subagent (TSX + stories only)"]
+```
+
+All three tools are pure Node.js/Python with zero dependencies — no build, no install.
 
 ---
 
