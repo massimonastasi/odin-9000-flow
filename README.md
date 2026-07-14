@@ -130,7 +130,7 @@ Code generation engine. Scaffolds semantic HTML + vanilla CSS + CSS Modules, **o
   ╚═══╝   ╚═════╝ ╚══════╝ ╚═════╝ ╚═╝  ╚═══╝╚═════╝ ╚═╝  ╚═╝
 ```
 
-FDS component documentation generator. Analyzes a Figma component set, extracts control props and variant structure, and writes documentation frames directly on the component's page — following the Fabric Design System template (Component Header, Control Props table, Variants, optional Building Blocks).
+FDS component documentation generator. Analyzes a Figma component set, extracts control props and variant structure, and writes documentation frames directly on the component's page — following the FDS template (Component Header, Control Props table, Variants, optional Building Blocks).
 
 **Invoke:** `/volundr`
 **Inputs:** Figma component URL or node id
