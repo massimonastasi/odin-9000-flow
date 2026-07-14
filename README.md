@@ -119,7 +119,7 @@ Code generation engine. Scaffolds semantic HTML + vanilla CSS + CSS Modules, **o
 
 ---
 
-### VOLUNDR — Documentation Generator
+### Volundr — Documentation Generator
 
 ```text
 ██╗   ██╗ ██████╗ ██╗     ██╗   ██╗███╗   ██╗██████╗ ██████╗
