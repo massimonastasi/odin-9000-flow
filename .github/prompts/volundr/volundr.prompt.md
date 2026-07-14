@@ -1,43 +1,38 @@
 # Volundr — FDS Component Documentation Generator
 
 ## Overview
-Volundr generates component documentation in Figma using the **Fabric Design System** template structure. It operates in 3 phases:
+Volundr generates component documentation in Figma following the **FDS "Design Component"** page layout. It operates in 3 phases:
 1. **Phase 1 (Analyse)**: Extract component metadata and variant information
 2. **Phase 2 (Confirm)**: Display text preview of documentation for user approval
-3. **Phase 3 (Generate)**: Create documentation frames following FDS wireframe structure
+3. **Phase 3 (Generate)**: Build the page **incrementally**, following `data/page-template.md`
 
-## FDS Wireframe Structure
+> **Layout authority**: `data/page-template.md` is the single source of truth for
+> the page layout, naming, terminology, entry-checks and background rules. Load it
+> in Phase 3 and follow it — do not hardcode a layout here.
 
-Documentation is created as 4-section layout on the same page as the component:
+## FDS "Design Component" layout
+
+Two-column documentation arranged around the component set on the same page.
+Volundr derives `✎` sections from the variant strings; `[P]` sections have no
+source content and are emitted as a **labelled placeholder + flag for the user**
+(never fabricate UX copy).
 
 ```
-┌─────────────────────────────────────┐
-│ Section 1: Component Overview       │
-│ (visual example + description)       │
-│ Size: ~541×383px                    │
-└─────────────────────────────────────┘
-         ↓
-┌─────────────────────────────────────┐
-│ Section 2: Control Props Table      │
-│ (Name | Control value columns)       │
-│ Size: 550×(48 + props×60)px         │
-└─────────────────────────────────────┘
-         ↓
-┌─────────────────────────────────────┐
-│ Section 3: Variants Organization    │
-│ (groups organized by primary prop)   │
-│ Size: 1013×2229px                   │
-│ - Type label + divider              │
-│ - Body frame with background        │
-│ - Variant count indicator           │
-└─────────────────────────────────────┘
-         ↓
-┌─────────────────────────────────────┐
-│ Section 4: Component Instances Grid │
-│ (all variants in grid layout)        │
-│ Size: 1013×1956px                   │
-└─────────────────────────────────────┘
+"Design Component"  (page header + subtitle)
+   Heading  — component name
+ ┌──────────────────────┐   ┌──────────────────────┐
+ │ Doc column 1  (≈938) │   │ Doc column 2  (≈995) │
+ │ • Usage         [P]  │   │ • Behaviour      [P] │
+ │ • Anatomy       [P]  │   │ • Best Practices [P] │
+ │ • Icons              │   │ • Animation      [P] │
+ │ • Control Props ✎    │   │ • Variant grid   ✎   │
+ │                      │   │ • Examples       [P] │
+ └──────────────────────┘   └──────────────────────┘
+ Surfaces matrix  ✎  — context columns × surface-background rows
 ```
+
+Full measurements, Control-Props/Variant-grid/Surfaces specs, canonical frame
+naming and entry-checks live in `data/page-template.md`.
 
 ## Phase 1: Analyse
 
@@ -120,28 +115,27 @@ Ready to generate documentation? (yes/no)
 
 **Input**: Approved Phase 1 analysis (control props + variant groups + page reference)
 
-**Reference**: Load `data/doc-template-structure.md` before generating any frame.
+**Reference**: Load `data/page-template.md` before building any frame — it is the authoritative layout spec.
 
-**Execution**:
+**Execution** (build incrementally — there is NO monolithic generator script):
 1. **Open Hermes run**:
    ```
    state.write(runId, { skill:"volundr", goal:"generate docs", componentName, pageName, phase:"Phase 3" })
    episode.append({ phase:"open", skill:"volundr", summary:`Generate documentation: ${componentName} on ${pageName}` })
    ```
-2. Run **Entry Point Checks** (from doc-template-structure.md):
+2. Run **Entry-point checks** (from `page-template.md`):
    - Confirm page name was saved in Phase 1
-   - Scan for existing documentation frames
-   - If found: notify user and wait for answer
-   - If generic names found: notify user and wait for answer
+   - Scan for existing documentation frames; if found or generic `Frame X` names present, notify user and wait for answer
 3. Check for **ODIN-forwarded metadata**: if `volundr_forwarded_metadata` is present in the run context, skip the `get_metadata` call — reuse it directly.
-4. Use `use_figma` with `generate-docs.figma.js` plugin script
-5. Script builds the blocks strictly following `doc-template-structure.md`:
-   - **Block 1** — `[componentName]` header frame (541x383px, #ffffff)
-   - **Block 2** — `Control` table frame (550px wide, `Header` + `Row_[PropName]` rows)
-   - **Block 3** — Variants: detect Sub-type A or B, generate accordingly
-   - **Block 4/5/6** — Section + Dependencies + Building Blocks only if needed
-6. Background fill in Body frames: apply keyword-based fill from doc-template-structure.md
-7. After generation, verify all created frames follow the canonical names (no `Frame X` names)
+4. If the user gave a **canonical reference node**, inspect it (`get_metadata` / `get_design_context`) and match its real measurements; otherwise use the defaults in `page-template.md`.
+5. Build the page **incrementally** in the `page-template.md` build order — `figma-use` before every `use_figma`, **≤10 ops per call**, validate between steps:
+   - page header ("Design Component" + subtitle) → `Heading`
+   - **Doc column 1**: Usage/Anatomy/Icons placeholders `[P]` + **Control Props** table (`Header` + `Row_[PropName]` rows) `✎`
+   - **Doc column 2**: Behaviour/Best Practices/Animation/Examples placeholders `[P]` + **Variant grid** (Sub-type A or B) `✎`
+   - **Surfaces matrix** `✎` (or placeholder if the component has no surface/context axis)
+   - `[P]` sections = labelled placeholder + flag for the user; never fabricate UX copy
+6. Use **instances** of the existing component set for the variant grid and surfaces matrix — never rebuild the set. Apply Body background per the keyword map in `page-template.md`.
+7. `get_screenshot` the full page; fix overlaps/clipping; verify all frames use canonical names (no `Frame X`).
 8. **Close Hermes run**:
    ```
    state.write(runId, { phase:"done", blocksCreated, variantSubtype, genericNamesFound })
@@ -259,13 +253,14 @@ if (bgTokenMap[variantTheme]) {
 
 ## Data Files
 
-- `data/doc-template-structure.md` — Template frame hierarchy and naming conventions
+- `data/page-template.md` — **Authoritative** "Design Component" page layout, naming, terminology, entry-checks, background map
 - `data/variant-parsing-rules.md` — Rules for parsing variant names and edge cases
 
 ## Plugin API Scripts
 
 - `scripts/scan-component.figma.js` — Extracts component metadata and variant list
-- `scripts/generate-docs.figma.js` — Creates/updates documentation frames in Figma
+
+Frame generation has **no dedicated script**: Volundr builds the page incrementally with `use_figma` following `data/page-template.md` (`figma-use` first, ≤10 ops per call).
 
 ## Error Handling
 
