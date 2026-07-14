@@ -94,6 +94,24 @@
         "stalenessCheck": "git ls-remote <repo> <branch>; re-pull only if SHA differs"
       }
     },
+    "volundr": {
+      "role": "Component documentation generation for Figma",
+      "prompt": ".github/prompts/volundr/volundr.prompt.md",
+      "agent": ".github/agents/volundr.agent.md",
+      "model": "Claude Sonnet 4.6",
+      "escalateTo": {
+        "Claude Opus 4.8": "components with >100 variants or ambiguous variant naming"
+      },
+      "scripts": [
+        ".github/prompts/volundr/scripts/scan-component.figma.js",
+        ".github/prompts/volundr/scripts/generate-docs.figma.js"
+      ],
+      "data": [
+        ".github/prompts/volundr/data/doc-template-structure.md",
+        ".github/prompts/volundr/data/variant-parsing-rules.md"
+      ],
+      "loadWhen": "user requests component documentation generation for a Figma component"
+    },
     "kevin": {
       "role": "Persona/verbosity overlay (narration only)",
       "prompt": ".github/prompts/kevin.prompt.md",
@@ -110,7 +128,8 @@
       "modi": "Claude Haiku 4.5",
       "vali": "Claude Sonnet 4.6",
       "mimr": "Claude Sonnet 4.6",
-      "saga": "Claude Sonnet 4.6"
+      "saga": "Claude Sonnet 4.6",
+      "volundr": "Claude Sonnet 4.6"
     },
     "escalation": "Override the default ONLY when a skill's escalateTo trigger is met for the specific task. Downgrade a Sonnet default to Claude Haiku 4.5 for trivial, mechanical steps. Record the chosen model in the step episode.",
     "escalationSafetyGate": {

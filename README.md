@@ -33,7 +33,7 @@ The sections below are a quick tour; the guides above go deeper.
 The top-level orchestrator. Reads design intent from a Figma URL or brief, decides which sub-skills to run, and sequences them in dependency order. Dispatches each sub-skill as an isolated subagent, resolves the model per task, and records every decision in the Hermes episode journal for future sessions.
 
 **Invoke:** `/odin-9000`
-**Pipeline:** MODI → VALI → MIMR → SAGA
+**Pipeline:** MODI → VALI → MIMR → SAGA · VOLUNDR (parallel doc branch)
 **Model:** Claude Opus 4.8 (orchestrator)
 
 ---
@@ -116,6 +116,26 @@ Code generation engine. Scaffolds semantic HTML + vanilla CSS + CSS Modules, **o
 **Outputs (vanilla):** `{name}.html`, `{name}.css`, `{name}.module.css`
 **Outputs (StencilJS):** `fds-{name}/fds-{name}.tsx`, `fds-{name}.css`, `fds-{name}.stories.ts`
 **Use when:** A component is ready (post-VALI + post-MIMR) and code output or Storybook handoff is needed
+
+---
+
+### VOLUNDR — Documentation Generator
+
+```text
+██╗   ██╗ ██████╗ ██╗     ██╗   ██╗███╗   ██╗██████╗ ██████╗
+██║   ██║██╔═══██╗██║     ██║   ██║████╗  ██║██╔══██╗██╔══██╗
+██║   ██║██║   ██║██║     ██║   ██║██╔██╗ ██║██║  ██║██████╔╝
+╚██╗ ██╔╝██║   ██║██║     ██║   ██║██║╚██╗██║██║  ██║██╔══██╗
+ ╚████╔╝ ╚██████╔╝███████╗╚██████╔╝██║ ╚████║██████╔╝██║  ██║
+  ╚═══╝   ╚═════╝ ╚══════╝ ╚═════╝ ╚═╝  ╚═══╝╚═════╝ ╚═╝  ╚═╝
+```
+
+FDS component documentation generator. Analyzes a Figma component set, extracts control props and variant structure, and writes documentation frames directly on the component's page — following the Fabric Design System template (Component Header, Control Props table, Variants, optional Building Blocks).
+
+**Invoke:** `/volundr`
+**Inputs:** Figma component URL or node id
+**Outputs:** Documentation frames on the component's Figma page (same page, below the component)
+**Use when:** A component needs FDS-style documentation generated or updated in Figma. Can be invoked directly or dispatched by ODIN when a documentation request is detected.
 
 ---
 

@@ -1,7 +1,9 @@
 # Plan v2 — Prompt Suite Review & Optimization
 
-> Status: **A-series + B1/B2 applied (2026-06-16).** Remaining: B3–B5 (structural token savings, optional).
-> Date captured: 2026-06-15. Source of truth for model routing = `.github/prompts/manifest.json`.
+> **ARCHIVE** — Review snapshot from 2026-06-15. All A-series + B1/B2 items applied 2026-06-16.
+> B3–B5 items (structural token savings) were optional and not pursued.
+> **Source of truth for current state: `.github/prompts/manifest.json` and the agent/prompt files directly.**
+> This file is retained for historical context only. Do not treat it as current.
 
 ## Context
 

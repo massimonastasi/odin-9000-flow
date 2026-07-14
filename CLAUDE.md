@@ -22,14 +22,16 @@ These rules define how to translate Figma inputs into code for this project and 
 
 | Skill | Invocation | Purpose |
 |-------|------------|---------|
-| ODIN-9000 | `/odin-9000` | Orchestrator — runs the full MIMR → VALI → SAGA pipeline |
+| ODIN-9000 | `/odin-9000` | Orchestrator — runs the full MODI → VALI → MIMR → SAGA · VOLUNDR pipeline |
+| MODI | `/modi` | Model-to-Object Design Instantiator — wireframe parsing & instance swapping |
 | MIMR | `/mimr` | Metadata Inventory & Mapping Repository — token extraction & bulk write |
 | VALI | `/vali` | Visual Alignment & Layout Instantiator — frame → Auto Layout conversion |
 | SAGA | `/saga` | Storybook Automation & Generative Asset — design context → HTML/CSS component |
+| VOLUNDR | `/volundr` | Documentation Generator — FDS component documentation directly on the Figma page |
 
 **Default rule**: If a request involves Figma design, token extraction, layout conversion, or component generation and no `/skill` is specified, suggest `/odin-9000` before proceeding.
 
-<!-- BEGIN HERMES INTEGRATION v:1 -->
+<!-- BEGIN HERMES INTEGRATION v:1 — canonical copy in AGENTS.md; keep in sync -->
 ## Hermes Harness (memory & run state)
 
 This project uses the **Hermes harness** instead of an external issue tracker. All persistent

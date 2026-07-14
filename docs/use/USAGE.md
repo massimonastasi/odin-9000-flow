@@ -38,11 +38,15 @@ flowchart LR
     VALI --> MIMR[MIMR<br/>token audit + write]
     MIMR --> SAGA[SAGA<br/>HTML/CSS · Stencil · Storybook]
     SAGA --> Out[Component files<br/>+ stories]
+    ODIN --> VOLUNDR[VOLUNDR<br/>FDS component docs]
+    VOLUNDR --> DocOut[Documentation frames<br/>in Figma]
 
     classDef orch fill:#ffe9a8,stroke:#8a6d00,color:#000
     classDef work fill:#cfe3ff,stroke:#1f4e8a,color:#000
+    classDef doc fill:#d4edda,stroke:#155724,color:#000
     class ODIN orch
     class MODI,VALI,MIMR,SAGA work
+    class VOLUNDR doc
 ```
 
 You rarely run all four. ODIN picks the subset your node actually needs (see
@@ -146,6 +150,7 @@ and `nodeId` for you (it converts the `-` in the `node-id` param to `:`).
 | **VALI**      | `/vali`       | Layers are unstructured GROUPs / absolute frames that need semantic Auto Layout before tokenizing               | Claude Sonnet 4.6 |
 | **MIMR**      | `/mimr`       | Tokens changed, bindings are missing, or you need a bulk token migration / audit                                | Claude Sonnet 4.6 |
 | **SAGA**      | `/saga`       | A component is ready (post-VALI + post-MIMR) and you want HTML/CSS, a StencilJS component, or a Storybook story | Claude Sonnet 4.6 |
+| **VOLUNDR**   | `/volundr`    | Generate or update FDS-style component documentation directly on the component's Figma page                      | Claude Sonnet 4.6 |
 | **Librarian** | _(automatic)_ | A token value or KB fact is missing — ODIN/MIMR dispatch it for you; not user-invocable                         | Claude Haiku 4.5  |
 | **Kevin**     | `/kevin …`    | A persona/verbosity overlay on narration — always on by default                                                 | _(no model)_      |
 
@@ -164,6 +169,12 @@ produce a merged conflict report, then performs rule-driven bulk token writes.
 **SAGA — Storybook Automation & Generative Asset.** Generates semantic HTML + vanilla CSS +
 CSS Modules, **or** a StencilJS Web Component folder (`fds-{name}.tsx` + `.css` + `.stories.ts`),
 deriving `--fds-*` CSS custom properties directly from native-variable bindings.
+
+**VOLUNDR — Documentation Generator.** Creates FDS-style component documentation directly on
+the component's own Figma page. Runs in 3 phases: Phase 1 extracts variant structure and control
+props from the component; Phase 2 shows a text preview for user confirmation; Phase 3 writes the
+documentation frames (Component Header, Control Props table, Variants, optional Building Blocks)
+following the FDS template structure. Can be invoked directly or dispatched by ODIN.
 
 ---
 
