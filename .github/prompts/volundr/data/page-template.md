@@ -237,8 +237,14 @@ file has surface variables (name match `fds-surface`, `fds-alternate-surface`,
 **Override — dark `artwork`:** if the group's Theme is an alternate/dark surface
 OR the component is very light (would wash out on a light fill), use the dark
 `artwork` background instead — bind the `artwork` / darkest-surface variable (see
-`anatomy-rules.md`). Bind with `setBoundVariableForPaint`; **never** a hex when a
-variable exists, and never a CSS-var string.
+`anatomy-rules.md`). This override **supersedes** the light `#ebebeb`
+alternate-surface fallback, which applies only to a genuinely light alternate
+surface. Bind with `setBoundVariableForPaint`; **never** a hex when a variable
+exists, and never a CSS-var string.
+
+**Same rule for the Surfaces matrix and Anatomy diagrams:** every `surfaces--row`
+and every Anatomy diagram picks its background the same way — bind the matching
+surface variable, dark `artwork` for alternate/dark or very-light components.
 
 Use **instances** of the existing component set for the cells — never rebuild it;
 prefer the `variants--cell` doc component (INSTANCE_SWAP + caption) when present.
