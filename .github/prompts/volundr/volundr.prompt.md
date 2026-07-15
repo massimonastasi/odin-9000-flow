@@ -22,7 +22,7 @@ as a **labelled placeholder + flag for the user** (never fabricate UX copy).
 <component name>     (page header title)
 <one-line abstract>  (subtitle)
  ┌────────────────┐  ┌──────────────────┐  ┌────────────────────┐
- │ Doc col 1 ≈938 │  │ Doc col 2  ≈995  │  │ Doc col 3  ≈1960   │
+ │ Doc col 1 ≈938 │  │ Doc col 2  ≈995  │  │ Doc col 3 hug ≤2000│
  │ • Usage      ✎ │  │ • Behaviour   [P]│  │ • Anatomy       ✎  │
  │ • Icons        │  │ • Best Prac.  [P]│  │   callout pins +   │
  │ • Control Pr.✎ │  │ • Animation   [P]│  │   numbered legend  │
@@ -140,7 +140,7 @@ Ready to generate documentation? (yes/no)
    - **Doc column 1**: **Usage** `✎` (component description lead paragraph) +
      **Icons** (or `[P]` if none) + **Control Props** table (`Header` + `Row_[PropName]` rows) `✎`
    - **Doc column 2**: Behaviour/Best Practices/Animation/Examples placeholders `[P]` + **Variant grid** (Sub-type A / B / C-nested) `✎`
-   - **Doc column 3**: **Anatomy** `✎` — callout pins on a reference instance + numbered legend of token-bound properties. Follow **`data/anatomy-rules.md`** (tokens only, never hardcoded).
+   - **Doc column 3** (**hug content, `maxWidth = 2000`** — never a fixed width): **Anatomy** `✎` — callout pins on a reference instance + numbered legend of token-bound properties. Follow **`data/anatomy-rules.md`** (tokens only, never hardcoded).
    - **Surfaces matrix** `✎` (or placeholder if the component has no surface/context axis)
    - `[P]` sections = labelled placeholder + flag for the user; never fabricate UX copy
 6. Use **instances** of the existing component set for the variant grid and surfaces matrix — never rebuild the set. Apply Body background per the keyword map in `page-template.md`.

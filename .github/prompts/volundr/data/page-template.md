@@ -45,7 +45,7 @@ column widths, paddings, gaps, text styles and radii instead of the defaults.
 <one-line abstract>  (subtitle)
         │
  ┌────────────────┐  ┌──────────────────┐  ┌──────────────────────┐
- │ Doc col 1 ≈938 │  │ Doc col 2  ≈995  │  │ Doc col 3  ≈1960     │
+ │ Doc col 1 ≈938 │  │ Doc col 2  ≈995  │  │ Doc col 3 hug ≤2000  │
  │ pad 40, vert.  │  │ pad 40, vert.    │  │ pad 40, vert.        │
  │                │  │                  │  │                      │
  │ • Usage      ✎ │  │ • Behaviour   [P]│  │ • Anatomy         ✎  │
@@ -77,11 +77,14 @@ horizontal `Doc Columns` frame.
    - **Behaviour / Best Practices / Animation / Examples** `[P]` — each a
      labelled placeholder + flag.
    - **Variant grid** `✎` — every variant combination, labelled; see below.
-3. **Doc column 3** (≈1960 wide, padding 40, vertical stack):
+3. **Doc column 3** (**hug content**, capped at **max 2000 wide**; padding 40,
+   vertical stack). Do **not** hardcode a fixed width — set
+   `layoutSizingHorizontal = "HUG"` and `maxWidth = 2000` so the column grows to
+   fit the anatomy diagrams + legend and wraps once it hits 2000.
    - **Anatomy** `✎` — callout pins on a reference instance + a numbered legend
-     of every part with its **token-bound** properties. This column is wide to
-     fit the two-part diagram+legend. See **`data/anatomy-rules.md`** for the
-     authoritative generation rules (tokens only, never hardcoded values).
+     of every part with its **token-bound** properties. See
+     **`data/anatomy-rules.md`** for the authoritative generation rules (tokens
+     only, never hardcoded values).
 4. **Surfaces matrix** `✎` — see below.
 
 ---

@@ -14,8 +14,10 @@ validate between steps).
 
 ## Layout
 
-Column 3 (`Doc Column 3`, ≈1960 wide, padding 40, vertical). One `Anatomy`
-section:
+Column 3 (`Doc Column 3`) — **hug content, `maxWidth = 2000`**, padding 40,
+vertical. Never hardcode a fixed column width: set `layoutSizingHorizontal =
+"HUG"` + `maxWidth = 2000` so the column grows to fit the diagrams + legend and
+wraps at 2000. One `Anatomy` section:
 
 ```
 Anatomy                                   (section label)
