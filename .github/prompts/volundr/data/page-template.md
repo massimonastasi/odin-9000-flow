@@ -27,14 +27,23 @@ column widths, paddings, gaps, text styles and radii instead of the defaults.
 
 ## Page-level
 
-- Documentation is added to the **same page** as the component, below/around
-  the existing variant set (Volundr never moves the component set).
+- Documentation lives on the **same page as the selected component** — never on
+  another page. In `use_figma`, `figma.currentPage` **resets to the first page
+  every call**, so Volundr MUST: resolve the component's page (walk
+  `node.parent` up to the `PAGE`), `await figma.setCurrentPageAsync(compPage)`,
+  and append the docs root to **that page** — never `figma.currentPage.appendChild`
+  blindly (that silently drops the docs on the first page).
+- Position the docs root to the **LEFT of the component**, tops aligned:
+  `docs.x = comp.x - docs.width - 200; docs.y = comp.y`. Volundr never moves the
+  component set.
 - Page header: title = the **component name** (e.g. `fds-sb-odds-button`, Bold)
   + a one-line **abstract** subtitle. Default the abstract to the **first
   sentence** of the component description; if the description is unavailable,
   emit the placeholder `**sostituire con uno piccolo abstract**` for the user
   to fill.
-- All doc columns share an `x: 128` left margin from the section origin.
+- The docs root is a self-contained frame (padding 48); the three doc columns
+  sit inside its horizontal `Doc Columns` frame — there is no external section
+  margin to honour.
 
 ---
 
@@ -198,8 +207,11 @@ names and **notifies the user** whenever generic names are found in existing doc
 
 ## Entry-point checks (before generating)
 
-1. **Save** the page name where the component lives.
-2. **Scan** the page for frames named `Control`, `Variants`, `Section`, or `[componentName]`.
+1. **Resolve & switch to the component's page.** Walk the selected node's
+   `parent` chain up to its `PAGE`; save that page's id + name;
+   `await figma.setCurrentPageAsync(compPage)`. All build calls target **this**
+   page. Never rely on `figma.currentPage` (it resets to the first page).
+2. **Scan that page** for frames named `Control`, `Variants`, `Section`, or `[componentName]`.
 3. If documentation exists → ask: overwrite, update, or skip? Wait for the answer.
 4. If generic `Frame X` names exist → ask whether to rename. Wait for the answer.
 5. If nothing found → proceed.
@@ -208,10 +220,15 @@ names and **notifies the user** whenever generic names are found in existing doc
 
 ## Build order (incremental)
 
-inspect canonical node (if given) → page header → Heading → column 1
-(Usage/Anatomy/Icons/Control Props) → column 2 (placeholders + Variant grid) →
-Surfaces matrix → `get_screenshot` → fix overlaps/clipping → report.
+switch to the component's page → create the docs root and place it to the
+**LEFT** of the component (`docs.x = comp.x - docs.width - 200; docs.y = comp.y`)
+→ page header (name + abstract) → column 1 (Usage/Behaviour/Best Practices/
+Control Props) → column 2 (Animation/Icons/Variant grid/Examples) → column 3
+(Anatomy, per `anatomy-rules.md`) → Surfaces matrix → `get_screenshot` → fix
+overlaps/clipping → report.
 
 `figma-use` before every `use_figma`; ≤10 ops per call; validate between steps.
+Once the docs root's real width is known, re-assert `docs.x = comp.x -
+docs.width - 200` so it stays left-aligned as content grows.
 Return: page id, frames created, which sections are complete vs. placeholder,
 and the list of placeholders flagged for the user.

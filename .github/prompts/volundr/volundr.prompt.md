@@ -130,11 +130,12 @@ Ready to generate documentation? (yes/no)
    episode.append({ phase:"open", skill:"volundr", summary:`Generate documentation: ${componentName} on ${pageName}` })
    ```
 2. Run **Entry-point checks** (from `page-template.md`):
-   - Confirm page name was saved in Phase 1
-   - Scan for existing documentation frames; if found or generic `Frame X` names present, notify user and wait for answer
+   - **Resolve the component's page** (walk `node.parent` to the `PAGE`) and `await figma.setCurrentPageAsync(compPage)` — the docs MUST be built on the **same page as the selected component**. `figma.currentPage` resets to the first page each `use_figma` call, so appending blindly drops the docs on the wrong page.
+   - Scan that page for existing documentation frames; if found or generic `Frame X` names present, notify user and wait for answer
 3. Check for **ODIN-forwarded metadata**: if `volundr_forwarded_metadata` is present in the run context, skip the `get_metadata` call — reuse it directly.
 4. If the user gave a **canonical reference node**, inspect it (`get_metadata` / `get_design_context`) and match its real measurements; otherwise use the defaults in `page-template.md`.
 5. Build the page **incrementally** in the `page-template.md` build order — `figma-use` before every `use_figma`, **≤10 ops per call**, validate between steps:
+   - **create the docs root on the component's page and place it to the LEFT of the component**: `docs.x = comp.x - docs.width - 200; docs.y = comp.y` (re-assert once the real width is known)
    - page header: **title = component name** (Bold) + one-line **abstract** subtitle (first sentence of the description, else the placeholder)
    - **Doc column 1** (1000 wide): **Usage** `✎` (description lead paragraph) + **Behaviour** `[P]` + **Best Practices** `[P]` + **Control Props** table (`Header` + `Row_[PropName]` rows) `✎`
    - **Doc column 2** (1000 wide): **Animation** `[P]` + **Icons** (or `[P]` if none) + **Variant grid** (Sub-type A / B / C-nested) `✎` + **Examples** `[P]`
