@@ -45,14 +45,14 @@ column widths, paddings, gaps, text styles and radii instead of the defaults.
 <one-line abstract>  (subtitle)
         │
  ┌────────────────┐  ┌──────────────────┐  ┌──────────────────────┐
- │ Doc col 1 ≈938 │  │ Doc col 2  ≈995  │  │ Doc col 3 hug ≤2000  │
+ │ Doc col 1 1000 │  │ Doc col 2  1000  │  │ Doc col 3 hug ≤2000  │
  │ pad 40, vert.  │  │ pad 40, vert.    │  │ pad 40, vert.        │
  │                │  │                  │  │                      │
- │ • Usage      ✎ │  │ • Behaviour   [P]│  │ • Anatomy         ✎  │
- │ • Icons        │  │ • Best Prac.  [P]│  │   callout pins on    │
- │ • Control Pr.✎ │  │ • Animation   [P]│  │   an instance +      │
- │                │  │ • Variants    ✎  │  │   numbered legend    │
- │                │  │ • Examples    [P]│  │   (tokens, per       │
+ │ • Usage      ✎ │  │ • Animation   [P]│  │ • Anatomy         ✎  │
+ │ • Behaviour [P]│  │ • Icons          │  │   callout pins on    │
+ │ • Best Prac.[P]│  │ • Variants    ✎  │  │   an instance +      │
+ │ • Control Pr.✎ │  │ • Examples    [P]│  │   numbered legend    │
+ │                │  │                  │  │   (tokens, per       │
  │                │  │                  │  │   anatomy-rules.md)  │
  └────────────────┘  └──────────────────┘  └──────────────────────┘
         │
@@ -65,18 +65,20 @@ The page header **title is the component name** (no separate `Heading` node and
 no fixed `"Design Component"` string). Columns are laid out left→right inside a
 horizontal `Doc Columns` frame.
 
-1. **Doc column 1** (≈938 wide, padding 40, vertical stack):
+1. **Doc column 1** (**1000 wide**, padding 40, vertical stack):
    - **Usage** `✎` — the component's **description** (Figma component
      `description` field). Use its **lead paragraph** as the Usage summary. Only
      if the description is empty, fall back to a `[P]` placeholder labelled
      `Usage — TODO (no source)`.
-   - **Icons** — list icon names found in the variant strings (`Icon=...`), or
-     placeholder if none.
+   - **Behaviour** `[P]` — labelled placeholder + flag.
+   - **Best Practices** `[P]` — labelled placeholder + flag.
    - **Control Props** `✎` — table, see below.
-2. **Doc column 2** (≈995 wide, padding 40, vertical stack):
-   - **Behaviour / Best Practices / Animation / Examples** `[P]` — each a
-     labelled placeholder + flag.
+2. **Doc column 2** (**1000 wide**, padding 40, vertical stack):
+   - **Animation** `[P]` — labelled placeholder + flag.
+   - **Icons** — list icon names found in the variant strings (`Icon=...`), or a
+     placeholder if none.
    - **Variant grid** `✎` — every variant combination, labelled; see below.
+   - **Examples** `[P]` — labelled placeholder + flag.
 3. **Doc column 3** (**hug content**, capped at **max 2000 wide**; padding 40,
    vertical stack). Do **not** hardcode a fixed width — set
    `layoutSizingHorizontal = "HUG"` and `maxWidth = 2000` so the column grows to

@@ -22,12 +22,11 @@ as a **labelled placeholder + flag for the user** (never fabricate UX copy).
 <component name>     (page header title)
 <one-line abstract>  (subtitle)
  ┌────────────────┐  ┌──────────────────┐  ┌────────────────────┐
- │ Doc col 1 ≈938 │  │ Doc col 2  ≈995  │  │ Doc col 3 hug ≤2000│
- │ • Usage      ✎ │  │ • Behaviour   [P]│  │ • Anatomy       ✎  │
- │ • Icons        │  │ • Best Prac.  [P]│  │   callout pins +   │
- │ • Control Pr.✎ │  │ • Animation   [P]│  │   numbered legend  │
- │                │  │ • Variants    ✎  │  │   (tokens only)    │
- │                │  │ • Examples    [P]│  │                    │
+ │ Doc col 1 1000 │  │ Doc col 2  1000  │  │ Doc col 3 hug ≤2000│
+ │ • Usage      ✎ │  │ • Animation   [P]│  │ • Anatomy       ✎  │
+ │ • Behaviour [P]│  │ • Icons          │  │   callout pins +   │
+ │ • Best Prac.[P]│  │ • Variants    ✎  │  │   numbered legend  │
+ │ • Control Pr.✎ │  │ • Examples    [P]│  │   (tokens only)    │
  └────────────────┘  └──────────────────┘  └────────────────────┘
  Surfaces matrix  ✎  — context columns × surface-background rows
 ```
@@ -137,9 +136,8 @@ Ready to generate documentation? (yes/no)
 4. If the user gave a **canonical reference node**, inspect it (`get_metadata` / `get_design_context`) and match its real measurements; otherwise use the defaults in `page-template.md`.
 5. Build the page **incrementally** in the `page-template.md` build order — `figma-use` before every `use_figma`, **≤10 ops per call**, validate between steps:
    - page header: **title = component name** (Bold) + one-line **abstract** subtitle (first sentence of the description, else the placeholder)
-   - **Doc column 1**: **Usage** `✎` (component description lead paragraph) +
-     **Icons** (or `[P]` if none) + **Control Props** table (`Header` + `Row_[PropName]` rows) `✎`
-   - **Doc column 2**: Behaviour/Best Practices/Animation/Examples placeholders `[P]` + **Variant grid** (Sub-type A / B / C-nested) `✎`
+   - **Doc column 1** (1000 wide): **Usage** `✎` (description lead paragraph) + **Behaviour** `[P]` + **Best Practices** `[P]` + **Control Props** table (`Header` + `Row_[PropName]` rows) `✎`
+   - **Doc column 2** (1000 wide): **Animation** `[P]` + **Icons** (or `[P]` if none) + **Variant grid** (Sub-type A / B / C-nested) `✎` + **Examples** `[P]`
    - **Doc column 3** (**hug content, `maxWidth = 2000`** — never a fixed width): **Anatomy** `✎` — callout pins on a reference instance + numbered legend of token-bound properties. Follow **`data/anatomy-rules.md`** (tokens only, never hardcoded).
    - **Surfaces matrix** `✎` (or placeholder if the component has no surface/context axis)
    - `[P]` sections = labelled placeholder + flag for the user; never fabricate UX copy
