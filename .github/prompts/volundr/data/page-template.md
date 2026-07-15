@@ -73,6 +73,12 @@ The kit components have **no component properties** — set their editable text 
 locating the inner TEXT nodes by name/order and overriding `characters` (load
 the node's current font first, per the canonical text-edit recipe).
 
+> **Long body text (e.g. the Usage description) clips.** `Section`'s body box is
+> fixed-height, so a long paragraph overflows. After overriding the
+> `Section description` node, set it `textAutoResize = "HEIGHT"` and walk its
+> ancestor frames up to the instance setting `primaryAxisSizingMode = "AUTO"`
+> (HUG height) so the box grows to fit instead of clipping.
+
 ### Reference layouts (frames to mirror, not components)
 
 These are well-formed example frames in the FDS-SB Components file — copy their
