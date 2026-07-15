@@ -4,7 +4,15 @@
 Volundr generates component documentation in Figma following the **FDS "Design Component"** page layout. It operates in 3 phases:
 1. **Phase 1 (Analyse)**: Extract component metadata and variant information
 2. **Phase 2 (Confirm)**: Display text preview of documentation for user approval
-3. **Phase 3 (Generate)**: Build the page **incrementally**, following `data/page-template.md`
+3. **Phase 3 (Generate)**: Build the page **incrementally** by **instancing the doc-kit** (`page-template.md` Generation model), then write a per-component `.md` archive
+
+> **Two hard rules:**
+> 1. Volundr **only creates documentation on the selected component's Figma
+>    page**. It **never generates, writes, or runs a script** (no `.js` file, no
+>    plugin-console snippet) — it builds directly via `use_figma`.
+> 2. It builds by **instancing the doc-kit components** (discover them in the
+>    file; if a needed one is missing, **ask which page** it is on) — never
+>    hand-building chrome it can instance, never importing cross-file by key.
 
 > **Layout authority**: `data/page-template.md` is the single source of truth for
 > the page layout, naming, terminology, entry-checks and background rules. Load it
@@ -142,9 +150,10 @@ Ready to generate documentation? (yes/no)
    - **Doc column 3** (**hug content, `maxWidth = 2000`** — never a fixed width): **Anatomy** `✎` — callout pins on a reference instance + numbered legend of token-bound properties. Follow **`data/anatomy-rules.md`** (tokens only, never hardcoded).
    - **Surfaces matrix** `✎` (or placeholder if the component has no surface/context axis)
    - `[P]` sections = labelled placeholder + flag for the user; never fabricate UX copy
-6. Use **instances** of the existing component set for the variant grid and surfaces matrix — never rebuild the set. Apply Body background per the keyword map in `page-template.md`.
+6. Build via **doc-kit instances** (`page-template.md` Generation model): `Page Header`, `Section`, `control-props--header/row`, `Anatomy--item`, `variants--cell`, `surfaces--row`. Use instances of the **documented component set** for the variant/surface showcases — never rebuild it. **Bind local surface variables** (`fds-surface` / `fds-alternate-surface` / `artwork`) for group and surface backgrounds when they exist; hex only as fallback.
 7. `get_screenshot` the full page; fix overlaps/clipping; verify all frames use canonical names (no `Frame X`).
-8. **Close Hermes run**:
+8. **Write the per-component archive** `components/<component-name>.md` (see "Per-component archive" below) so future edits skip re-analysis.
+9. **Close Hermes run**:
    ```
    state.write(runId, { phase:"done", blocksCreated, variantSubtype, genericNamesFound })
    episode.append({ phase:"close", skill:"volundr", summary:`Docs created: ${blocksCreated} blocks, sub-type ${variantSubtype}` })
@@ -158,6 +167,49 @@ Blocks created: [list]
 Variant sub-type: A (organized) or B (flat)
 Generic names found: [list or "none"]
 ```
+
+## Per-component archive (`components/`) & training loop
+
+After each run, Volundr writes a compact record of the analysis to
+**`.github/prompts/volundr/components/<component-name>.md`** (create the folder if
+absent). This is the fast path for **editing** an existing doc later — read the
+archive instead of re-scanning Figma — and the corpus that feeds the optional
+training loop.
+
+**Schema** (one file per component):
+```markdown
+---
+component: fds-sb-toggle
+fileKey: <key>
+pageName: <page>
+nodeId: <id>
+generatedAt: <ISO>
+variantSubtype: C
+---
+## Abstract
+<one-line abstract, or "(none — description empty)">
+## Control Props
+- Theme: on-surface, on-alternate-surface
+- …
+## Variant grid
+Sub-type C — Section=Theme, Subsection=State, caption=Icon·text
+## Anatomy
+parts: root, Toggle, Switch — tokens: <resolved token names, or "none — untokenized">
+## Surfaces
+per-surface: on-surface, on-alternate-surface (bg var: fds-surface / fds-alternate-surface)
+## Doc-kit used
+Page Header, Section, control-props--* (missing: variants--cell → hand-built)
+## Placeholders flagged
+Usage, Behaviour, Best Practices, Animation, Examples
+```
+
+**Training loop (optional, on request):** when the user asks, review the
+accumulated `components/*.md` and propose improvements to `page-template.md`,
+`variant-parsing-rules.md`, and `anatomy-rules.md` — e.g. a recurring variant
+naming pattern, a better grouping heuristic, or a token that is always missing.
+Surface the proposals as a **gated diff** (same discipline as `lesson.sweep`) and
+apply only what the user approves. **Never** auto-edit the rule files from the
+archive.
 
 ## Hermes Integration
 
@@ -248,9 +300,10 @@ light keyword fill. Figma fills are `{r, g, b}` (0–1 range) or a bound variabl
 
 ## Data Files
 
-- `data/page-template.md` — **Authoritative** "Design Component" page layout, naming, terminology, entry-checks, background map
-- `data/variant-parsing-rules.md` — Rules for parsing variant names and edge cases (incl. nested Sub-type C grid)
+- `data/page-template.md` — **Authoritative** "Design Component" page layout, doc-kit Generation model, discovery, entry-checks, background/variable rules
+- `data/variant-parsing-rules.md` — Rules for parsing variant names and edge cases (incl. nested Sub-type C grid + `variants--cell`)
 - `data/anatomy-rules.md` — **Authoritative** Anatomy section spec (column 3): token-only legend, callout pins, reference variants, dark `artwork` background rule
+- `components/<component-name>.md` — **per-component archive** written after each run (fast-edit record + training-loop corpus)
 
 ## Plugin API Scripts
 

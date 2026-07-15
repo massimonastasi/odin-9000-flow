@@ -101,10 +101,12 @@ variant so the component stays **visible**:
      near-white (approx. relative luminance ≥ 0.85), so it would wash out on a
      light background.
 
-Use the design system's **`artwork`** background token for the dark case (a dark
-surface/artwork variable). Resolve and **bind** it — do **not** hardcode a hex.
-If no `artwork` token is available, fall back to the darkest available surface
-token and flag it to the user.
+Use the design system's **`artwork`** background variable for the dark case.
+First query **local variables** (`getLocalVariablesAsync('COLOR')`) for a name
+match (`artwork`, `fds-alternate-surface`, darkest surface) and **bind** it with
+`setBoundVariableForPaint` — do **not** hardcode a hex. Only if no such variable
+exists, fall back to a dark hex and flag it to the user. Likewise the light case
+binds `fds-surface` when a local variable exists.
 
 > Decide per diagram: a light base variant → light background; the same
 > component's alternate-surface variant → dark `artwork` background.
@@ -121,6 +123,12 @@ token and flag it to the user.
 ---
 
 ## Legend format  (readability of the description)
+
+Prefer **instances of the `Anatomy--item`** doc component (one per part) —
+override its 3 TEXT nodes (`num` number, node name, token line); fall back to
+hand-built rows only if the component is unavailable (see `page-template.md`
+Discovery). The no-token flag at the top of the column is the optional
+`flag-optional` frame — include it only when the component is untokenised.
 
 - One continuous numbered list. Each item:
   - `⟨n⟩  <NodeName>` — number badge + node name **Semi Bold**.

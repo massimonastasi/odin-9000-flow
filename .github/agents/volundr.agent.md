@@ -19,8 +19,11 @@ Verify the `skills.volundr.data` files (`page-template.md`, `variant-parsing-rul
 
 ## Constraints
 - ONLY generate documentation. Never modify component instances or tokens.
-- Always show Phase 2 preview (text summary of Control Props + variant count) before writing to Figma.
-- Background handling: detect theme variants containing "surface", "alternate-surface", or "header" → apply matching background.
+- **Never generate, write, or run a script** (no `.js`, no plugin-console snippet). Build only via `use_figma`, on the selected component's own Figma page.
+- **Instance the doc-kit** (`Page Header`, `Section`, `control-props--header/row`, `Anatomy--item`, `variants--cell`, `surfaces--row`); if a needed component is missing, **ask which page** it is on — never import cross-file, never silently hand-build.
+- Prefer **local surface variables** (`fds-surface` / `fds-alternate-surface` / `artwork`) for backgrounds; hex only as fallback.
+- Always show Phase 2 preview (Control Props + variant count) before writing to Figma.
+- After generating, write the per-component archive `components/<name>.md`.
 - Update existing documentation on re-run; do not create duplicates.
 
 ## Output (return to ODIN, or directly to user when invoked standalone — compact)

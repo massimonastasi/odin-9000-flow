@@ -3,7 +3,10 @@
 Authoritative layout spec Volundr follows in Phase 3. Mirrors the FDS-SB
 `fdssb-page-template` ("Design Component") page. Volundr builds this layout
 **incrementally** (`figma-use` before every `use_figma`, ≤10 ops per call,
-validate between steps) — there is no monolithic generator script.
+validate between steps) by **instancing the doc-kit components** (see
+"Generation model" below) — it never hand-builds chrome it can instance, and it
+**never generates, writes, or emits a script of any kind**: Volundr only creates
+documentation directly on the selected component's Figma page.
 
 Volundr derives everything it can from the component's **variant strings**
 (Control Props, Variant grid, Surfaces matrix). Sections that need written UX
@@ -44,6 +47,61 @@ column widths, paddings, gaps, text styles and radii instead of the defaults.
 - The docs root is a self-contained frame (padding 48); the three doc columns
   sit inside its horizontal `Doc Columns` frame — there is no external section
   margin to honour.
+
+---
+
+## Generation model — instance the doc-kit (never hand-build chrome)
+
+Volundr builds the documentation by **instancing purpose-built doc components**
+and overriding their inner text — not by drawing raw frames + text. This keeps
+every doc identical in style and lets the user restyle all docs by editing one
+master. Hand-building is only a last-resort fallback (see Discovery).
+
+### Doc-kit components (matched by name in the current file)
+
+| Component name | Role | Fill by |
+|---|---|---|
+| `Page Header` | docs title + one-line abstract | override inner title / abstract text |
+| `Section` | a prose/placeholder section (Usage, Behaviour, Best Practices, Animation, Icons, Examples) | override label + body text |
+| `control-props--header` | Control Props table header row (Name / Control) | — |
+| `control-props--row` | one Control Props row (prop key / values) | override the two cells; repeat once per prop |
+| `Anatomy--item` | one numbered Anatomy legend row | override its 3 TEXT nodes: `num` (number), node name, token line |
+| `variants--cell` *(to build+publish)* | a variant showcase cell: component instance (INSTANCE_SWAP) + caption | swap the instance, set caption |
+| `surfaces--row` *(to build+publish)* | one Surfaces-matrix row (surface label + component instance on that surface bg) | swap instance, set label + bg variable |
+
+The kit components have **no component properties** — set their editable text by
+locating the inner TEXT nodes by name/order and overriding `characters` (load
+the node's current font first, per the canonical text-edit recipe).
+
+### Reference layouts (frames to mirror, not components)
+
+These are well-formed example frames in the FDS-SB Components file — copy their
+structure and naming, don't instance them:
+
+- **`Section--variants`** — the nested variant grid: `Variants` label +
+  `Section — Theme: <value>` groups → `State: <value>` subsections → `Body` →
+  `cell` (component instance + caption).
+- **`Doc Column 3`** — the Anatomy column: `Anatomy` label + `flag-optional`
+  (the no-token flag, omit when tokens exist) + `Diagrams` (each diagram = a
+  component instance + numbered pins built from an `Ellipse` + number text) +
+  `Legend` (a stack of `Anatomy--item` instances).
+
+### Discovery (never import cross-file)
+
+The user maintains the doc-kit **in every Figma file**. Before building:
+
+1. Search the current file for each needed kit component by name
+   (`findAllWithCriteria({ types: ['COMPONENT','COMPONENT_SET'] })` per page, or
+   the enabled team library).
+2. If a needed component is **missing**, **ask the user which page it is on**
+   (or whether to proceed hand-built). Do **not** import it from another file by
+   key, and do **not** silently hand-build a look-alike.
+3. Once found, instance it (`component.createInstance()`), place it, override text.
+
+Dynamic containers (the 3-column layout, the nested Variant grid, the Anatomy
+diagram) are still **composed by code** — but their repeating atoms
+(`control-props--row`, `variants--cell`, `Anatomy--item`, `surfaces--row`)
+are instances, not hand-drawn.
 
 ---
 
@@ -102,19 +160,21 @@ horizontal `Doc Columns` frame.
 
 ## Control Props table  (column 1)
 
-**Frame name**: `Control`. Width 550, height `48 + Σ(row heights)`.
+Built from **instances** of the doc-kit, inside a `Control` frame:
 
-- **Header** row (rename any generic `Frame 2` → `Header`): `Name | Control`,
-  height 48. `Name` at x:8, `Control` at x:275.
-- One **`Row_[PropName]`** per control prop (rename generic `Frame 3/5/8…`):
-  height 48 single-line / 60–82 multi-line, no gap between rows.
-  Left cell x:8 = prop key; right cell x:275 = comma-separated values.
-- Label the table **"Control Props"** (append `(fds-subcomponent)` only for a
-  sub-component). Add `Row_Animation` **only** if the variants contain an
-  `Animation` key.
+- **"Control Props"** label (append `(fds-subcomponent)` only for a sub-component).
+- One `control-props--header` instance (Name / Control).
+- One `control-props--row` instance **per control prop** — override left cell =
+  prop key, right cell = comma-separated values. Add a row for every axis;
+  include an `Animation` row only if the variants carry an `Animation` key.
 
-Control props come from the variant strings: split each name by `, `, collect
-unique `Key=Value` pairs, dedupe values per key, sort alphabetically.
+If the kit components are unavailable (see Discovery), fall back to a hand-built
+table: `Control` frame, `Header` row (Name / Control), one `Row_[PropName]` per
+prop.
+
+Control props come from `component.variantProperties` (preferred) or the variant
+name strings: collect unique `Key=Value` pairs, dedupe values per key, sort
+alphabetically.
 
 ---
 
@@ -156,27 +216,42 @@ else if (axisCount >= 3 OR variantCount > 20)          → Sub-type C (nested)
 else                                                   → Sub-type B (flat)
 ```
 
-**Body background** — by keyword in the group value:
+**Body / group background — prefer local variables.** Before choosing a fill,
+query local variables (`figma.variables.getLocalVariablesAsync('COLOR')`). If the
+file has surface variables (name match `fds-surface`, `fds-alternate-surface`,
+`*surface*`), **bind** them to the group background instead of a hex:
 
-| Keyword | Fill |
-|---|---|
-| `on-surface` | #f5f5f5 |
-| `on-alternate-surface` | #ebebeb |
-| `on-header` | #e0e0e0 |
-| (no match) | #f7f7f7 |
+| Group Theme | Bind (if a local var exists) | Hex fallback |
+|---|---|---|
+| `on-surface` / `surface` | `…/fds-surface` | #f5f5f5 |
+| `on-alternate-surface` | `…/fds-alternate-surface` | #ebebeb |
+| `on-header` | `…/fds-*-header` | #e0e0e0 |
+| (no match) | — | #f7f7f7 |
 
-Use **instances** of the existing component set — never rebuild it.
+**Override — dark `artwork`:** if the group's Theme is an alternate/dark surface
+OR the component is very light (would wash out on a light fill), use the dark
+`artwork` background instead — bind the `artwork` / darkest-surface variable (see
+`anatomy-rules.md`). Bind with `setBoundVariableForPaint`; **never** a hex when a
+variable exists, and never a CSS-var string.
+
+Use **instances** of the existing component set for the cells — never rebuild it;
+prefer the `variants--cell` doc component (INSTANCE_SWAP + caption) when present.
 
 ---
 
 ## Surfaces matrix
 
-Panel with **context columns** (Success / Error / Alert / Info / Brand) ×
-**surface rows** (Surface-Variant / Surface / Alternate Surface). Each cell is
-an instance of the component on that surface background. Emit only the
-context/surface values that actually exist in the component's variants; if the
+One **`surfaces--row`** instance per surface the component actually supports
+(Surface-Variant / Surface / Alternate Surface, plus any context axis
+Success / Error / Alert / Info / Brand it has). Each row shows a component
+instance on that surface background — **bind** the matching local surface
+variable (`fds-surface`, `fds-alternate-surface`, …) as the row background,
+falling back to the hex map above only when no variable exists. Emit only the
+surface/context values that actually exist in the component's variants; if the
 component has no surface/context axis, replace the matrix with a placeholder +
 flag.
+
+If `surfaces--row` is unavailable (see Discovery), hand-build the rows.
 
 ---
 
@@ -211,21 +286,32 @@ names and **notifies the user** whenever generic names are found in existing doc
    `parent` chain up to its `PAGE`; save that page's id + name;
    `await figma.setCurrentPageAsync(compPage)`. All build calls target **this**
    page. Never rely on `figma.currentPage` (it resets to the first page).
-2. **Scan that page** for frames named `Control`, `Variants`, `Section`, or `[componentName]`.
-3. If documentation exists → ask: overwrite, update, or skip? Wait for the answer.
-4. If generic `Frame X` names exist → ask whether to rename. Wait for the answer.
-5. If nothing found → proceed.
+2. **Discover the doc-kit** (see Generation model): find `Page Header`, `Section`,
+   `control-props--header`, `control-props--row`, `variants--cell`,
+   `Anatomy--item`, `surfaces--row` in the current file. If any needed one is
+   **missing → ask the user which page it is on** (or whether to proceed
+   hand-built). Never import cross-file by key.
+3. **Query local variables** (`getLocalVariablesAsync('COLOR')`): note whether
+   `fds-surface` / `fds-alternate-surface` / `artwork` exist so backgrounds bind
+   variables instead of hex.
+4. **Scan the page** for existing doc frames (`Control`, `Variants`, `Section`,
+   `[componentName]`). If documentation exists → ask: overwrite, update, or skip?
+5. If generic `Frame X` names exist → ask whether to rename. Wait for the answer.
+6. If nothing found → proceed.
 
 ---
 
 ## Build order (incremental)
 
-switch to the component's page → create the docs root and place it to the
-**LEFT** of the component (`docs.x = comp.x - docs.width - 200; docs.y = comp.y`)
-→ page header (name + abstract) → column 1 (Usage/Behaviour/Best Practices/
-Control Props) → column 2 (Animation/Icons/Variant grid/Examples) → column 3
-(Anatomy, per `anatomy-rules.md`) → Surfaces matrix → `get_screenshot` → fix
-overlaps/clipping → report.
+discover doc-kit + query local surface variables → switch to the component's
+page → create the docs root and place it to the **LEFT** of the component
+(`docs.x = comp.x - docs.width - 200; docs.y = comp.y`) → instance `Page Header`
+(name + abstract) → column 1 (`Section` ×3 for Usage/Behaviour/Best Practices +
+Control Props from `control-props--*`) → column 2 (`Section` ×2 for
+Animation/Icons + Variant grid using `variants--cell`, group bg bound to surface
+vars) → column 3 (Anatomy with `Anatomy--item`, per `anatomy-rules.md`) →
+Surfaces (`surfaces--row`) → `get_screenshot` → fix overlaps/clipping → **write
+the per-component `.md`** (see `volundr.prompt.md`) → report.
 
 `figma-use` before every `use_figma`; ≤10 ops per call; validate between steps.
 Once the docs root's real width is known, re-assert `docs.x = comp.x -

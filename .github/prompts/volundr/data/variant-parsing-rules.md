@@ -71,6 +71,9 @@ Algorithm:
    `Default · Selected · Pre-built`) so each instance is identifiable.
 5. Emit only value combinations that **exist** in the component — never the full
    cartesian product.
+6. Each cell is a **`variants--cell`** doc-component instance when available
+   (swap in the variant instance, set the caption); hand-build the cell only if
+   that component is missing (see `page-template.md` Discovery).
 
 Example (`fds-sb-odds-button`, 5 axes, 47 variants): Section = `Direction`,
 Subsection = `Event`, caption = `UI State · Selected · Pre-built`.
