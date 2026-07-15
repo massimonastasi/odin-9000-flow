@@ -135,7 +135,7 @@ token and flag it to the user.
 
 ## Build order (incremental)
 
-1. Create `Doc Column 3` (≈1960) if not present; add the `Anatomy` section label.
+1. Create `Doc Column 3` (**hug, `maxWidth = 2000`**) if not present; add the `Anatomy` section label.
 2. Read the base instance subtree; for each annotated node resolve its tokens
    (table above) — **collect resolved lines only**.
 3. Build the **diagrams row**: place instance(s), add numbered pins.
