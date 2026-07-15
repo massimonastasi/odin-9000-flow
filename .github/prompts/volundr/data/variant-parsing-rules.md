@@ -48,6 +48,33 @@ Result (ControlProps):
   Assistive Text: [Off, On]
 ```
 
+## Nested Variant Grouping (multi-axis grid)
+
+When a set has **≥3 variant axes** or **>20 variants**, a single grouping axis is
+too coarse — the grid reads as one undifferentiated wall. Build a **nested**
+grid instead (see `page-template.md` Sub-type C):
+
+```
+Section    = primary axis    → one per value  (first carries a Banner)
+  Subsection = secondary axis → one per value  (label: "<axis>: <value>  (<count>)")
+    cell     = one variant instance + caption of ALL remaining axes
+```
+
+Algorithm:
+1. Read each variant's axes from `component.variantProperties` — a `{axis: value}`
+   map — **not** the name string (avoids re-parsing and handles spaces in keys).
+2. Pick the **primary** and **secondary** grouping axes. Default: the two lowest
+   cardinality axes; confirm with the user when the choice is ambiguous.
+3. For each primary value → Section; within it, for each secondary value that
+   actually occurs → Subsection; place the matching instances as cells.
+4. **Caption every cell** with the remaining axes joined by ` · ` (e.g.
+   `Default · Selected · Pre-built`) so each instance is identifiable.
+5. Emit only value combinations that **exist** in the component — never the full
+   cartesian product.
+
+Example (`fds-sb-odds-button`, 5 axes, 47 variants): Section = `Direction`,
+Subsection = `Event`, caption = `UI State · Selected · Pre-built`.
+
 ## Control Prop Classification
 
 **Primary Props** (identify variant groups):

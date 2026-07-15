@@ -22,7 +22,7 @@ source content and are emitted as a **labelled placeholder + flag for the user**
    Heading  — component name
  ┌──────────────────────┐   ┌──────────────────────┐
  │ Doc column 1  (≈938) │   │ Doc column 2  (≈995) │
- │ • Usage         [P]  │   │ • Behaviour      [P] │
+ │ • Usage         ✎    │   │ • Behaviour      [P] │
  │ • Anatomy       [P]  │   │ • Best Practices [P] │
  │ • Icons              │   │ • Animation      [P] │
  │ • Control Props ✎    │   │ • Variant grid   ✎   │
@@ -39,15 +39,21 @@ naming and entry-checks live in `data/page-template.md`.
 **Input**: Figma component URL or node ID (e.g., rhSXN8LjWELGgCvtCnIxM6, 8225:12554)
 
 **Tasks**:
-1. Call `get_design_context` → extract component name and description
-2. Call `get_metadata` → get variant structure 
-3. Parse variant names to extract **Control Props** using rules from `data/variant-parsing-rules.md`
+1. Call `get_design_context` → extract component name and **description**.
+   Read the component's `description` field (via `use_figma`:
+   `set.description`) — its **lead paragraph** becomes the **Usage** section
+   content (see `page-template.md`). Do not discard it as metadata.
+2. Call `get_metadata` → get variant structure. Prefer reading
+   `component.variantProperties` per variant (a clean `{axis: value}` map)
+   over parsing the name string.
+3. Parse variants to extract **Control Props** using rules from `data/variant-parsing-rules.md`
    - Split each variant name by `, ` (comma-space)
    - Extract Key=Value pairs
    - Collect unique keys as property names
    - Collect unique values for each key
-4. Group variants by **primary property** (first key in variant names)
-   - Example: if all variants start with `Theme=...`, group by Theme values
+4. Choose the **variant-grid grouping** (see `page-template.md` Sub-type A/B/C):
+   with ≥3 axes or >20 variants, use **Sub-type C — nested** (Section = primary
+   axis, Subsection = secondary axis, remaining axes → per-cell caption).
 5. Sort each property's values alphabetically
 
 **Control Props Format**:
@@ -130,8 +136,9 @@ Ready to generate documentation? (yes/no)
 4. If the user gave a **canonical reference node**, inspect it (`get_metadata` / `get_design_context`) and match its real measurements; otherwise use the defaults in `page-template.md`.
 5. Build the page **incrementally** in the `page-template.md` build order — `figma-use` before every `use_figma`, **≤10 ops per call**, validate between steps:
    - page header ("Design Component" + subtitle) → `Heading`
-   - **Doc column 1**: Usage/Anatomy/Icons placeholders `[P]` + **Control Props** table (`Header` + `Row_[PropName]` rows) `✎`
-   - **Doc column 2**: Behaviour/Best Practices/Animation/Examples placeholders `[P]` + **Variant grid** (Sub-type A or B) `✎`
+   - **Doc column 1**: **Usage** `✎` (component description lead paragraph) +
+     Anatomy/Icons placeholders `[P]` + **Control Props** table (`Header` + `Row_[PropName]` rows) `✎`
+   - **Doc column 2**: Behaviour/Best Practices/Animation/Examples placeholders `[P]` + **Variant grid** (Sub-type A / B / C-nested) `✎`
    - **Surfaces matrix** `✎` (or placeholder if the component has no surface/context axis)
    - `[P]` sections = labelled placeholder + flag for the user; never fabricate UX copy
 6. Use **instances** of the existing component set for the variant grid and surfaces matrix — never rebuild the set. Apply Body background per the keyword map in `page-template.md`.

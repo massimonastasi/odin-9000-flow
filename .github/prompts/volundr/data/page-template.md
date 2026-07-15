@@ -46,7 +46,7 @@ column widths, paddings, gaps, text styles and radii instead of the defaults.
  │ Doc column 1  (≈938) │   │ Doc column 2  (≈995) │
  │ padding 40, vertical │   │ padding 40, vertical │
  │                      │   │                      │
- │ • Usage         [P]  │   │ • Behaviour      [P] │
+ │ • Usage         ✎    │   │ • Behaviour      [P] │
  │ • Anatomy       [P]  │   │ • Best Practices [P] │
  │ • Icons              │   │ • Animation      [P] │
  │ • Control Props ✎    │   │ • Variant grid   ✎   │
@@ -61,7 +61,10 @@ content).
 
 1. **Heading** — component name (single text/heading node).
 2. **Doc column 1** (≈938 wide, padding 40, vertical stack):
-   - **Usage** `[P]` — placeholder frame labelled `Usage — TODO (no source)`.
+   - **Usage** `✎` — the component's **description** (Figma component
+     `description` field). Use its **lead paragraph** as the Usage summary. Only
+     if the description is empty, fall back to a `[P]` placeholder labelled
+     `Usage — TODO (no source)`.
    - **Anatomy** `[P]` — placeholder; if a canonical node is given, mirror its
      annotation style.
    - **Icons** — list icon names found in the variant strings (`Icon=...`), or
@@ -106,10 +109,29 @@ carries a `Banner` (all-caps category).
 Theme/State/config (no semantic `Type`), typically ≤20. Frame `[componentName]`,
 all instances arranged row-by-row.
 
+**Sub-type C — nested groups (multi-axis).** Use when the set has **≥3 variant
+axes** OR a flat grid would exceed **~20** instances. Never dump a flat wall of
+instances — nest it so it reads as **sections and subsections**:
+
+```
+Section    = primary axis   (e.g. Direction)  → labelled `Section — <axis>: <value>`, first carries a Banner
+  Subsection = secondary axis (e.g. Event)     → labelled `<axis>: <value>  (<count>)`
+    Body     = WRAP frame of cells
+      cell   = variant instance + a caption of the REMAINING axes
+               (e.g. `Default · Selected · Pre-built`)
+```
+
+Only the two chosen axes become section/subsection; **every remaining axis goes
+into the per-cell caption** so each instance is identifiable. Read the axes and
+per-variant values from `component.variantProperties` (not the name string) —
+pick the primary/secondary axes by lowest cardinality first, or confirm the two
+grouping axes with the user when ambiguous.
+
 Detection:
 ```
 if (variants have key "Type" with 2+ distinct values) → Sub-type A
-else → Sub-type B
+else if (axisCount >= 3 OR variantCount > 20)          → Sub-type C (nested)
+else                                                   → Sub-type B (flat)
 ```
 
 **Body background** — by keyword in the group value:
