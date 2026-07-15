@@ -174,43 +174,21 @@ Parsing:
 Action: Correct behavior; deduplicate across all variants
 ```
 
-## Theme Keyword Detection
+## Theme Keyword Detection (for background handling)
 
-**Used for background handling in documentation**:
+When a variant/group carries a Theme keyword (`on-surface`,
+`on-alternate-surface`, `on-header`, `surface`, `alternate-surface`), the
+documentation background is chosen by that keyword. **The authoritative mapping
+lives elsewhere — do not hardcode colours here:**
 
-### Detected Keywords
-| Keyword | Background Token | Visual Use |
-|---------|------------------|-----------|
-| `on-surface` | `--fds-color-on-surface` | Dark/inverted background |
-| `on-alternate-surface` | `--fds-color-on-alternate-surface` | Alternative dark background |
-| `on-header` | `--fds-color-on-header` | Header/top-bar dark background |
-| `surface` | `--fds-color-surface` | Light/neutral background |
-| `alternate-surface` | `--fds-color-alternate-surface` | Alternative light background |
+- Variant-grid group/cell and Surfaces backgrounds → **`page-template.md`**
+  (light keyword → hex map).
+- Anatomy diagrams and any **alternate/dark surface** or **very light**
+  component → dark **`artwork`** background, see **`anatomy-rules.md`**.
 
-### Detection Logic
-```javascript
-function getBackgroundToken(variantName) {
-  const bgTokens = {
-    "on-surface": "--fds-color-on-surface",
-    "on-alternate-surface": "--fds-color-on-alternate-surface",
-    "on-header": "--fds-color-on-header",
-    "surface": "--fds-color-surface",
-    "alternate-surface": "--fds-color-alternate-surface"
-  };
-  
-  for (const [keyword, token] of Object.entries(bgTokens)) {
-    if (variantName.toLowerCase().includes(keyword)) {
-      return token;
-    }
-  }
-  return null; // No background override
-}
-```
-
-**Usage in Phase 3**:
-- Extract variant name from component instance
-- Call `getBackgroundToken()`
-- If token returned, apply to group frame background
+Detection: lowercase the group value / variant name and match the keyword.
+Figma fills are `{r, g, b}` (0–1) or a bound variable — **never a CSS-var
+string** like `--fds-color-*`.
 
 ## Validation Rules
 

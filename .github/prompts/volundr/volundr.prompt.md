@@ -236,28 +236,15 @@ episode.append({
 }
 ```
 
-## Background Handling Logic
+## Background Handling
 
-**When generating variant instances, check theme keywords**:
-
-```javascript
-const bgTokenMap = {
-  "on-surface": "--fds-color-on-surface",
-  "on-alternate-surface": "--fds-color-on-alternate-surface",
-  "on-header": "--fds-color-on-header",
-  "surface": "--fds-color-surface",
-  "alternate-surface": "--fds-color-alternate-surface"
-};
-
-// For each variant group:
-const variantTheme = extractTheme(variantName);
-if (bgTokenMap[variantTheme]) {
-  // Apply background to frame containing this variant instance
-  frame.fills = [{ color: bgTokenMap[variantTheme] }];
-}
-```
-
-**Purpose**: Show the visual context where the variant is intended to be used.
+Variant-grid group/cell and Surfaces backgrounds are governed by
+**`data/page-template.md`** (light keyword map) and **`data/anatomy-rules.md`**
+(dark `artwork` background). Key rule: a group/diagram whose Theme is an
+alternate/dark surface — or whose component is very light — renders on the dark
+`artwork` background so the component stays visible; everything else uses the
+light keyword fill. Figma fills are `{r, g, b}` (0–1 range) or a bound variable —
+**never a CSS-var string**.
 
 ## Data Files
 
@@ -267,9 +254,11 @@ if (bgTokenMap[variantTheme]) {
 
 ## Plugin API Scripts
 
-- `scripts/scan-component.figma.js` — Extracts component metadata and variant list
-
-Frame generation has **no dedicated script**: Volundr builds the page incrementally with `use_figma` following `data/page-template.md` (`figma-use` first, ≤10 ops per call).
+**None.** Volundr reads component structure via `get_metadata` +
+`get_design_context` and, inside `use_figma`, `component.variantProperties` /
+`node.boundVariables` directly — there is no scan script. The page is built
+incrementally with `use_figma` following `data/page-template.md` (`figma-use`
+first, ≤10 ops per call).
 
 ## Error Handling
 
@@ -279,7 +268,7 @@ Frame generation has **no dedicated script**: Volundr builds the page incrementa
 
 **If Phase 3 generation fails**:
 - Permission error → user must have edit access to Figma file
-- Duplicate documentation → script detects existing page and updates instead
+- Duplicate documentation → the **entry-point checks** (see `page-template.md`) detect existing doc frames on the component's page and ask whether to overwrite / update / skip
 
 ## Model Routing
 

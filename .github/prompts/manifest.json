@@ -102,12 +102,11 @@
       "escalateTo": {
         "Claude Opus 4.8": "components with >100 variants or ambiguous variant naming"
       },
-      "scripts": [
-        ".github/prompts/volundr/scripts/scan-component.figma.js"
-      ],
+      "scripts": [],
       "data": [
         ".github/prompts/volundr/data/page-template.md",
-        ".github/prompts/volundr/data/variant-parsing-rules.md"
+        ".github/prompts/volundr/data/variant-parsing-rules.md",
+        ".github/prompts/volundr/data/anatomy-rules.md"
       ],
       "loadWhen": "user requests component documentation generation for a Figma component"
     },
