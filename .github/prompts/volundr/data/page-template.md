@@ -29,8 +29,11 @@ column widths, paddings, gaps, text styles and radii instead of the defaults.
 
 - Documentation is added to the **same page** as the component, below/around
   the existing variant set (Volundr never moves the component set).
-- Page header: title **"Design Component"** + subtitle
-  "Design the component based on Figma tokens plugin".
+- Page header: title = the **component name** (e.g. `fds-sb-odds-button`, Bold)
+  + a one-line **abstract** subtitle. Default the abstract to the **first
+  sentence** of the component description; if the description is unavailable,
+  emit the placeholder `**sostituire con uno piccolo abstract**` for the user
+  to fill.
 - All doc columns share an `x: 128` left margin from the section origin.
 
 ---
@@ -38,42 +41,47 @@ column widths, paddings, gaps, text styles and radii instead of the defaults.
 ## Per-component layout (left → right)
 
 ```
-"Design Component"  (page header + subtitle)
+<component name>     (page header title, Bold)
+<one-line abstract>  (subtitle)
         │
-   Heading  — component name
-        │
- ┌──────────────────────┐   ┌──────────────────────┐
- │ Doc column 1  (≈938) │   │ Doc column 2  (≈995) │
- │ padding 40, vertical │   │ padding 40, vertical │
- │                      │   │                      │
- │ • Usage         ✎    │   │ • Behaviour      [P] │
- │ • Anatomy       [P]  │   │ • Best Practices [P] │
- │ • Icons              │   │ • Animation      [P] │
- │ • Control Props ✎    │   │ • Variant grid   ✎   │
- │                      │   │ • Examples       [P] │
- └──────────────────────┘   └──────────────────────┘
+ ┌────────────────┐  ┌──────────────────┐  ┌──────────────────────┐
+ │ Doc col 1 ≈938 │  │ Doc col 2  ≈995  │  │ Doc col 3  ≈1960     │
+ │ pad 40, vert.  │  │ pad 40, vert.    │  │ pad 40, vert.        │
+ │                │  │                  │  │                      │
+ │ • Usage      ✎ │  │ • Behaviour   [P]│  │ • Anatomy         ✎  │
+ │ • Icons        │  │ • Best Prac.  [P]│  │   callout pins on    │
+ │ • Control Pr.✎ │  │ • Animation   [P]│  │   an instance +      │
+ │                │  │ • Variants    ✎  │  │   numbered legend    │
+ │                │  │ • Examples    [P]│  │   (tokens, per       │
+ │                │  │                  │  │   anatomy-rules.md)  │
+ └────────────────┘  └──────────────────┘  └──────────────────────┘
         │
  Surfaces matrix  — context columns × surface-background rows
 ```
 
-`✎` = Volundr derives it from variants. `[P]` = placeholder + flag (no source
-content).
+`✎` = Volundr derives it. `[P]` = placeholder + flag (no source content).
 
-1. **Heading** — component name (single text/heading node).
-2. **Doc column 1** (≈938 wide, padding 40, vertical stack):
+The page header **title is the component name** (no separate `Heading` node and
+no fixed `"Design Component"` string). Columns are laid out left→right inside a
+horizontal `Doc Columns` frame.
+
+1. **Doc column 1** (≈938 wide, padding 40, vertical stack):
    - **Usage** `✎` — the component's **description** (Figma component
      `description` field). Use its **lead paragraph** as the Usage summary. Only
      if the description is empty, fall back to a `[P]` placeholder labelled
      `Usage — TODO (no source)`.
-   - **Anatomy** `[P]` — placeholder; if a canonical node is given, mirror its
-     annotation style.
    - **Icons** — list icon names found in the variant strings (`Icon=...`), or
      placeholder if none.
    - **Control Props** `✎` — table, see below.
-3. **Doc column 2** (≈995 wide, padding 40, vertical stack):
+2. **Doc column 2** (≈995 wide, padding 40, vertical stack):
    - **Behaviour / Best Practices / Animation / Examples** `[P]` — each a
      labelled placeholder + flag.
    - **Variant grid** `✎` — every variant combination, labelled; see below.
+3. **Doc column 3** (≈1960 wide, padding 40, vertical stack):
+   - **Anatomy** `✎` — callout pins on a reference instance + a numbered legend
+     of every part with its **token-bound** properties. This column is wide to
+     fit the two-part diagram+legend. See **`data/anatomy-rules.md`** for the
+     authoritative generation rules (tokens only, never hardcoded values).
 4. **Surfaces matrix** `✎` — see below.
 
 ---

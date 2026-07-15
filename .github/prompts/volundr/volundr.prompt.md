@@ -12,22 +12,23 @@ Volundr generates component documentation in Figma following the **FDS "Design C
 
 ## FDS "Design Component" layout
 
-Two-column documentation arranged around the component set on the same page.
-Volundr derives `✎` sections from the variant strings; `[P]` sections have no
-source content and are emitted as a **labelled placeholder + flag for the user**
-(never fabricate UX copy).
+Three-column documentation arranged around the component set on the same page.
+The page header **title is the component name** + a one-line abstract subtitle.
+Volundr derives `✎` sections from the component (variants + description +
+token-bound properties); `[P]` sections have no source content and are emitted
+as a **labelled placeholder + flag for the user** (never fabricate UX copy).
 
 ```
-"Design Component"  (page header + subtitle)
-   Heading  — component name
- ┌──────────────────────┐   ┌──────────────────────┐
- │ Doc column 1  (≈938) │   │ Doc column 2  (≈995) │
- │ • Usage         ✎    │   │ • Behaviour      [P] │
- │ • Anatomy       [P]  │   │ • Best Practices [P] │
- │ • Icons              │   │ • Animation      [P] │
- │ • Control Props ✎    │   │ • Variant grid   ✎   │
- │                      │   │ • Examples       [P] │
- └──────────────────────┘   └──────────────────────┘
+<component name>     (page header title)
+<one-line abstract>  (subtitle)
+ ┌────────────────┐  ┌──────────────────┐  ┌────────────────────┐
+ │ Doc col 1 ≈938 │  │ Doc col 2  ≈995  │  │ Doc col 3  ≈1960   │
+ │ • Usage      ✎ │  │ • Behaviour   [P]│  │ • Anatomy       ✎  │
+ │ • Icons        │  │ • Best Prac.  [P]│  │   callout pins +   │
+ │ • Control Pr.✎ │  │ • Animation   [P]│  │   numbered legend  │
+ │                │  │ • Variants    ✎  │  │   (tokens only)    │
+ │                │  │ • Examples    [P]│  │                    │
+ └────────────────┘  └──────────────────┘  └────────────────────┘
  Surfaces matrix  ✎  — context columns × surface-background rows
 ```
 
@@ -135,10 +136,11 @@ Ready to generate documentation? (yes/no)
 3. Check for **ODIN-forwarded metadata**: if `volundr_forwarded_metadata` is present in the run context, skip the `get_metadata` call — reuse it directly.
 4. If the user gave a **canonical reference node**, inspect it (`get_metadata` / `get_design_context`) and match its real measurements; otherwise use the defaults in `page-template.md`.
 5. Build the page **incrementally** in the `page-template.md` build order — `figma-use` before every `use_figma`, **≤10 ops per call**, validate between steps:
-   - page header ("Design Component" + subtitle) → `Heading`
+   - page header: **title = component name** (Bold) + one-line **abstract** subtitle (first sentence of the description, else the placeholder)
    - **Doc column 1**: **Usage** `✎` (component description lead paragraph) +
-     Anatomy/Icons placeholders `[P]` + **Control Props** table (`Header` + `Row_[PropName]` rows) `✎`
+     **Icons** (or `[P]` if none) + **Control Props** table (`Header` + `Row_[PropName]` rows) `✎`
    - **Doc column 2**: Behaviour/Best Practices/Animation/Examples placeholders `[P]` + **Variant grid** (Sub-type A / B / C-nested) `✎`
+   - **Doc column 3**: **Anatomy** `✎` — callout pins on a reference instance + numbered legend of token-bound properties. Follow **`data/anatomy-rules.md`** (tokens only, never hardcoded).
    - **Surfaces matrix** `✎` (or placeholder if the component has no surface/context axis)
    - `[P]` sections = labelled placeholder + flag for the user; never fabricate UX copy
 6. Use **instances** of the existing component set for the variant grid and surfaces matrix — never rebuild the set. Apply Body background per the keyword map in `page-template.md`.
@@ -261,7 +263,8 @@ if (bgTokenMap[variantTheme]) {
 ## Data Files
 
 - `data/page-template.md` — **Authoritative** "Design Component" page layout, naming, terminology, entry-checks, background map
-- `data/variant-parsing-rules.md` — Rules for parsing variant names and edge cases
+- `data/variant-parsing-rules.md` — Rules for parsing variant names and edge cases (incl. nested Sub-type C grid)
+- `data/anatomy-rules.md` — **Authoritative** Anatomy section spec (column 3): token-only legend, callout pins, reference variants, dark `artwork` background rule
 
 ## Plugin API Scripts
 
