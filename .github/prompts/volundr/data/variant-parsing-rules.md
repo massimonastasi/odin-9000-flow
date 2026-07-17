@@ -48,35 +48,62 @@ Result (ControlProps):
   Assistive Text: [Off, On]
 ```
 
-## Nested Variant Grouping (multi-axis grid)
+## Exposed Component Properties (non-variant Control Props) — added 2026-07-17
 
-When a set has **≥3 variant axes** or **>20 variants**, a single grouping axis is
-too coarse — the grid reads as one undifferentiated wall. Build a **nested**
-grid instead (see `page-template.md` Sub-type C):
+Not every Control Props row comes from a variant axis. A component can also
+expose **BOOLEAN** or **TEXT** component properties (set on the main
+component, not part of the variant name) — confirmed live on
+`fds-sb-odds-button`: `Show Particpant Title` (boolean), `Participant Title`
+(text), `Show Handicap` (boolean), `Handicap Value` (text), added **after**
+the 5 variant-axis rows (`Direction`, `Event`, `UI State`, `Selected`,
+`Pre-built`).
 
-```
-Section    = primary axis    → one per value  (first carries a Banner)
-  Subsection = secondary axis → one per value  (label: "<axis>: <value>  (<count>)")
-    cell     = one variant instance + caption of ALL remaining axes
-```
+**Source**: `component.componentPropertyDefinitions` (or
+`instance.componentProperties` when read off an instance) — each entry has
+`{ type: 'BOOLEAN' | 'TEXT' | 'INSTANCE_SWAP' | 'VARIANT', defaultValue }`.
 
-Algorithm:
+**Which types become a Control Props row**:
+- `VARIANT` — already covered by the axis-parsing above; don't duplicate here.
+- `BOOLEAN` / `TEXT` — **yes**, one `control-props--row` each, appended after
+  the variant-axis rows, in the order the properties are defined on the
+  component.
+- `INSTANCE_SWAP` — **no** — this describes a swappable sub-component slot;
+  surface it in the **Dependencies** section instead (see `page-template.md`),
+  not in Control Props, unless the user asks otherwise.
+
+**Row formatting** (left cell = the property's display name, stripped of any
+Figma `#nodeId` suffix; right cell = its **default value**):
+- `BOOLEAN` → `"<True|False> (boolean)"` (e.g. `True (boolean)`). A trailing
+  comma has been seen in one hand-edited row (`"True, (boolean)"`) — treat that
+  as a typo, not a format requirement; don't reproduce the comma.
+- `TEXT` → the default text value **verbatim, no type suffix** (e.g.
+  `Manchester city (xyz)`, `+2`) — unlike `BOOLEAN`, don't append `(text)`.
+
+Keep the property's own naming as-is (including known typos like `Particpant`)
+— Volundr documents what the component actually exposes, it doesn't silently
+"fix" the designer's naming.
+
+## Nested Variant Grouping (multi-axis grid) — DEPRECATED (2026-07-17)
+
+> **This curated grid (Section → Subsection → captioned cell,
+> `variants--cell` instances) is no longer built.** `page-template.md` v2
+> replaced it: Volundr now moves the **original, unmodified** component into
+> `section--component` at the bottom of the doc instead of curating a grid.
+> The axis-reading algorithm below is **kept only for Control Props
+> extraction** (still needed — see `page-template.md`'s Control Props table);
+> the grouping/captioning/`variants--cell` parts are historical and should not
+> be built in new runs.
+
+Algorithm (still used, for Control Props only):
 1. Read each variant's axes from `component.variantProperties` — a `{axis: value}`
    map — **not** the name string (avoids re-parsing and handles spaces in keys).
-2. Pick the **primary** and **secondary** grouping axes. Default: the two lowest
-   cardinality axes; confirm with the user when the choice is ambiguous.
-3. For each primary value → Section; within it, for each secondary value that
-   actually occurs → Subsection; place the matching instances as cells.
-4. **Caption every cell** with the remaining axes joined by ` · ` (e.g.
-   `Default · Selected · Pre-built`) so each instance is identifiable.
-5. Emit only value combinations that **exist** in the component — never the full
-   cartesian product.
-6. Each cell is a **`variants--cell`** doc-component instance when available
-   (swap in the variant instance, set the caption); hand-build the cell only if
-   that component is missing (see `page-template.md` Discovery).
+2. Collect the unique keys as Control Prop names and their unique values —
+   this feeds the `control-props--row` instances directly. There is no more
+   "primary/secondary axis" selection to make; every axis becomes one row.
 
-Example (`fds-sb-odds-button`, 5 axes, 47 variants): Section = `Direction`,
-Subsection = `Event`, caption = `UI State · Selected · Pre-built`.
+Example (`fds-sb-odds-button`, 5 axes, 47 variants): Control Props table gets
+one row each for `Direction`, `Event`, `UI State`, `Selected`, `Pre-built` — no
+grouping choice needed.
 
 ## Control Prop Classification
 
@@ -177,21 +204,21 @@ Parsing:
 Action: Correct behavior; deduplicate across all variants
 ```
 
-## Theme Keyword Detection (for background handling)
+## Theme Keyword Detection (for background handling) — Anatomy only now
 
-When a variant/group carries a Theme keyword (`on-surface`,
+> The variant-grid group/cell and Surfaces-matrix backgrounds this section
+> used to describe **no longer exist** (`section--component` holds the raw
+> component, not a curated/backgrounded grid). Theme-keyword detection is now
+> relevant **only** for Anatomy diagram backgrounds.
+
+When a reference variant carries a Theme keyword (`on-surface`,
 `on-alternate-surface`, `on-header`, `surface`, `alternate-surface`), the
-documentation background is chosen by that keyword. **The authoritative mapping
-lives elsewhere — do not hardcode colours here:**
+**Anatomy diagram** background is chosen by that keyword — see the
+authoritative light-vs-dark-`artwork` rule in **`anatomy-rules.md`**.
 
-- Variant-grid group/cell and Surfaces backgrounds → **`page-template.md`**
-  (light keyword → hex map).
-- Anatomy diagrams and any **alternate/dark surface** or **very light**
-  component → dark **`artwork`** background, see **`anatomy-rules.md`**.
-
-Detection: lowercase the group value / variant name and match the keyword.
-Figma fills are `{r, g, b}` (0–1) or a bound variable — **never a CSS-var
-string** like `--fds-color-*`.
+Detection: lowercase the variant value and match the keyword. Figma fills are
+`{r, g, b}` (0–1) or a bound variable — **never a CSS-var string** like
+`--fds-color-*`.
 
 ## Validation Rules
 

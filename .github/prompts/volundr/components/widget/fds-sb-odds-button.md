@@ -1,5 +1,6 @@
 ---
 component: fds-sb-odds-button
+classification: widget   # composed of multiple sub-components (FDS-SB-prebuilt-odd, chain block/icon, up/down icons)
 fileKey: RNbMGKPqYRz2vkANBdSJWx
 pageName: arkamadanah
 nodeId: "0:236"
@@ -16,6 +17,15 @@ A sportsbook odds selection button that displays a betting market outcome with p
 - UI State: Default, Hover
 - Selected: False, True
 - Pre-built: No, Yes
+- Show Particpant Title: True (boolean) — exposed component property, default value shown
+- Participant Title: Manchester city (xyz) — exposed component property (text), default value shown
+- Show Handicap: True (boolean) — exposed component property, default value shown
+- Handicap Value: +2 — exposed component property (text), default value shown
+
+**Updated 2026-07-17**: `section--control-props` in Figma (node `120:2007`) now
+includes 4 rows for exposed `BOOLEAN`/`TEXT` component properties, added after
+the 5 variant-axis rows — see `variant-parsing-rules.md` § "Exposed Component
+Properties" for the source/formatting rule.
 
 ## Variant grid
 Sub-type C (nested) — Section = Direction, Subsection = Event, caption = `UI State · Selected · Pre-built`. 47 variants (28 Horizontal + 19 Vertical), one `variants--cell` instance per variant.

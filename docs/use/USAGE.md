@@ -170,11 +170,15 @@ produce a merged conflict report, then performs rule-driven bulk token writes.
 CSS Modules, **or** a StencilJS Web Component folder (`fds-{name}.tsx` + `.css` + `.stories.ts`),
 deriving `--fds-*` CSS custom properties directly from native-variable bindings.
 
-**VOLUNDR — Documentation Generator.** Creates FDS-style component documentation directly on
-the component's own Figma page. Runs in 3 phases: Phase 1 extracts variant structure and control
-props from the component; Phase 2 shows a text preview for user confirmation; Phase 3 writes the
-documentation frames (Component Header, Control Props table, Variants, optional Building Blocks)
-following the FDS template structure. Can be invoked directly or dispatched by ODIN.
+**VOLUNDR — Documentation Generator.** Creates a `doc_[component-name]` documentation page directly on
+the component's own Figma page, by instancing a 9-atom doc-kit (spec in `data/doc-components.md`:
+`design-system-label`, `component-title`, `description`, `section-title`,
+`section-title--control-props`, `control-props--header/row`, `Anatomy--item`, etc.). Runs in 3
+phases: Phase 1 extracts the component's description, variant axes, exposed properties and
+sub-component dependencies; Phase 2 shows a text preview for user confirmation; Phase 3 builds
+the page (Header, Purpose/Behavior/Dependencies/Icons/Control Props, Composition/Usage/Animation,
+Anatomy) and **moves** the original component into a `section--component` block at the bottom —
+no curated variant grid is built. Can be invoked directly or dispatched by ODIN.
 
 ---
 

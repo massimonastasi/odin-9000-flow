@@ -1,18 +1,26 @@
-# Volundr Page Template — FDS "Design Component" layout
+# Volundr Page Template — `doc_[component-name]` layout
 
-Authoritative layout spec Volundr follows in Phase 3. Mirrors the FDS-SB
-`fdssb-page-template` ("Design Component") page. Volundr builds this layout
-**incrementally** (`figma-use` before every `use_figma`, ≤10 ops per call,
-validate between steps) by **instancing the doc-kit components** (see
-"Generation model" below) — it never hand-builds chrome it can instance, and it
-**never generates, writes, or emits a script of any kind**: Volundr only creates
-documentation directly on the selected component's Figma page.
+> **v2 (2026-07-17)** — rewritten against a real, working reference example
+> found in Figma file `RNbMGKPqYRz2vkANBdSJWx`, frame `doc_fds-sb-odds-button`
+> (node `120:1985`), built entirely from instances of the atoms defined in
+> **`doc-components.md`** (Fase 1 of `istruzioni.md`). This supersedes the
+> previous `Page Header` / `Section` / curated-"Variants"-grid model — that
+> model existed **in parallel, under colliding component names**, in the same
+> Figma file. Only one style is now canonical; see `doc-components.md` for why.
 
-Volundr derives everything it can from the component's **variant strings**
-(Control Props, Variant grid, Surfaces matrix). Sections that need written UX
-content it does not have (Usage, Anatomy, Behaviour, Best Practices, Animation,
-Examples) are emitted as a **labelled placeholder + flag for the user** — never
-fabricate UX guidance.
+Authoritative layout spec Volundr follows in Phase 3. Volundr builds this
+layout **incrementally** (`figma-use` before every `use_figma`, ≤10 ops per
+call, validate between steps) by **instancing the doc-kit atoms** from
+`doc-components.md` — it never hand-builds chrome it can instance, and it
+**never generates, writes, or emits a script of any kind**: Volundr only
+creates documentation directly on the selected component's Figma page.
+
+Volundr derives everything it can from the component's **description** and
+**variant strings** (Control Props, Dependencies, Icons). Sections that need
+written UX content it does not have (Behavior, Composition, Usage, Animation)
+reuse the same content as **Purpose** (the component's description) until the
+user supplies more specific copy — never fabricate UX guidance not present in
+the component's Figma description.
 
 ---
 
@@ -36,234 +44,256 @@ column widths, paddings, gaps, text styles and radii instead of the defaults.
   `node.parent` up to the `PAGE`), `await figma.setCurrentPageAsync(compPage)`,
   and append the docs root to **that page** — never `figma.currentPage.appendChild`
   blindly (that silently drops the docs on the first page).
-- Position the docs root to the **LEFT of the component**, tops aligned:
-  `docs.x = comp.x - docs.width - 200; docs.y = comp.y`. Volundr never moves the
-  component set.
-- Page header: title = the **component name** (e.g. `fds-sb-odds-button`, Bold)
-  + a one-line **abstract** subtitle. Default the abstract to the **first
-  sentence** of the component description; if the description is unavailable,
-  emit the placeholder `**sostituire con uno piccolo abstract**` for the user
-  to fill.
-- The docs root is a self-contained frame (padding 48); the three doc columns
-  sit inside its horizontal `Doc Columns` frame — there is no external section
-  margin to honour.
+- **Root frame**: name `doc_[component-name]` (e.g. `doc_fds-sb-odds-button`).
+  White background, **32px corner radius**, **64px padding** on all sides,
+  vertical auto-layout, **96px gap** between its three direct children
+  (`Header`, `doc-columns`, `section--component`). Place it in empty canvas
+  space near the component — exact position is not load-bearing (unlike the
+  old model, the component no longer stays put — see below).
+- **The original component moves into the documentation.** Volundr copies (or
+  moves, if the user confirms) the component/component-set into
+  **`section--component`** at the bottom of the doc — it is no longer kept in
+  place with the doc positioned to its left. This is a deliberate change from
+  the previous model; see `section--component` below.
 
 ---
 
 ## Generation model — instance the doc-kit (never hand-build chrome)
 
-Volundr builds the documentation by **instancing purpose-built doc components**
-and overriding their inner text — not by drawing raw frames + text. This keeps
-every doc identical in style and lets the user restyle all docs by editing one
-master. Hand-building is only a last-resort fallback (see Discovery).
+Volundr builds the documentation by **instancing the doc-kit atoms** defined in
+**`doc-components.md`** and overriding their inner text — not by drawing raw
+frames + text. This keeps every doc identical in style and lets the user
+restyle all docs by editing the 8 master components once. Hand-building is
+only a last-resort fallback for a genuinely missing atom (see Discovery).
 
-### Doc-kit components (matched by name in the current file)
+### Doc-kit atoms (full spec in `doc-components.md`)
 
 | Component name | Role | Fill by |
 |---|---|---|
-| `Page Header` | docs title + one-line abstract | override inner title / abstract text |
-| `Section` | a prose/placeholder section (Usage, Behaviour, Best Practices, Animation, Icons, Examples) | override label + body text |
-| `control-props--header` | Control Props table header row (Name / Control) | — |
-| `control-props--row` | one Control Props row (prop key / values) | override the two cells; repeat once per prop |
-| `Anatomy--item` | one numbered Anatomy legend row | override its 3 TEXT nodes: `num` (number), node name, token line |
-| `variants--cell` *(to build+publish)* | a variant showcase cell: component instance (INSTANCE_SWAP) + caption | swap the instance, set caption |
-| `surfaces--row` *(to build+publish)* | one Surfaces-matrix row (surface label + component instance on that surface bg) | swap instance, set label + bg variable |
+| `design-system-label` | eyebrow above the title (design system + library name) | override the two text lines (default: "Fabric Foundations" / "Components") |
+| `component-title` | page title, format `{prefix:component-name}` | override the single text node |
+| `description` | any free-text paragraph (abstract, Purpose, Behavior, Composition, Usage, Animation) | override text; width fills its column |
+| `description--bullet-points` | one bullet-point line (Dependencies, Icons) | override text; **duplicate the instance** for each extra bullet, don't stretch one instance |
+| `section-title` | generic sub-section heading | override text (e.g. "Purpose", "Icons", "Anatomy") |
+| `section-title--control-props` | Control Props heading **and** the `section--component` heading — label + parenthetical/italic suffix | override both text nodes (see below for each use) |
+| `control-props--header` | Control Props table header row (Name / Control) | — (static "Name"/"Control") |
+| `control-props--row` | one Control Props row | override the two cells; one instance per Control Prop |
 
-The kit components have **no component properties** — set their editable text by
-locating the inner TEXT nodes by name/order and overriding `characters` (load
-the node's current font first, per the canonical text-edit recipe).
+These 8 are the **only** real doc-kit components. Everything else (`Header`,
+`doc-columns`, `doc-column-1/2/3`, `section`, `section--dependencies`,
+`section--icons`, `section--control-props`, `section--anatomy`,
+`content--bullet-point`, `content--control-props`, `content--anatomy`,
+`section--component`, `Diagram`, `Legend`, `flag-optional`) are **plain
+auto-layout frames Volundr composes and names** — not instanced components.
+They wrap/repeat the 8 atoms above; see "Per-component layout" for their exact
+structure, sizing and gaps.
 
-> **Long body text (e.g. the Usage description) clips.** `Section`'s body box is
-> fixed-height, so a long paragraph overflows. After overriding the
-> `Section description` node, set it `textAutoResize = "HEIGHT"` and walk its
-> ancestor frames up to the instance setting `primaryAxisSizingMode = "AUTO"`
-> (HUG height) so the box grows to fit instead of clipping.
+### Atoms still missing (no instance anywhere yet)
 
-### Reference layouts (frames to mirror, not components)
+`Anatomy--item` **was found** on 2026-07-17 (node `105:219` in the reference
+file) — it is a real, instantiable atom (`num` circle + `txt` name/token
+line), documented as atom #9 in `doc-components.md`. Instance it for the
+Anatomy legend rows; do not hand-build them when this atom is available (see
+Discovery above — only fall back to hand-built rows if it's missing in the
+current file).
 
-These are well-formed example frames in the FDS-SB Components file — copy their
-structure and naming, don't instance them:
-
-- **`Section--variants`** — the nested variant grid: `Variants` label +
-  `Section — Theme: <value>` groups → `State: <value>` subsections → `Body` →
-  `cell` (component instance + caption).
-- **`Doc Column 3`** — the Anatomy column: `Anatomy` label + `flag-optional`
-  (the no-token flag, omit when tokens exist) + `Diagrams` (each diagram = a
-  component instance + numbered pins built from an `Ellipse` + number text) +
-  `Legend` (a stack of `Anatomy--item` instances).
+`variants--cell`, `surfaces--row` and `Banner` (from the pre-v2 model) are
+**deprecated** — the curated Variant grid / Surfaces matrix they supported no
+longer exists (see `section--component` below). Do not instance them in new
+runs; they may still exist as orphaned components in older files. Per the
+user's decision (2026-07-17), **leave any existing orphaned instances of these
+in Figma alone** — Volundr does not clean them up.
 
 ### Discovery (never import cross-file)
 
 The user maintains the doc-kit **in every Figma file**. Before building:
 
-1. Search the current file for each needed kit component by name
+1. Search the current file for each of the 8 atoms by name
    (`findAllWithCriteria({ types: ['COMPONENT','COMPONENT_SET'] })` per page, or
    the enabled team library).
-2. If a needed component is **missing**, **ask the user which page it is on**
-   (or whether to proceed hand-built). Do **not** import it from another file by
-   key, and do **not** silently hand-build a look-alike.
-3. Once found, instance it (`component.createInstance()`), place it, override text.
-
-Dynamic containers (the 3-column layout, the nested Variant grid, the Anatomy
-diagram) are still **composed by code** — but their repeating atoms
-(`control-props--row`, `variants--cell`, `Anatomy--item`, `surfaces--row`)
-are instances, not hand-drawn.
-
----
-
-## Per-component layout (left → right)
-
-```
-<component name>     (page header title, Bold)
-<one-line abstract>  (subtitle)
-        │
- ┌────────────────┐  ┌──────────────────┐  ┌──────────────────────┐
- │ Doc col 1 1000 │  │ Doc col 2  1000  │  │ Doc col 3 hug ≤2000  │
- │ pad 40, vert.  │  │ pad 40, vert.    │  │ pad 40, vert.        │
- │                │  │                  │  │                      │
- │ • Usage      ✎ │  │ • Animation   [P]│  │ • Anatomy         ✎  │
- │ • Behaviour [P]│  │ • Icons          │  │   callout pins on    │
- │ • Best Prac.[P]│  │ • Variants    ✎  │  │   an instance +      │
- │ • Control Pr.✎ │  │ • Examples    [P]│  │   numbered legend    │
- │                │  │                  │  │   (tokens, per       │
- │                │  │                  │  │   anatomy-rules.md)  │
- └────────────────┘  └──────────────────┘  └──────────────────────┘
-        │
- Surfaces matrix  — context columns × surface-background rows
-```
-
-`✎` = Volundr derives it. `[P]` = placeholder + flag (no source content).
-
-The page header **title is the component name** (no separate `Heading` node and
-no fixed `"Design Component"` string). Columns are laid out left→right inside a
-horizontal `Doc Columns` frame.
-
-1. **Doc column 1** (**1000 wide**, padding 40, vertical stack):
-   - **Usage** `✎` — the component's **description** (Figma component
-     `description` field). Use its **lead paragraph** as the Usage summary. Only
-     if the description is empty, fall back to a `[P]` placeholder labelled
-     `Usage — TODO (no source)`.
-   - **Behaviour** `[P]` — labelled placeholder + flag.
-   - **Best Practices** `[P]` — labelled placeholder + flag.
-   - **Control Props** `✎` — table, see below.
-2. **Doc column 2** (**1000 wide**, padding 40, vertical stack):
-   - **Animation** `[P]` — labelled placeholder + flag.
-   - **Icons** — list icon names found in the variant strings (`Icon=...`), or a
-     placeholder if none.
-   - **Variant grid** `✎` — every variant combination, labelled; see below.
-   - **Examples** `[P]` — labelled placeholder + flag.
-3. **Doc column 3** (**hug content**, capped at **max 2000 wide**; padding 40,
-   vertical stack). Do **not** hardcode a fixed width — set
-   `layoutSizingHorizontal = "HUG"` and `maxWidth = 2000` so the column grows to
-   fit the anatomy diagrams + legend and wraps once it hits 2000.
-   - **Anatomy** `✎` — callout pins on a reference instance + a numbered legend
-     of every part with its **token-bound** properties. See
-     **`data/anatomy-rules.md`** for the authoritative generation rules (tokens
-     only, never hardcoded values).
-4. **Surfaces matrix** `✎` — see below.
+2. If a needed atom is **missing**, **ask the user which page it is on** (or
+   whether to proceed hand-built per `doc-components.md`'s spec for that atom).
+   Do **not** import it from another file by key, and do **not** silently
+   hand-build a look-alike without telling the user.
+3. **If two components share the same name with different specs** (this HAS
+   happened in this design system before — see `doc-components.md`'s "Set A vs
+   Set B" note) — stop and ask the user which one is canonical before
+   instancing either. Never guess.
+4. Once found, instance it (`component.createInstance()`), place it, override
+   text.
 
 ---
 
-## Control Props table  (column 1)
+## Per-component layout (top → bottom)
 
-Built from **instances** of the doc-kit, inside a `Control` frame:
+```
+doc_[component-name]                         (root frame, white, 32 corner radius, pad 64, gap 96 vertical)
+┌──────────────────────────────────────────────────────────────────────────┐
+│ Header                                            (gap 24, vertical)     │
+│  design-system-label                                                     │
+│  component-title            {prefix:component-name}                     │
+│  description                 full component description (abstract)      │
+├──────────────────────────────────────────────────────────────────────────┤
+│ doc-columns                          (horizontal, gap 96, top-aligned)   │
+│ ┌─ doc-column-1 ──┐   ┌─ doc-column-2 ──┐   ┌─ doc-column-3 ───────────┐ │
+│ │ gap 96, vert.   │   │ gap 96, vert.   │   │ section--anatomy         │ │
+│ │ • Purpose    ✎  │   │ • Composition ✎ │   │  flag-optional (if no    │ │
+│ │ • Behavior   ✎  │   │ • Usage       ✎ │   │  tokens/no Anatomy--item)│ │
+│ │ • Dependencies* │   │ • Animation   ✎ │   │  Diagram(s) + pins       │ │
+│ │ • Icons*        │   │                 │   │  Legend (numbered)  ✎    │ │
+│ │ • Control Props✎│   │                 │   │  (tokens only, per       │ │
+│ │                 │   │                 │   │  anatomy-rules.md)       │ │
+│ └─────────────────┘   └─────────────────┘   └──────────────────────────┘ │
+├──────────────────────────────────────────────────────────────────────────┤
+│ section--component        "Component" | "Widget"  ·  <component-name>   │
+│  the ORIGINAL component/component-set, moved here as-is — Volundr does   │
+│  NOT re-lay it out, group it, or add captions. Full doc width.           │
+└──────────────────────────────────────────────────────────────────────────┘
+```
 
-- **"Control Props"** label (append `(fds-subcomponent)` only for a sub-component).
-- One `control-props--header` instance (Name / Control).
-- One `control-props--row` instance **per control prop** — override left cell =
-  prop key, right cell = comma-separated values. Add a row for every axis;
-  include an `Animation` row only if the variants carry an `Animation` key.
+`✎` = Volundr derives it from the component's description/variants. `*` =
+optional, only emitted when applicable (see below). No section is ever a bare
+`[P]` placeholder any more — every section reuses the component's description
+text until the user supplies more specific copy; **never invent facts not
+present in the Figma description**.
 
-If the kit components are unavailable (see Discovery), fall back to a hand-built
-table: `Control` frame, `Header` row (Name / Control), one `Row_[PropName]` per
-prop.
+No internal padding on `Header`, `doc-columns`, the doc-columns themselves, or
+any `section*` frame — the **only** padding in the whole page is the root
+frame's 64px. Column widths: `doc-column-1` and `doc-column-2` are equal, fixed
+width (851px in the reference — treat as tunable to the canvas, not a magic
+constant: if a canonical node is supplied, match its real width instead).
+`doc-column-3` is **hug width**, sized to its Anatomy content (~560px in the
+reference) — never stretched to match column 1/2.
 
-Control props come from `component.variantProperties` (preferred) or the variant
-name strings: collect unique `Key=Value` pairs, dedupe values per key, sort
-alphabetically.
+1. **`Header`** (gap 24, vertical, full width):
+   - `design-system-label` instance.
+   - `component-title` instance — text = `{prefix:component-name}` (see
+     `doc-components.md` §2 for the prefix rule).
+   - `description` instance — the **full** component description (Figma
+     `description` field), not a shortened lead sentence. If the description is
+     empty, flag it: `⚑ TODO — component has no description in Figma`.
+2. **`doc-column-1`** (gap 96, vertical):
+   - `section` → title **"Purpose"** + `description` = the component
+     description (same text as the Header abstract).
+   - `section` → title **"Behavior"** + `description` = the component
+     description (reuse until the user gives more specific behaviour copy).
+   - `section--dependencies` *(optional)* — only if the component's Figma
+     description lists nested sub-component instances it depends on (its
+     "COMPOSITION" notes, excluding icons): title **"Dependencies"** +
+     `content--bullet-point` holding one `description--bullet-points` instance
+     per dependency, named `{prefix:subcomponent-name}`. Duplicate the
+     instance for each extra dependency.
+   - `section--icons` *(optional)* — only if the component uses named icons:
+     title **"Icons"** + `content--bullet-point` (gap 8) holding one
+     `description--bullet-points` instance per icon name.
+   - `section--control-props` → see "Control Props table" below.
+3. **`doc-column-2`** (gap 96, vertical) — three generic `section` blocks,
+   titles **"Composition"**, **"Usage"**, **"Animation"**: each is a
+   `section-title` + `description` reusing the component description until the
+   user supplies dedicated copy for that angle. Omit **Animation** only if the
+   component genuinely has no animated/interactive states (static component).
+4. **`doc-column-3`** → `section--anatomy`, see **`data/anatomy-rules.md`**
+   for the authoritative generation rules (tokens only, never hardcoded
+   values); container naming below.
+5. **`section--component`** (full doc width, below `doc-columns`) — see its own
+   section below. This **replaces** the old curated "Variant grid" +
+   "Surfaces matrix": Volundr no longer builds a bespoke showcase grid.
 
 ---
 
-## Variant grid  (column 2)
-
-Label the block **"Variants"** (always this term) + divider line.
-
-**Sub-type A — organized groups.** Use when the variants have a `Type` key with
-2+ distinct values. Frame `Variants`, width 1013. One group frame per `Type`
-value: `Type: [value]` label + `Body` frame holding the instances. First group
-carries a `Banner` (all-caps category).
-
-**Sub-type B — flat grid.** Use when variants differ only by
-Theme/State/config (no semantic `Type`), typically ≤20. Frame `[componentName]`,
-all instances arranged row-by-row.
-
-**Sub-type C — nested groups (multi-axis).** Use when the set has **≥3 variant
-axes** OR a flat grid would exceed **~20** instances. Never dump a flat wall of
-instances — nest it so it reads as **sections and subsections**:
+## Control Props table  (`section--control-props`, in `doc-column-1`)
 
 ```
-Section    = primary axis   (e.g. Direction)  → labelled `Section — <axis>: <value>`, first carries a Banner
-  Subsection = secondary axis (e.g. Event)     → labelled `<axis>: <value>  (<count>)`
-    Body     = WRAP frame of cells
-      cell   = variant instance + a caption of the REMAINING axes
-               (e.g. `Default · Selected · Pre-built`)
+section--control-props                    (gap 24, vertical)
+  section-title--control-props            "Control Props" + italic component-name
+  content--control-props                  (vertical stack, rows adjacent, gap 0)
+    control-props--header                 ("Name" / "Control")
+    control-props--row  × N               one per Control Prop
 ```
 
-Only the two chosen axes become section/subsection; **every remaining axis goes
-into the per-cell caption** so each instance is identifiable. Read the axes and
-per-variant values from `component.variantProperties` (not the name string) —
-pick the primary/secondary axes by lowest cardinality first, or confirm the two
-grouping axes with the user when ambiguous.
+- `section-title--control-props`: left text = fixed **"Control Props"**; italic
+  suffix = the **component name** (e.g. `fds-sb-odds-button`) for the main
+  component, or the **sub-component's name** when duplicated (see next bullet).
+- One `control-props--header` instance (static "Name" / "Control").
+- One `control-props--row` instance **per Control Prop** — left cell = prop
+  key (e.g. `Direction`), right cell = comma-separated possible values (e.g.
+  `Horizontal, Vertical`). Control props come from `component.variantProperties`
+  (preferred) or the variant name strings — see `variant-parsing-rules.md` for
+  the extraction algorithm (still authoritative for **this** table, even though
+  it no longer drives a separate variant-grid display).
+- **Exposed component properties** (`BOOLEAN` / `TEXT`, from
+  `component.componentPropertyDefinitions`) get a row too, appended **after**
+  the variant-axis rows — e.g. `Show Handicap` → `True (boolean)`,
+  `Handicap Value` → `+2`. `INSTANCE_SWAP` properties do **not** get a row
+  here — they belong in Dependencies. See `variant-parsing-rules.md` §
+  "Exposed Component Properties" for the full type/formatting rule.
+- **Sub-component duplication**: if the page has other components used
+  **inside** the main one, named `[component-name].[block/subcomponent-name]`
+  (e.g. `fds-sb-odds-button.chain` — parent component name, a literal dot,
+  then the block/subcomponent's own name; **confirmed 2026-07-17**, replaces
+  the earlier `block.[nome]`/`[nome].block` guesses) — duplicate the
+  **entire** `section--control-props` block once per sub-component, with the
+  italic suffix set to that sub-component's name.
 
-Detection:
-```
-if (variants have key "Type" with 2+ distinct values) → Sub-type A
-else if (axisCount >= 3 OR variantCount > 20)          → Sub-type C (nested)
-else                                                   → Sub-type B (flat)
-```
-
-**Body / group background — prefer local variables.** Before choosing a fill,
-query local variables (`figma.variables.getLocalVariablesAsync('COLOR')`). If the
-file has surface variables (name match `fds-surface`, `fds-alternate-surface`,
-`*surface*`), **bind** them to the group background instead of a hex:
-
-| Group Theme | Bind (if a local var exists) | Hex fallback |
-|---|---|---|
-| `on-surface` / `surface` | `…/fds-surface` | #f5f5f5 |
-| `on-alternate-surface` | `…/fds-alternate-surface` | #ebebeb |
-| `on-header` | `…/fds-*-header` | #e0e0e0 |
-| (no match) | — | #f7f7f7 |
-
-**Override — dark `artwork`:** if the group's Theme is an alternate/dark surface
-OR the component is very light (would wash out on a light fill), use the dark
-`artwork` background instead — bind the `artwork` / darkest-surface variable (see
-`anatomy-rules.md`). This override **supersedes** the light `#ebebeb`
-alternate-surface fallback, which applies only to a genuinely light alternate
-surface. Bind with `setBoundVariableForPaint`; **never** a hex when a variable
-exists, and never a CSS-var string.
-
-**Same rule for the Surfaces matrix and Anatomy diagrams:** every `surfaces--row`
-and every Anatomy diagram picks its background the same way — bind the matching
-surface variable, dark `artwork` for alternate/dark or very-light components.
-
-Use **instances** of the existing component set for the cells — never rebuild it;
-prefer the `variants--cell` doc component (INSTANCE_SWAP + caption) when present.
+If the 8 doc-kit atoms are unavailable (see Discovery), fall back to a
+hand-built table using the same structure and naming.
 
 ---
 
-## Surfaces matrix
+## `section--component` (bottom of the page — replaces the old Variant grid + Surfaces matrix)
 
-One **`surfaces--row`** instance per surface the component actually supports
-(Surface-Variant / Surface / Alternate Surface, plus any context axis
-Success / Error / Alert / Info / Brand it has). Each row shows a component
-instance on that surface background — **bind** the matching local surface
-variable (`fds-surface`, `fds-alternate-surface`, …) as the row background,
-falling back to the hex map above only when no variable exists. Emit only the
-surface/context values that actually exist in the component's variants; if the
-component has no surface/context axis, replace the matrix with a placeholder +
-flag.
+```
+section--component                         (gap 24, vertical, full doc width)
+  section-title--control-props             "Component" | "Widget"  +  italic <component-name>
+  <the original component / component-set> (moved here as-is, full width)
+```
 
-If `surfaces--row` is unavailable (see Discovery), hand-build the rows.
+- Reuses the **`section-title--control-props`** atom, but with its fixed left
+  text changed to **"Component"** or **"Widget"** (see the classification rule
+  below) instead of "Control Props"; the italic suffix is still the component
+  name.
+- The body is the **actual original component/component-set** Volundr was
+  asked to document — copied or moved wholesale into this frame, at its own
+  existing internal layout/grid. **Do not** re-group it, add per-cell
+  captions, bind group/surface backgrounds, or otherwise curate it — that
+  entire model (Sub-type A/B/C nested grids, `variants--cell`,
+  `surfaces--row`, per-Theme background binding) is **deprecated**. If the
+  user wants a curated/annotated showcase instead of the raw component, ask
+  before building one — don't default to it.
+- **Component vs. Widget** classification (confirmed with the user
+  2026-07-17): **Component** = atomic, systematic — a single reusable element.
+  **Widget** = composed of multiple components, usually built for one
+  specific purpose/context. Ask the user when a component's classification is
+  not obvious from its Figma structure.
+- Moving vs. copying the original component into this frame, and whether the
+  component keeps a separate reference elsewhere on the page, is an
+  **open question** (see `istruzioni.md` — not yet settled for every case).
+  Default to **moving** it (per the confirmed Q5 answer) but confirm with the
+  user before doing so on a component that has other pages/frames referencing
+  its current position.
+
+---
+
+## `section--anatomy` (`doc-column-3`)
+
+```
+section--anatomy                           (gap 24, vertical)
+  section-title                            "Anatomy"
+  content--anatomy                         (gap 24, vertical)
+    flag-optional                          (only if no bound tokens / no Anatomy--item — "⚑ …")
+    Diagram — <variant label>  × 1 or more (reference instance + numbered pins)
+    Legend                                 (gap ~12, numbered items: num circle + txt)
+```
+
+Full generation rules (which variants to annotate, token resolution table,
+diagram background choice, pin/legend formatting) are authoritative in
+**`data/anatomy-rules.md`** — this file only defines the **container naming**
+(`section--anatomy` / `content--anatomy` / `flag-optional` / `Diagram` /
+`Legend`), which now sits directly in `doc-column-3` (there is no more generic
+`Doc Column 3` wrapper name — the anatomy section frame **is** the column).
+`Anatomy--item` **is a real atom** (found `105:219`, see `doc-components.md`
+§9) — instance it for each legend row; only hand-build a row if this atom is
+missing in the current file, and flag that to the user.
 
 ---
 
@@ -274,19 +304,22 @@ names and **notifies the user** whenever generic names are found in existing doc
 
 | Generic (original) | Semantic (Volundr) |
 |---|---|
-| `Frame 4` | `Control` |
-| `Frame 2` (inside Control) | `Header` |
-| `Frame 3/5/7…` (prop rows) | `Row_[PropName]` |
-| `Frame 17` (category banner) | `Banner` |
-| `Rectangle 2` | `Section` |
+| `Frame 4` (etc., prop table wrapper) | `content--control-props` |
+| `Frame 2` (header row) | `control-props--header` (atom) |
+| `Frame 3/5/7…` (prop rows) | `control-props--row` (atom) |
+| `Frame 17` (category banner) | *(no longer used — `Banner` is deprecated, see `section--component`)* |
+| `Rectangle 2` | `section` |
 
 ---
 
 ## Terminology rules
 
-1. Variant block label is always **"Variants"**.
-2. Control props label is always **"Control Props"** (`(fds-subcomponent)` suffix only for sub-components).
-3. Row names use the exact property key from the variant strings.
+1. `section--component`'s title is always **"Component"** or **"Widget"** (see
+   classification rule above) — never "Variants".
+2. Control Props label is always **"Control Props"**; the italic suffix is
+   always the (sub-)component's exact name.
+3. Control Props row names use the exact property key from the variant
+   strings/`variantProperties`.
 4. If a key name differs from FDS standard, **ask the user** before using it.
 5. Notify the user whenever a `Frame X` name is found; ask whether to rename.
 
@@ -298,35 +331,47 @@ names and **notifies the user** whenever generic names are found in existing doc
    `parent` chain up to its `PAGE`; save that page's id + name;
    `await figma.setCurrentPageAsync(compPage)`. All build calls target **this**
    page. Never rely on `figma.currentPage` (it resets to the first page).
-2. **Discover the doc-kit** (see Generation model): find `Page Header`, `Section`,
-   `control-props--header`, `control-props--row`, `variants--cell`,
-   `Anatomy--item`, `surfaces--row` in the current file. If any needed one is
-   **missing → ask the user which page it is on** (or whether to proceed
-   hand-built). Never import cross-file by key.
-3. **Query local variables** (`getLocalVariablesAsync('COLOR')`): note whether
-   `fds-surface` / `fds-alternate-surface` / `artwork` exist so backgrounds bind
-   variables instead of hex.
-4. **Scan the page** for existing doc frames (`Control`, `Variants`, `Section`,
-   `[componentName]`). If documentation exists → ask: overwrite, update, or skip?
-5. If generic `Frame X` names exist → ask whether to rename. Wait for the answer.
-6. If nothing found → proceed.
+2. **Discover the doc-kit** (see Generation model): find the 8 atoms
+   (`design-system-label`, `component-title`, `description`,
+   `description--bullet-points`, `section-title`,
+   `section-title--control-props`, `control-props--header`,
+   `control-props--row`) in the current file. If any needed one is **missing →
+   ask the user which page it is on** (or whether to proceed hand-built per
+   `doc-components.md`). Never import cross-file by key. **If a name collision
+   with a different spec is found, stop and ask which is canonical** (see
+   `doc-components.md`'s Set A/Set B note) — never silently pick one.
+3. **Scan the page** for an existing `doc_[component-name]` frame. If
+   documentation exists → ask: overwrite, update, or skip?
+4. If generic `Frame X` names exist → ask whether to rename. Wait for the answer.
+5. If nothing found → proceed.
 
 ---
 
 ## Build order (incremental)
 
-discover doc-kit + query local surface variables → switch to the component's
-page → create the docs root and place it to the **LEFT** of the component
-(`docs.x = comp.x - docs.width - 200; docs.y = comp.y`) → instance `Page Header`
-(name + abstract) → column 1 (`Section` ×3 for Usage/Behaviour/Best Practices +
-Control Props from `control-props--*`) → column 2 (`Section` ×2 for
-Animation/Icons + Variant grid using `variants--cell`, group bg bound to surface
-vars) → column 3 (Anatomy with `Anatomy--item`, per `anatomy-rules.md`) →
-Surfaces (`surfaces--row`) → `get_screenshot` → fix overlaps/clipping → **write
-the per-component `.md`** (see `volundr.prompt.md`) → report.
+discover the 8 doc-kit atoms → switch to the component's page → create the
+`doc_[component-name]` root (white, 32 radius, pad 64, gap 96) → `Header`
+(`design-system-label` + `component-title` + `description`) → `doc-columns`
+→ `doc-column-1` (Purpose/Behavior/Dependencies*/Icons*/Control Props) →
+`doc-column-2` (Composition/Usage/Animation) → `doc-column-3`
+(`section--anatomy`, per `anatomy-rules.md`) → `section--component`
+(move/copy the original component in, titled "Component"/"Widget" + name) →
+`get_screenshot` → fix overlaps/clipping → **write the per-component `.md`**
+(see `volundr.prompt.md`) → report.
 
 `figma-use` before every `use_figma`; ≤10 ops per call; validate between steps.
-Once the docs root's real width is known, re-assert `docs.x = comp.x -
-docs.width - 200` so it stays left-aligned as content grows.
-Return: page id, frames created, which sections are complete vs. placeholder,
-and the list of placeholders flagged for the user.
+Return: page id, frames created, which sections reused the description
+verbatim vs. got dedicated copy, and any atom-collision or missing-atom
+questions raised to the user.
+
+> **Auto-layout height gotcha (found 2026-07-17 during live testing)**: never
+> call `resize(w, h)` on an `AUTO`-height auto-layout frame **before**
+> appending its children — it can pin the frame at whatever placeholder
+> height was passed, silently clipping every child added afterward (even with
+> `clipsContent = false` the frame's own declared height stays wrong, which
+> throws off every sibling positioned after it). If a frame's height looks
+> wrong after building, force a relayout by toggling its sizing mode off and
+> back on (`primaryAxisSizingMode = 'FIXED'` then `'AUTO'`) **after** all
+> children exist. Always verify real heights via `get_metadata` — not just a
+> screenshot — before trusting the layout and moving to the next step.
+
