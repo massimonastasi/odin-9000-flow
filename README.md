@@ -130,7 +130,7 @@ Code generation engine. Scaffolds semantic HTML + vanilla CSS + CSS Modules, **o
   ╚═══╝   ╚═════╝ ╚══════╝ ╚═════╝ ╚═╝  ╚═══╝╚═════╝ ╚═╝  ╚═╝
 ```
 
-FDS component documentation generator. Analyzes a Figma component's description and variant/property structure, then builds a `doc_[component-name]` page by instancing a 9-atom doc-kit (`design-system-label`, `component-title`, `description`, `section-title`, `section-title--control-props`, `control-props--header/row`, `Anatomy--item`, etc. — spec in `data/doc-components.md`) on the component's own page. The original component is **moved** into a `section--component` block at the bottom of the doc, as-is.
+FDS component documentation generator. Analyzes a Figma component's description and variant/property structure, then builds a `doc_[component-name]` page by instancing a doc-kit ( spec in `data/doc-components.md`) on the component's own page. The original component is **moved** into a `section--component` block at the bottom of the doc, as-is.
 
 **Invoke:** `/volundr`
 **Inputs:** Figma component URL or node id
