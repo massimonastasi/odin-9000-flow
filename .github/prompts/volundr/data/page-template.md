@@ -90,7 +90,7 @@ structure, sizing and gaps.
 
 ### Atoms still missing (no instance anywhere yet)
 
-`Anatomy--item` **was found** on 2026-07-17 (node `105:219` in the reference
+`anatomy--item` **was found** on 2026-07-17 (node `105:219` in the reference
 file) — it is a real, instantiable atom (`num` circle + `txt` name/token
 line), documented as atom #9 in `doc-components.md`. Instance it for the
 Anatomy legend rows; do not hand-build them when this atom is available (see
@@ -138,7 +138,7 @@ doc_[component-name]                         (root frame, white, 32 corner radiu
 │ ┌─ doc-column-1 ──┐   ┌─ doc-column-2 ──┐   ┌─ doc-column-3 ───────────┐ │
 │ │ gap 96, vert.   │   │ gap 96, vert.   │   │ section--anatomy         │ │
 │ │ • Purpose    ✎  │   │ • Composition ✎ │   │  flag-optional (if no    │ │
-│ │ • Behavior   ✎  │   │ • Usage       ✎ │   │  tokens/no Anatomy--item)│ │
+│ │ • Behavior   ✎  │   │ • Usage       ✎ │   │  tokens/no anatomy--item)│ │
 │ │ • Dependencies* │   │ • Animation   ✎ │   │  Diagram(s) + pins       │ │
 │ │ • Icons*        │   │                 │   │  Legend (numbered)  ✎    │ │
 │ │ • Control Props✎│   │                 │   │  (tokens only, per       │ │
@@ -152,10 +152,22 @@ doc_[component-name]                         (root frame, white, 32 corner radiu
 ```
 
 `✎` = Volundr derives it from the component's description/variants. `*` =
-optional, only emitted when applicable (see below). No section is ever a bare
-`[P]` placeholder any more — every section reuses the component's description
-text until the user supplies more specific copy; **never invent facts not
-present in the Figma description**.
+optional, only emitted when applicable (see below).
+
+> **Hide empty sections (confirmed 2026-07-17)**: a `section` is always
+> **created** (so the frame exists for future edits) but if it has no real,
+> distinct content — the component's description is empty, or there's
+> nothing more specific to say for that angle — set it `visible = false`
+> rather than showing a `⚑ FLAG TODO` placeholder inline. If a component
+> **does** have a real description, still reuse it verbatim across
+> Purpose/Behavior/Composition/Usage/Animation as before — the hide rule only
+> applies when there is truly nothing to show. **If every section in a
+> column ends up hidden, hide the whole column too** (`doc-column-1` stays
+> visible as long as Control Props has content, which it always does; if
+> `doc-column-2`'s three sections are all hidden, hide `doc-column-2` itself
+> so `doc-column-3` shifts left to sit next to `doc-column-1`). The
+> **Header's** abstract is the one exception — it always stays visible, flag
+> and all, so the page never loses its title context.
 
 No internal padding on `Header`, `doc-columns`, the doc-columns themselves, or
 any `section*` frame — the **only** padding in the whole page is the root
@@ -171,12 +183,15 @@ reference) — never stretched to match column 1/2.
      `doc-components.md` §2 for the prefix rule).
    - `description` instance — the **full** component description (Figma
      `description` field), not a shortened lead sentence. If the description is
-     empty, flag it: `⚑ TODO — component has no description in Figma`.
+     empty, flag it: `⚑ TODO — component has no description in Figma` (kept
+     **visible** — see the Header exception above).
 2. **`doc-column-1`** (gap 96, vertical):
    - `section` → title **"Purpose"** + `description` = the component
-     description (same text as the Header abstract).
+     description (same text as the Header abstract). **Hidden** if the
+     component has no description.
    - `section` → title **"Behavior"** + `description` = the component
      description (reuse until the user gives more specific behaviour copy).
+     **Hidden** if there's no description to reuse.
    - `section--dependencies` *(optional)* — only if the component's Figma
      description lists nested sub-component instances it depends on (its
      "COMPOSITION" notes, excluding icons): title **"Dependencies"** +
@@ -186,12 +201,15 @@ reference) — never stretched to match column 1/2.
    - `section--icons` *(optional)* — only if the component uses named icons:
      title **"Icons"** + `content--bullet-point` (gap 8) holding one
      `description--bullet-points` instance per icon name.
-   - `section--control-props` → see "Control Props table" below.
+   - `section--control-props` → see "Control Props table" below. Always has
+     content (the props table) — never hidden.
 3. **`doc-column-2`** (gap 96, vertical) — three generic `section` blocks,
    titles **"Composition"**, **"Usage"**, **"Animation"**: each is a
    `section-title` + `description` reusing the component description until the
-   user supplies dedicated copy for that angle. Omit **Animation** only if the
-   component genuinely has no animated/interactive states (static component).
+   user supplies dedicated copy for that angle. **Hidden** individually when
+   empty; if all three end up hidden, hide `doc-column-2` itself (see the
+   hide rule above). Omit **Animation** only if the component genuinely has
+   no animated/interactive states (static component).
 4. **`doc-column-3`** → `section--anatomy`, see **`data/anatomy-rules.md`**
    for the authoritative generation rules (tokens only, never hardcoded
    values); container naming below.
@@ -280,7 +298,7 @@ section--component                         (gap 24, vertical, full doc width)
 section--anatomy                           (gap 24, vertical)
   section-title                            "Anatomy"
   content--anatomy                         (gap 24, vertical)
-    flag-optional                          (only if no bound tokens / no Anatomy--item — "⚑ …")
+    flag-optional                          (only if no bound tokens / no anatomy--item — "⚑ …")
     Diagram — <variant label>  × 1 or more (reference instance + numbered pins)
     Legend                                 (gap ~12, numbered items: num circle + txt)
 ```
@@ -291,7 +309,7 @@ diagram background choice, pin/legend formatting) are authoritative in
 (`section--anatomy` / `content--anatomy` / `flag-optional` / `Diagram` /
 `Legend`), which now sits directly in `doc-column-3` (there is no more generic
 `Doc Column 3` wrapper name — the anatomy section frame **is** the column).
-`Anatomy--item` **is a real atom** (found `105:219`, see `doc-components.md`
+`anatomy--item` **is a real atom** (found `105:219`, see `doc-components.md`
 §9) — instance it for each legend row; only hand-build a row if this atom is
 missing in the current file, and flag that to the user.
 

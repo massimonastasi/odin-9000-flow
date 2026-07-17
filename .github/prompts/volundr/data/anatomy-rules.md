@@ -112,25 +112,35 @@ binds `fds-surface` when a local variable exists.
 
 ## Callout pins  (readability of the component)
 
-- Render each reference instance at a **legible size** on the chosen background
-  (light or dark `artwork`; small variants scaled up so labels/odds are readable).
-- Pin = a small numbered circular badge with a thin leader line to the part.
+- **Center the reference instance at its native size** in the diagram frame
+  (confirmed 2026-07-17 — do not scale it up by default). Only scale a variant
+  up when it is genuinely too small to read at native size (e.g. dense text or
+  odds values) — ask the user before doing so rather than assuming.
+- Pin = a small numbered circular badge (22×22, corner radius 11) placed at
+  the part it calls out. **Fill = the pin accent color at 50% opacity**
+  (confirmed 2026-07-17 — e.g. `rgba(217,51,38,0.5)`; not solid). This applies
+  to the **diagram** pins only — the `num` badge inside each `anatomy--item`
+  legend row stays **solid** (no opacity change there).
   Place badges **outside** the instance bounds where possible; leader lines must
   not cross the odds value / labels. No overlapping pins.
-- Pin number ↔ legend number must match exactly.
+- Pin number ↔ legend number must match exactly, and both must be
+  **renumbered sequentially from 1** — if a part is skipped (e.g. because it
+  has no bound token, see "Which variants / parts to annotate" above), do not
+  leave a gap in the numbering.
 
 ---
 
 ## Legend format  (readability of the description)
 
-Instance the **`Anatomy--item`** doc component (found `105:219` in the
+Instance the **`anatomy--item`** doc component (found `105:219` in the
 reference file, spec in `doc-components.md` §9) — one per part — overriding
 its `num` text (pin number) and its two `txt` lines (node name + type, then
 the resolved property line or the `⛑ no bound token` flag). Only fall back to
-hand-built rows if `Anatomy--item` is missing in the current file (see
+hand-built rows if `anatomy--item` is missing in the current file (see
 `page-template.md` Discovery). The no-token flag at the top of the column is
 the optional `flag-optional` frame — include it only when the component is
-untokenised.
+untokenised. **The `Legend` frame itself has no background/fill** (confirmed
+2026-07-17) — it is a plain transparent vertical stack; never set a fill on it.
 
 - One continuous numbered list. Each item:
   - `⟨n⟩  <NodeName>` — number badge + node name **Semi Bold**.

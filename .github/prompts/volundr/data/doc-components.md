@@ -232,7 +232,7 @@ colonna di documentazione la larghezza segue il contenuto della colonna, es.
 
 ---
 
-## 9. `Anatomy--item`
+## 9. `anatomy--item`
 
 **Node sorgente**: `105:219` (340px, `flex gap-[10px] items-start`) — **trovato
 il 2026-07-17**, esiste già come componente reale altrove nella stessa pagina
@@ -273,7 +273,7 @@ come gli altri atomi.
 
 ## Atomi ancora mancanti dal kit (aggiornato 2026-07-17)
 
-`Anatomy--item` **non è più mancante** (vedi §9 sopra). Restano da chiudere:
+`anatomy--item` **non è più mancante** (vedi §9 sopra). Restano da chiudere:
 `variants--cell`, `surfaces--row`, `Banner` — ma questi tre sono **deprecati**
 dopo la riscrittura di `page-template.md` v2 (il componente originale viene
 spostato as-is dentro `section--component`, non più mostrato tramite una
@@ -314,11 +314,11 @@ Esempi di "pattern ripetuto" da segnalare: una struttura di
 riga/cella/badge che ricorre identica in più `section--*` di uno stesso
 componente; un blocco che si ripete identico documentando più
 componenti/widget diversi (candidato forte a diventare un atomo condiviso,
-come è successo storicamente con `control-props--row` o `Anatomy--item`).
+come è successo storicamente con `control-props--row` o `anatomy--item`).
 
 ## Prossimo passo
 
 Con questi 9 atomi documentati, la Fase 2 di `istruzioni.md` ha già aggiornato
 `page-template.md` e `anatomy-rules.md` (v2) — restano da allineare i
-riferimenti ad `Anatomy--item` come "mancante/hand-built" in quei due file
+riferimenti ad `anatomy--item` come "mancante/hand-built" in quei due file
 (vedi sezione "Aggiornamento" in `istruzioni.md`).

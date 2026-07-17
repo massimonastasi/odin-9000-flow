@@ -45,7 +45,7 @@ design-system-label + component-title {prefix:name} + description   (Header, gap
  ┌─ doc-column-1 ──┐  ┌─ doc-column-2 ──┐  ┌─ doc-column-3 ───────────┐
  │ Purpose      ✎  │  │ Composition   ✎ │  │ section--anatomy      ✎  │
  │ Behavior     ✎  │  │ Usage         ✎ │  │  Diagram(s) + pins       │
- │ Dependencies *  │  │ Animation     ✎ │  │  Legend (Anatomy--item)  │
+ │ Dependencies *  │  │ Animation     ✎ │  │  Legend (anatomy--item)  │
  │ Icons        *  │  │                 │  │  (tokens only, see       │
  │ Control Props✎  │  │                 │  │  anatomy-rules.md)       │
  └─────────────────┘  └─────────────────┘  └──────────────────────────┘
@@ -157,10 +157,11 @@ Ready to generate documentation? (yes/no)
    - `Header` (gap 24): `design-system-label` + `component-title` (`{prefix:name}`) + `description` (**full** component description, both as the abstract and reused verbatim as Purpose's body)
    - `doc-column-1`: **Purpose** ✎ + **Behavior** ✎ (description reused) + `section--dependencies` (only if sub-component instances were detected) + `section--icons` (only if named icons exist) + `section--control-props` ✎ (duplicated per detected `[component-name].[block-name]` sub-component)
    - `doc-column-2`: **Composition** / **Usage** / **Animation** — generic `section` blocks reusing the description until the user supplies dedicated copy (omit Animation only for genuinely static components)
-   - `doc-column-3`: `section--anatomy` — instance `Anatomy--item` per legend row (it is a real atom, see `doc-components.md` §9); follow **`data/anatomy-rules.md`** (tokens only, never hardcoded)
+   - **Hide empty sections** (confirmed 2026-07-17): a `section` with no real, distinct content (component description empty, nothing more specific for that angle) is still created but set `visible = false` — never shown as an inline `⚑ FLAG TODO` placeholder. If **every** section in `doc-column-2` ends up hidden, hide `doc-column-2` itself too (`doc-column-3` then sits directly next to `doc-column-1`). `section--control-props` always has content and is never hidden; the Header's abstract also always stays visible, flag and all.
+   - `doc-column-3`: `section--anatomy` — instance `anatomy--item` per legend row (it is a real atom, see `doc-components.md` §9); follow **`data/anatomy-rules.md`** (tokens only, never hardcoded)
    - `section--component` (bottom, full width): reuse `section-title--control-props` with its label changed to **"Component"** or **"Widget"** (per the component/widget criterion) + the component name in italic; **move** (not copy) the original component/component-set in as-is — no grouping, no captions, no curated grid
    - Any **repeated-pattern module** spotted during the build that isn't covered by an atom → **ask the user** (promote to `doc-components.md` + `volundr-components-doc`, or leave hand-built once) before continuing — never decide silently
-6. Build via **doc-kit atom instances** (`doc-components.md`): `design-system-label`, `component-title`, `description`, `description--bullet-points`, `section-title`, `section-title--control-props`, `control-props--header`, `control-props--row`, `Anatomy--item`. `Header`/`doc-columns`/`section*`/`content--*` are plain composed frames, not instances (see `page-template.md`).
+6. Build via **doc-kit atom instances** (`doc-components.md`): `design-system-label`, `component-title`, `description`, `description--bullet-points`, `section-title`, `section-title--control-props`, `control-props--header`, `control-props--row`, `anatomy--item`. `Header`/`doc-columns`/`section*`/`content--*` are plain composed frames, not instances (see `page-template.md`).
 7. `get_screenshot` the full page; fix overlaps/clipping; verify all frames use canonical names (no `Frame X`).
 8. **Write the per-component archive** to `components/component/<component-name>.md` or `components/widget/<component-name>.md` (ask the user for the classification if not obvious — see "Per-component archive" below) so future edits skip re-analysis.
 9. **Close Hermes run**:
@@ -223,7 +224,7 @@ parts: root, Toggle, Switch — tokens: <resolved token names, or "none — unto
 ## section--component
 moved | copied — <note if the original component had other pages/frames referencing its prior position>
 ## Doc-kit atoms used
-design-system-label, component-title, description, section-title, section-title--control-props, control-props--header/row, Anatomy--item (missing: none)
+design-system-label, component-title, description, section-title, section-title--control-props, control-props--header/row, anatomy--item (missing: none)
 ## New atoms proposed (if any)
 <pattern description + user's decision: promoted to doc-components.md | left hand-built>
 ```
@@ -333,7 +334,7 @@ variable — **never a CSS-var string**.
 - `data/doc-components.md` — **Authoritative** build spec for each of the 9 doc-kit atoms (purpose, structure, alignment, sizing, padding, typography/color + proposed FDS token bindings), plus the pattern-detection/kit-extension rule
 - `data/page-template.md` — **Authoritative** `doc_[component-name]` page layout, container naming (`Header`/`doc-columns`/`section--component`/etc.), discovery, entry-checks
 - `data/variant-parsing-rules.md` — Rules for parsing variant names + exposed BOOLEAN/TEXT component properties (Control Props only — grid grouping is deprecated)
-- `data/anatomy-rules.md` — **Authoritative** Anatomy section spec (column 3): token-only legend via `Anatomy--item`, callout pins, reference variants, dark `artwork` background rule
+- `data/anatomy-rules.md` — **Authoritative** Anatomy section spec (column 3): token-only legend via `anatomy--item`, callout pins, reference variants, dark `artwork` background rule
 - `components/component/<component-name>.md` / `components/widget/<component-name>.md` — **typed per-component archive** written after each run (fast-edit record + training-loop corpus)
 
 ## Plugin API Scripts
