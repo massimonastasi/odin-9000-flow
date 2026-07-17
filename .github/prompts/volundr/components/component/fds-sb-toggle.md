@@ -1,5 +1,6 @@
 ---
 component: fds-sb-toggle
+classification: component   # atomic, single reusable element — no sub-component dependencies
 fileKey: rhSXN8LjWELGgCvtCnIxM6
 pageName: "🟣  FDS-SB-Toggle"
 nodeId: "8175:31438"

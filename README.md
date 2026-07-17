@@ -130,11 +130,11 @@ Code generation engine. Scaffolds semantic HTML + vanilla CSS + CSS Modules, **o
   ╚═══╝   ╚═════╝ ╚══════╝ ╚═════╝ ╚═╝  ╚═══╝╚═════╝ ╚═╝  ╚═╝
 ```
 
-FDS component documentation generator. Analyzes a Figma component set, extracts control props and variant structure, and writes documentation frames directly on the component's page — following the FDS template (Component Header, Control Props table, Variants, optional Building Blocks).
+FDS component documentation generator. Analyzes a Figma component's description and variant/property structure, then builds a `doc_[component-name]` page by instancing a 9-atom doc-kit (`design-system-label`, `component-title`, `description`, `section-title`, `section-title--control-props`, `control-props--header/row`, `Anatomy--item`, etc. — spec in `data/doc-components.md`) on the component's own page. The original component is **moved** into a `section--component` block at the bottom of the doc, as-is.
 
 **Invoke:** `/volundr`
 **Inputs:** Figma component URL or node id
-**Outputs:** Documentation frames on the component's Figma page (same page, below the component)
+**Outputs:** A `doc_[component-name]` documentation page on the component's Figma page, with the original component moved into it
 **Use when:** A component needs FDS-style documentation generated or updated in Figma. Can be invoked directly or dispatched by ODIN when a documentation request is detected.
 
 ---

@@ -14,10 +14,9 @@ validate between steps).
 
 ## Layout
 
-Column 3 (`Doc Column 3`) — **hug content, `maxWidth = 2000`**, padding 40,
-vertical. Never hardcode a fixed column width: set `layoutSizingHorizontal =
-"HUG"` + `maxWidth = 2000` so the column grows to fit the diagrams + legend and
-wraps at 2000. One `Anatomy` section:
+`section--anatomy` (in `doc-column-3`) — gap 24, vertical, hug width sized to
+its content (~560px in the reference; not a fixed column width). One
+`section-title` ("Anatomy") + `content--anatomy` (gap 24, vertical):
 
 ```
 Anatomy                                   (section label)
@@ -113,22 +112,35 @@ binds `fds-surface` when a local variable exists.
 
 ## Callout pins  (readability of the component)
 
-- Render each reference instance at a **legible size** on the chosen background
-  (light or dark `artwork`; small variants scaled up so labels/odds are readable).
-- Pin = a small numbered circular badge with a thin leader line to the part.
+- **Center the reference instance at its native size** in the diagram frame
+  (confirmed 2026-07-17 — do not scale it up by default). Only scale a variant
+  up when it is genuinely too small to read at native size (e.g. dense text or
+  odds values) — ask the user before doing so rather than assuming.
+- Pin = a small numbered circular badge (22×22, corner radius 11) placed at
+  the part it calls out. **Fill = the pin accent color at 50% opacity**
+  (confirmed 2026-07-17 — e.g. `rgba(217,51,38,0.5)`; not solid). This applies
+  to the **diagram** pins only — the `num` badge inside each `anatomy--item`
+  legend row stays **solid** (no opacity change there).
   Place badges **outside** the instance bounds where possible; leader lines must
   not cross the odds value / labels. No overlapping pins.
-- Pin number ↔ legend number must match exactly.
+- Pin number ↔ legend number must match exactly, and both must be
+  **renumbered sequentially from 1** — if a part is skipped (e.g. because it
+  has no bound token, see "Which variants / parts to annotate" above), do not
+  leave a gap in the numbering.
 
 ---
 
 ## Legend format  (readability of the description)
 
-Prefer **instances of the `Anatomy--item`** doc component (one per part) —
-override its 3 TEXT nodes (`num` number, node name, token line); fall back to
-hand-built rows only if the component is unavailable (see `page-template.md`
-Discovery). The no-token flag at the top of the column is the optional
-`flag-optional` frame — include it only when the component is untokenised.
+Instance the **`anatomy--item`** doc component (found `105:219` in the
+reference file, spec in `doc-components.md` §9) — one per part — overriding
+its `num` text (pin number) and its two `txt` lines (node name + type, then
+the resolved property line or the `⛑ no bound token` flag). Only fall back to
+hand-built rows if `anatomy--item` is missing in the current file (see
+`page-template.md` Discovery). The no-token flag at the top of the column is
+the optional `flag-optional` frame — include it only when the component is
+untokenised. **The `Legend` frame itself has no background/fill** (confirmed
+2026-07-17) — it is a plain transparent vertical stack; never set a fill on it.
 
 - One continuous numbered list. Each item:
   - `⟨n⟩  <NodeName>` — number badge + node name **Semi Bold**.
@@ -143,10 +155,12 @@ Discovery). The no-token flag at the top of the column is the optional
 
 ## Build order (incremental)
 
-1. Create `Doc Column 3` (**hug, `maxWidth = 2000`**) if not present; add the `Anatomy` section label.
+1. Create `section--anatomy` (`section-title` "Anatomy" + `content--anatomy`,
+   hug width) if not present.
 2. Read the base instance subtree; for each annotated node resolve its tokens
    (table above) — **collect resolved lines only**.
-3. Build the **diagrams row**: place instance(s), add numbered pins.
+3. Build the **diagram(s)**: place instance(s) directly in `content--anatomy`
+   (wrap in a `Diagrams` frame only if more than one), add numbered pins.
 4. Build the **legend**: numbered items with their resolved property lines.
 5. `get_screenshot` → check pins align, no overlaps, no raw values leaked into
    the legend. Fix before finishing.

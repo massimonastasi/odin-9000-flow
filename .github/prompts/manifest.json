@@ -104,6 +104,7 @@
       },
       "scripts": [],
       "data": [
+        ".github/prompts/volundr/data/doc-components.md",
         ".github/prompts/volundr/data/page-template.md",
         ".github/prompts/volundr/data/variant-parsing-rules.md",
         ".github/prompts/volundr/data/anatomy-rules.md"
