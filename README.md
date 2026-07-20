@@ -265,6 +265,7 @@ ODIN resolves a model for each subagent dispatch. Two layers compose:
 | VALI                     | Claude Sonnet 4.6 | —                                                               |
 | MIMR                     | Claude Sonnet 4.6 | Opus 4.8 (large/ambiguous conflict audit)                       |
 | SAGA                     | Claude Sonnet 4.6 | Opus 4.8 (complex multi-state component)                        |
+| Volundr                  | Claude Sonnet 4.6 | —                                                               |
 
 **Escalation safety gate (mandatory):** before dispatching any subagent on a model **higher** than its frontmatter default, ODIN MUST ask the user via a confirmation prompt and receive explicit approval — no silent escalation. If declined, ODIN dispatches on the default instead (the step is never blocked). Downgrades (e.g. Sonnet → Haiku for a trivial step) are exempt and need no confirmation. The chosen model and approval are recorded as `episode.escalation = { from, to, approved }`.
 
@@ -368,17 +369,20 @@ flowchart TD
     M --> V["/vali → layout conversion"]
     V --> I["/mimr → token audit + writes"]
     I --> G["/saga → HTML + CSS or StencilJS"]
+    I --> D["/volundr → FDS documentation page (parallel)"]
     G --> S3["3. Close run (episode close)"]
+    D --> S3
     S3 --> OUT["Storybook-ready component folder<br/>+ full Hermes episode trail"]
 ```
 
 Each sub-skill runs as an isolated subagent. ODIN forwards handoff contracts so downstream skills avoid redundant Figma reads:
 
-| Handoff     | Contract                                                                           |
-| ----------- | ---------------------------------------------------------------------------------- |
-| VALI → MIMR | node list `[{id,type}]` forwarded as `PRIOR_SCAN` (skips MIMR tree walk)           |
-| MIMR → SAGA | NV map `{prop: shortName, value}` reused for `--fds-*` CSS vars (no re-resolution) |
-| MODI → VALI | swap report; converted instances ready for the layout pass                         |
+| Handoff        | Contract                                                                           |
+| -------------- | ---------------------------------------------------------------------------------- |
+| VALI → MIMR    | node list `[{id,type}]` forwarded as `PRIOR_SCAN` (skips MIMR tree walk)           |
+| MIMR → SAGA    | NV map `{prop: shortName, value}` reused for `--fds-*` CSS vars (no re-resolution) |
+| MODI → VALI    | swap report; converted instances ready for the layout pass                         |
+| MIMR → Volundr | token-bound component ready for doc-kit instancing; Volundr runs Phase 1+2 (Analyse+Confirm) as a subagent, ODIN executes Phase 3 (`use_figma` build) in its own session |
 
 ### Technical pipeline (SAGA detail)
 
@@ -422,6 +426,7 @@ odin-9000-flow/
 │       ├── mimr.prompt.md             # /mimr entry point
 │       ├── vali.prompt.md             # /vali entry point
 │       ├── saga.prompt.md             # /saga entry point
+│       ├── volundr.prompt.md          # /volundr entry point
 │       ├── kevin.prompt.md            # /kevin persona overlay
 │       ├── odin-9000/
 │       │   └── odin-9000.prompt.md
@@ -437,15 +442,20 @@ odin-9000-flow/
 │       │   ├── vali.prompt.md
 │       │   ├── data/                  # layout-rules.md
 │       │   └── scripts/               # scan.figma.js, process.figma.js
-│       └── saga/
-│           ├── saga.prompt.md
-│           └── scripts/               # generate-component-css.mjs
+│       ├── saga/
+│       │   ├── saga.prompt.md
+│       │   └── scripts/               # generate-component-css.mjs
+│       └── volundr/
+│           ├── volundr.prompt.md
+│           ├── data/                  # doc-components.md, page-template.md, variant-parsing-rules.md, anatomy-rules.md
+│           └── components/            # doc-kit atom specs
 ├── .github/agents/                    # Subagent definitions (model + tools per agent)
 │   ├── librarian.agent.md
 │   ├── modi.agent.md
 │   ├── vali.agent.md
 │   ├── mimr.agent.md
-│   └── saga.agent.md
+│   ├── saga.agent.md
+│   └── volundr.agent.md
 ├── AGENTS.md                          # Agent workflow reference
 └── CLAUDE.md                          # Claude Code integration
 ```
