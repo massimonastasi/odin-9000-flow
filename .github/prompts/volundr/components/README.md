@@ -7,8 +7,8 @@ of each run (schema in `../volundr.prompt.md` → "Per-component archive").
 `component/` for atomic, single-purpose reusable components; `widget/` for
 components composed of multiple sub-components built for a specific
 purpose/context (see `../data/doc-components.md` for the exact criterion).
-When documenting a new component, decide which it is and write the `.md` into
-the matching subfolder — ask the user if the classification isn't obvious.
+When documenting a new component, ask the user and write the `.md` into
+the matching subfolder.
 
 Purpose:
 

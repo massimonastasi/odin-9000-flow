@@ -527,6 +527,28 @@ All three tools are pure Node.js/Python with zero dependencies — no build, no 
 
 ---
 
+## Changelog
+
+### 2026-07-20
+
+- **Volundr** — validated an end-to-end, from-scratch run: published all 9 doc-kit atoms
+  (`design-system-label`, `component-title`, `description`, `description--bullet-points`,
+  `section-title`, `section-title--control-props`, `control-props--header`,
+  `control-props--row`, `anatomy--item`) plus the `❖ volundr-components-doc` page and its
+  `---` divider page on a Figma file that had no doc-kit yet, then built a full
+  `doc_[component-name]` page (Header, Dependencies, Icons, Control Props, Anatomy
+  diagram + legend, moved-in original component) for `fds-sb-mini-header`.
+- **`page-template.md`** — added a new build-order note: `use_figma` calls are
+  **all-or-nothing** — an uncaught error rolls back every edit made earlier in that same
+  call, so scripts must be written idempotently (check-before-create) and must
+  `appendChild` a node into its auto-layout parent *before* setting
+  `layoutSizingHorizontal`/`layoutSizingVertical` on it.
+- Confirmed `get_metadata`'s no-nodeId page listing can silently omit real pages in a
+  file — the true page list should be read live inside a `use_figma` script
+  (`figma.root.children`), never trusted from the listing call alone.
+
+---
+
 ## License
 
 © 2026. All rights reserved.

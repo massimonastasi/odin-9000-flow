@@ -16,13 +16,12 @@ Always display this plain-text boot line at the start of the workflow:
 
 # SAGA — Storybook Automation & Generative Asset
 
-## Hermes integration (run at start, every invocation)
+## Hermes integration
 
-1. Read `.github/prompts/manifest.json` and `.github/prompts/.hermes/memory-adapter.md`.
-2. `lesson.recall(["saga"])` — honour returned lessons.
-3. Open an episode if standalone: `episode.append({phase:"open", skill:"saga", summary})` (ODIN opens it when dispatched).
-4. **Cache & handoff:** `cache.read("dc-<nodeId>-<version>")` before re-fetching `get_design_context`; reuse MIMR's NV map (when ODIN forwards it) to derive `--fds-*` vars instead of re-resolving variables.
-5. On finish: `episode.append({phase:"close", skill:"saga", summary})` and `lesson.append(...)` for any codegen pitfall.
+Generic recall/open/close pattern: see `.hermes/memory-adapter.md` § "Skill invocation
+boilerplate" — don't restate it here. `lesson.recall(["saga"])`. **Cache & handoff:**
+`cache.read("dc-<nodeId>-<version>")` before re-fetching `get_design_context`; reuse MIMR's NV
+map (when ODIN forwards it) to derive `--fds-*` vars instead of re-resolving variables.
 
 ## Purpose
 

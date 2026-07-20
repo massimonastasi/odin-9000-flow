@@ -3,10 +3,10 @@
 > **v2 (2026-07-17)** — rewritten against a real, working reference example
 > found in Figma file `RNbMGKPqYRz2vkANBdSJWx`, frame `doc_fds-sb-odds-button`
 > (node `120:1985`), built entirely from instances of the atoms defined in
-> **`doc-components.md`** (Fase 1 of `istruzioni.md`). This supersedes the
-> previous `Page Header` / `Section` / curated-"Variants"-grid model — that
-> model existed **in parallel, under colliding component names**, in the same
-> Figma file. Only one style is now canonical; see `doc-components.md` for why.
+> **`doc-components.md`**. This supersedes the previous `Page Header` /
+> `Section` / curated-"Variants"-grid model — that model existed **in
+> parallel, under colliding component names**, in the same Figma file. Only
+> one style is now canonical; see `doc-components.md` for why.
 
 Authoritative layout spec Volundr follows in Phase 3. Volundr builds this
 layout **incrementally** (`figma-use` before every `use_figma`, ≤10 ops per
@@ -108,9 +108,14 @@ in Figma alone** — Volundr does not clean them up.
 
 The user maintains the doc-kit **in every Figma file**. Before building:
 
+0. **Check the atom-id cache first** (`cache.valid('volundr-atoms-<fileKey>', <file-version>)` —
+   see `volundr.prompt.md` § Phase 3 performance note). On a valid hit, skip straight to step 4
+   using the cached `{atomName: nodeId}` map (still worth a cheap existence check per id before
+   instancing). Only fall through to steps 1-3 on a cache miss or version mismatch.
 1. Search the current file for each of the 8 atoms by name
    (`findAllWithCriteria({ types: ['COMPONENT','COMPONENT_SET'] })` per page, or
-   the enabled team library).
+   the enabled team library). Once resolved, `cache.write` the id map so the next run on this
+   file skips this step.
 2. If a needed atom is **missing**, **ask the user which page it is on** (or
    whether to proceed hand-built per `doc-components.md`'s spec for that atom).
    Do **not** import it from another file by key, and do **not** silently
@@ -285,10 +290,10 @@ section--component                         (gap 24, vertical, full doc width)
   not obvious from its Figma structure.
 - Moving vs. copying the original component into this frame, and whether the
   component keeps a separate reference elsewhere on the page, is an
-  **open question** (see `istruzioni.md` — not yet settled for every case).
-  Default to **moving** it (per the confirmed Q5 answer) but confirm with the
-  user before doing so on a component that has other pages/frames referencing
-  its current position.
+  **open question** — not yet settled for every case. Default to **moving**
+  it (per the confirmed Q5 answer) but confirm with the user before doing so
+  on a component that has other pages/frames referencing its current
+  position.
 
 ---
 
@@ -392,4 +397,17 @@ questions raised to the user.
 > back on (`primaryAxisSizingMode = 'FIXED'` then `'AUTO'`) **after** all
 > children exist. Always verify real heights via `get_metadata` — not just a
 > screenshot — before trusting the layout and moving to the next step.
+
+> **`use_figma` calls are all-or-nothing (found 2026-07-20 during live
+> testing)**: if any statement in a `use_figma` script throws uncaught partway
+> through, **every edit made earlier in that same call is rolled back** — there
+> is no partial persistence, even for steps that looked like they succeeded
+> (confirmed via a diagnostic page that vanished after a later error in the
+> same call). Two consequences: (1) fix ordering bugs rather than assuming
+> earlier work survives — e.g. always `appendChild` a node into its auto-layout
+> parent **before** setting `layoutSizingHorizontal`/`layoutSizingVertical` on
+> it, since that property requires the node to already be inside an
+> auto-layout parent; (2) write each step as idempotent create-if-missing logic
+> (check by name before creating) so a retried call after a failure is always
+> safe to re-run from scratch.
 

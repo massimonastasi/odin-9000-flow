@@ -145,6 +145,22 @@ its data file; `true` = it has been folded in. `appliedAt` (ISO8601, optional) i
 
 Cache **key convention**: `<kind>-<fileKey>-<nodeId?>-<version>`. `cache.valid` returns false when the stored `version` ≠ the supplied `ver`, forcing a rebuild.
 
+## Skill invocation boilerplate (canonical — skills point here, never restate)
+
+Every worker (MODI/VALI/MIMR/SAGA/VOLUNDR) follows the same four-step sequence on every
+invocation. Each skill's own `.prompt.md` should reduce its "Hermes integration" section to a
+one-line pointer to this list **plus only what's genuinely skill-specific** (cache key shape,
+lesson-recall hints, handoff data, which data file a `ruleProposal` targets) — do not re-paste
+these four steps verbatim per skill; that duplication is exactly what this section replaces.
+
+1. Read `.github/prompts/manifest.json` and this file.
+2. `lesson.recall([skill])` and honour every returned lesson.
+3. Open an episode if running standalone: `episode.append({phase:"open", skill, summary})`
+   (ODIN opens it instead when the skill is dispatched as a subagent).
+4. On finish: `episode.append({phase:"close", skill, summary})` and `lesson.append(...)` for any
+   durable insight — attach a `ruleProposal` against the skill's own `data/*.md` file when the
+   insight implies a lasting rule change.
+
 ## Usage rules
 
 - **Open a run** (replaces `bd create`): get `runId` from `util run-id` (`odin-<yyyymmdd-hhmmss>`); `state.write`; `episode.append({phase:"open"})`.

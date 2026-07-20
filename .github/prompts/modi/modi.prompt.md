@@ -14,13 +14,12 @@ Always display this plain-text boot line at the start of the workflow:
 
 # MODI — Model-to-Object Design Instantiator
 
-## Hermes integration (run at start, every invocation)
+## Hermes integration
 
-1. Read `.github/prompts/manifest.json` and `.github/prompts/.hermes/memory-adapter.md`.
-2. `lesson.recall(["modi"])` — honour returned lessons.
-3. Open an episode if standalone: `episode.append({phase:"open", skill:"modi", summary})` (ODIN opens it when dispatched).
-4. **Cache:** `data/component-map.md` is the Tier-A resolution cache — read first, append every new resolution.
-5. On finish: `episode.append({phase:"close", skill:"modi", summary})` and `lesson.append(...)` for new resolutions worth caching (attach a `ruleProposal` against `data/component-map.md` when durable).
+Generic recall/open/close pattern: see `.hermes/memory-adapter.md` § "Skill invocation
+boilerplate" — don't restate it here. Specific to MODI: `data/component-map.md` is the Tier-A
+resolution cache, read first and appended with every new resolution; attach `ruleProposal`
+against it for durable insights.
 
 > **"Shape becomes component."**
 > Transforms wireframe placeholders into real library instances, and swaps existing instances to newer versions — with full variant axis mapping.

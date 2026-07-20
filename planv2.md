@@ -148,8 +148,22 @@ PRIOR_SCAN handoff). Waste is concentrated here:
    - [x] A6 — SAGA internal-TEXT vs slot rule.
 5. **Structural token savings (optional, larger refactor)**
    - [ ] B3 — collapse stub/full prompt indirection.
-   - [ ] B4 — strip long descriptions from manifest/frontmatter overlap.
-   - [ ] B5 — compress Hermes boilerplate across workers.
+   - [x] B4 — strip long descriptions from manifest/frontmatter overlap. **Verified 2026-07-20:
+     already compliant** — every one of the 8 `skills.*` entries in `manifest.json` keeps `role`
+     and `loadWhen` to a single terse line; none duplicate the long frontmatter `description`
+     text verbatim. The remaining duplication (stub `.prompt.md` vs full `<name>/<name>.prompt.md`
+     carrying the identical long frontmatter description) is B3's scope, not B4's — no manifest
+     change was needed here.
+   - [x] B5 — compress Hermes boilerplate across workers. **Done 2026-07-20**: added a
+     canonical "Skill invocation boilerplate" section to `.hermes/memory-adapter.md` (the
+     generic read-manifest → `lesson.recall` → open-episode → close-episode+`lesson.append`
+     sequence, stated once); every worker's `.prompt.md` (`modi`, `vali`, `mimr`, `saga`,
+     `volundr`) now points there instead of restating the 5-6 line numbered list, keeping only
+     what's genuinely skill-specific (cache key shape, lesson-recall hints, handoff data, which
+     `data/*.md` file a `ruleProposal` targets). `.agent.md` Boot sections were left untouched —
+     they're the subagent's actual bootstrap instructions (manifest → adapter → recall → load
+     full prompt), not restated Hermes-verb boilerplate, so collapsing them further would risk
+     the subagent skipping a real step rather than just trimming prose.
 6. **Housekeeping**
    - [x] A8 — PAT storage note.
    - [ ] Re-verify C (manifest ↔ ODIN ↔ README) after any routing touch.

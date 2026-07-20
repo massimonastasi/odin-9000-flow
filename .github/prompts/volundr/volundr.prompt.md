@@ -11,24 +11,36 @@ Volundr generates component documentation in Figma following the **`doc_[compone
 >    page**. It **never generates, writes, or runs a script** (no `.js` file, no
 >    plugin-console snippet) — it builds directly via `use_figma`.
 > 2. It builds by **instancing the 9 doc-kit atoms** from `data/doc-components.md`
->    (discover them via the **`volundr-components-doc`** page first, then
+>    (discover them via the **`❖ volundr-components-doc`** page first, then
 >    elsewhere in the file; if a needed one is missing, **ask the user** whether
 >    to publish it there, per its `doc-components.md` spec — **never publish a
->    new component automatically**) — never hand-building chrome it can
->    instance, never importing cross-file by key.
+>    new component automatically**; if the file has no `❖ volundr-components-doc`
+>    page at all, create it — plus an empty `---` divider page directly above it
+>    to separate it from the rest of the file's pages — only after the user
+>    confirms) — never hand-building chrome it can instance, never importing
+>    cross-file by key.
 > 3. **Pattern-detection rule**: if Volundr notices one or more repeated-pattern
 >    modules not covered by an existing atom (during analysis or during build),
 >    it must **ask the user** whether to promote the pattern to a new doc-kit
 >    atom (spec added to `doc-components.md`, then published on
->    `volundr-components-doc` with confirmation) or leave it hand-built once —
->    never decide this automatically (see `doc-components.md` § "Estensione del
->    kit").
+>    `❖ volundr-components-doc` with confirmation) or leave it hand-built once —
+>    never decide this automatically (see `doc-components.md` § "Kit
+>    extension").
 
 > **Layout authority**: `data/page-template.md` is the single source of truth for
 > the page layout, naming, terminology, entry-checks and background rules;
 > `data/doc-components.md` is the single source of truth for each doc-kit
 > atom's build spec. Load both in Phase 3 and follow them — do not hardcode a
 > layout here.
+
+## Hermes integration
+
+Generic recall/open/close pattern: see `.hermes/memory-adapter.md` § "Skill invocation
+boilerplate" — don't restate it here. `lesson.recall(["volundr"])`. **Cache:** before Discovery,
+`cache.valid("volundr-atoms-<fileKey>", <file-version>)` — on a hit, skip the atom tree-walk and
+instance from the cached `{atomName: nodeId}` map (see Phase 3 § performance); on a miss, run
+Discovery and `cache.write` the fresh map. Attach `ruleProposal` against the relevant
+`data/*.md` file for durable insights.
 
 ## `doc_[component-name]` layout
 
@@ -138,6 +150,17 @@ Ready to generate documentation? (yes/no)
 
 **Reference**: Load `data/page-template.md` **and** `data/doc-components.md` before building any frame — together they are the authoritative layout + atom specs.
 
+> **Execution context (MANDATORY):** `use_figma` only works in **ODIN's own session** — never in
+> a dispatched Volundr subagent (same constraint as MIMR/VALI/SAGA, see `mimr.prompt.md`). ODIN
+> dispatches Volundr for **Phase 1+2 only**; ODIN itself then runs every Phase 3 `use_figma` call
+> using the returned analysis — never re-dispatch a subagent just to attempt Phase 3.
+>
+> **Performance:** atom discovery is cached per file (see "Hermes integration" step 4 above) —
+> skip the `findAllWithCriteria` tree walk on a cache hit, still `getNodeByIdAsync`-verify before
+> instancing. Batch `use_figma` ops per section, not per atom (e.g. all `control-props--row`
+> instances in one call); only `get_screenshot`/validate at section boundaries (Header, each
+> doc-column, `section--component`), not after every atom.
+
 **Execution** (build incrementally — there is NO monolithic generator script):
 1. **Open Hermes run**:
    ```
@@ -146,8 +169,8 @@ Ready to generate documentation? (yes/no)
    ```
 2. Run **Entry-point checks** (from `page-template.md`):
    - **Resolve the component's page** (walk `node.parent` to the `PAGE`) and `await figma.setCurrentPageAsync(compPage)` — the docs MUST be built on the **same page as the selected component**. `figma.currentPage` resets to the first page each `use_figma` call, so appending blindly drops the docs on the wrong page.
-   - **Check for the `volundr-components-doc` page** in the file. If present, discover the 9 doc-kit atoms there first (see `doc-components.md`); if not, fall back to searching the rest of the file (the older, pre-convention layout).
-   - If a needed atom is missing everywhere → **ask the user** whether to publish it on `volundr-components-doc` per its `doc-components.md` spec — **never publish automatically**. If the user declines, hand-build that one section and flag it.
+   - **Check for the `❖ volundr-components-doc` page** in the file. If present, discover the 9 doc-kit atoms there first (see `doc-components.md`); if not, fall back to searching the rest of the file (the older, pre-convention layout).
+   - If a needed atom is missing everywhere → **ask the user** whether to publish it on `❖ volundr-components-doc` per its `doc-components.md` spec — **never publish automatically**. If the user confirms and the file has **no `❖ volundr-components-doc` page yet**, create it, and also create an empty page named `---` immediately above it in the page list — a plain divider with no content, separating the doc-kit from the rest of the file's pages. If the user declines, hand-build that one section and flag it.
    - If **two components share the same atom name with different specs** (a known past issue in this design system) → stop and ask which is canonical before instancing either.
    - Scan the component's page for an existing `doc_[component-name]` frame; if found or generic `Frame X` names present, notify user and wait for answer (overwrite / update / skip).
 3. Check for **ODIN-forwarded metadata**: if `volundr_forwarded_metadata` is present in the run context, skip the `get_metadata` call — reuse it directly.
@@ -160,7 +183,7 @@ Ready to generate documentation? (yes/no)
    - **Hide empty sections** (confirmed 2026-07-17): a `section` with no real, distinct content (component description empty, nothing more specific for that angle) is still created but set `visible = false` — never shown as an inline `⚑ FLAG TODO` placeholder. If **every** section in `doc-column-2` ends up hidden, hide `doc-column-2` itself too (`doc-column-3` then sits directly next to `doc-column-1`). `section--control-props` always has content and is never hidden; the Header's abstract also always stays visible, flag and all.
    - `doc-column-3`: `section--anatomy` — instance `anatomy--item` per legend row (it is a real atom, see `doc-components.md` §9); follow **`data/anatomy-rules.md`** (tokens only, never hardcoded)
    - `section--component` (bottom, full width): reuse `section-title--control-props` with its label changed to **"Component"** or **"Widget"** (per the component/widget criterion) + the component name in italic; **move** (not copy) the original component/component-set in as-is — no grouping, no captions, no curated grid
-   - Any **repeated-pattern module** spotted during the build that isn't covered by an atom → **ask the user** (promote to `doc-components.md` + `volundr-components-doc`, or leave hand-built once) before continuing — never decide silently
+   - Any **repeated-pattern module** spotted during the build that isn't covered by an atom → **ask the user** (promote to `doc-components.md` + `❖ volundr-components-doc`, or leave hand-built once) before continuing — never decide silently
 6. Build via **doc-kit atom instances** (`doc-components.md`): `design-system-label`, `component-title`, `description`, `description--bullet-points`, `section-title`, `section-title--control-props`, `control-props--header`, `control-props--row`, `anatomy--item`. `Header`/`doc-columns`/`section*`/`content--*` are plain composed frames, not instances (see `page-template.md`).
 7. `get_screenshot` the full page; fix overlaps/clipping; verify all frames use canonical names (no `Frame X`).
 8. **Write the per-component archive** to `components/component/<component-name>.md` or `components/widget/<component-name>.md` (ask the user for the classification if not obvious — see "Per-component archive" below) so future edits skip re-analysis.
@@ -238,88 +261,6 @@ a token that is always missing. Surface the proposals as a **gated diff**
 (same discipline as `lesson.sweep`) and apply only what the user approves.
 **Never** auto-edit the rule files from the archive.
 
-## Hermes Integration
-
-### Opening a Run
-```javascript
-state.write(runId, {
-  skill: "volundr",
-  componentNodeId: "...",
-  componentName: "...",
-  phase: "Phase 1 — Analyse"
-});
-episode.append({
-  phase: "open",
-  skill: "volundr",
-  summary: `Component documentation: {fds:ComponentName}`
-});
-```
-
-### Logging Outcomes
-```javascript
-// Phase transitions
-state.write(runId, { phase: "Phase 2 — Confirm" });
-episode.append({ 
-  phase: "progress",
-  skill: "volundr",
-  action: "Presented Phase 2 preview for user approval"
-});
-
-state.write(runId, { phase: "Phase 3 — Generate" });
-episode.append({ 
-  phase: "progress",
-  skill: "volundr",
-  action: "Generated documentation frames in Figma"
-});
-```
-
-### Capturing Lessons
-```javascript
-lesson.append({
-  skill: "volundr",
-  insight: "Component {name} used non-standard variant naming pattern",
-  ruleProposal: "Add variant pattern X to variant-parsing-rules.md",
-  applied: false
-});
-```
-
-### Closing a Run
-```javascript
-episode.append({
-  phase: "close",
-  skill: "volundr",
-  summary: `Documentation updated: {fds:ComponentName} — {pageUrl}`
-});
-```
-
-## Control Props Extraction Algorithm
-
-**Input**: Array of variant names  
-**Example**: `["State=Filled, Theme=Surface", "State=Focus, Theme=Alternate", ...]`
-
-**Algorithm**:
-1. Split each variant name by `, `
-2. For each pair `Key=Value`:
-   - Extract `Key` as Control Prop name
-   - Extract `Value` as possible value
-3. De-duplicate: collect all unique Values per Key
-4. Sort alphabetically within each prop
-5. Append one row per exposed `BOOLEAN`/`TEXT` component property (source:
-   `component.componentPropertyDefinitions`, not the variant name) — see
-   `variant-parsing-rules.md` § "Exposed Component Properties" for formatting.
-
-**Output**:
-```javascript
-{
-  "State": ["Filled", "Focus", "Danger"],
-  "Theme": ["Surface", "Alternate-Surface", "On-Header", "On-Surface"],
-  "Assistive Text": ["On", "Off"],
-  "Show Handicap": ["True (boolean)"],
-  "Handicap Value": ["+2"],
-  ...
-}
-```
-
 ## Background Handling
 
 The Variant-grid/Surfaces-matrix background rules from the pre-v2 model are
@@ -354,7 +295,7 @@ first, ≤10 ops per call).
 **If Phase 3 generation fails**:
 - Permission error → user must have edit access to Figma file
 - Duplicate documentation → the **entry-point checks** (see `page-template.md`) detect existing doc frames on the component's page and ask whether to overwrite / update / skip
-- Missing doc-kit atom → **ask** whether to publish it on `volundr-components-doc` per `doc-components.md`; never auto-publish
+- Missing doc-kit atom → **ask** whether to publish it on `❖ volundr-components-doc` per `doc-components.md` (creating the page, plus the `---` divider page above it, if the file doesn't have one yet); never auto-publish
 - Atom name collision (two components sharing a name with different specs) → **ask** which is canonical before instancing either
 - Repeated pattern not covered by any atom → **ask** whether to promote it to a new atom or leave it hand-built; never decide silently
 

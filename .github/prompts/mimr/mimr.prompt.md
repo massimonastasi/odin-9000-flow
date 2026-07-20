@@ -15,14 +15,15 @@ Always display this plain-text boot line at the beginning of the workflow:
 
 # MIMR — Metadata Inventory & Mapping Repository
 
-## Hermes integration (run at start, every invocation)
+## Hermes integration
 
-1. Read `.github/prompts/manifest.json` and `.github/prompts/.hermes/memory-adapter.md`.
-2. `lesson.recall(["mimr"])` — honour returned lessons (esp. async reads, cornerRadius single-call, var caching).
-3. Open an episode if running standalone: `episode.append({phase:"open", skill:"mimr", summary})` (ODIN opens it when dispatched).
-4. **Cache:** before resolving variables, `cache.read("vars-<fileKey>-<version>")`; reuse if `cache.valid`. After a fresh resolution, `cache.write` the `name→id` / short-name map keyed by the Figma file `version`.
-5. **Librarian:** on a `token-registry.md` grep miss, dispatch the `librarian` subagent — never read `ts-core-fabric.json` directly.
-6. On finish: `episode.append({phase:"close", skill:"mimr", summary})` and `lesson.append(...)` for any corrected token path / perf insight (attach a `ruleProposal` against `data/mapping-rules.md` when durable).
+Generic recall/open/close pattern: see `.hermes/memory-adapter.md` § "Skill invocation
+boilerplate" — don't restate it here. `lesson.recall(["mimr"])` — esp. async reads,
+cornerRadius single-call, var caching. **Cache:** `cache.read("vars-<fileKey>-<version>")`
+before resolving variables, reuse if `cache.valid`; after a fresh resolution `cache.write` the
+`name→id` map. **Librarian:** on a `token-registry.md` grep miss, dispatch the `librarian`
+subagent — never read `ts-core-fabric.json` directly. Attach `ruleProposal` against
+`data/mapping-rules.md` for durable insights.
 
 ## Purpose
 
