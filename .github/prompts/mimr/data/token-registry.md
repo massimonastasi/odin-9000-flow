@@ -251,6 +251,10 @@
 | `fds-on-surface-nav-low` | `var.fds.fds-on-surface-nav-low` | `color` |  |  |
 | `fds-on-surface-nav-color` | `var.fds.fds-on-surface-nav-color` | `color` |  |  |
 | `fds-alternate-surface-nav-active` | `var.fds.fds-alternate-surface-nav-active` | `color` |  |  |
+| `fds-success-shade` | `var.fds.fds-success-shade` | `color` (gradient) | — bound via `fillStyleId` paint style `fds/fds-success-shade`, stops `ref/system/success/60` + `ref/system/success/50` | Linear-gradient status token; NOT a scalar fills NV — see mimr `mapping-rules.md` § Gradient fill rules. |
+| `fds-info-shade` | `var.fds.fds-info-shade` | `color` (gradient) | — bound via `fillStyleId` paint style `fds/fds-info-shade`, stops `ref/system/info/60` + `ref/system/info/50` | Linear-gradient status token; NOT a scalar fills NV. |
+| `fds-alert-shade` | `var.fds.fds-alert-shade` | `color` (gradient) | — bound via `fillStyleId` paint style `fds/fds-alert-shade`, stops `ref/system/alert/60` + `ref/system/alert/50` | Linear-gradient status token; NOT a scalar fills NV. |
+| `fds-error-shade` | `var.fds.fds-error-shade` | `color` (gradient) | — bound via `fillStyleId` paint style `fds/fds-error-shade`, stops `ref/system/error/60` + `ref/system/error/50` | Linear-gradient status token; NOT a scalar fills NV. |
 
 
 ## Color — Button (var.btn)

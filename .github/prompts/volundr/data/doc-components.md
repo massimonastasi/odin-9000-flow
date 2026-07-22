@@ -266,9 +266,14 @@ the other 8). This corrects what was written so far in `page-template.md` and
   token) — that file remains authoritative on **which** properties to show and
   how to resolve them; this atom is just its visual container, now real.
 
----
-
-## Atoms still missing from the kit (updated 2026-07-17)
+> **Sizing gotcha (confirmed 2026-07-22):** when overriding the property/flag
+> text with multi-line content, setting the inner TEXT node's
+> `textAutoResize = 'HEIGHT'` is **not enough** — the `anatomy--item`
+> **instance's own** `layoutSizingVertical` must also be set to `'HUG'` (not
+> just its ancestor frames' `primaryAxisSizingMode`), or the instance stays
+> pinned at its default height and clips/overlaps the next item in the
+> Legend's vertical stack. Set both on every `anatomy--item` instance with
+> more than one property line.
 
 `anatomy--item` **is no longer missing** (see §9 above). Still to close:
 `variants--cell`, `surfaces--row`, `Banner` — but these three are **deprecated**

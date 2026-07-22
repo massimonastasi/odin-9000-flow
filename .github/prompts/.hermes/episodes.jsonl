@@ -81,3 +81,9 @@
 {"phase":"open","summary":"Test Volundr from scratch: fds-sb-mini-header docs generation","runId":"odin-20260720-165616","skill":"odin","ts":"2026-07-20T14:57:02.641Z"}
 {"skill":"odin","outcome":"complete","runId":"odin-20260720-165616","result":"ok","summary":"Volundr built doc_fds-sb-mini-header from scratch on file WK1o7C9Dd2qm9yOvUKqVsU: 9 doc-kit atoms published + full docs page (5 content blocks), classification=Component","phase":"close","ts":"2026-07-20T15:14:04.280Z"}
 {"skill":"odin","outcome":"complete","runId":"odin-20260720-165616","result":"ok","summary":"Volundr built doc_fds-sb-mini-header from scratch: 9 doc-kit atoms published + full docs page (5 content blocks), classification=Component","phase":"close","ts":"2026-07-20T15:14:14.575Z"}
+{"phase":"open","summary":"Generate FDS component documentation for SB Toggle (fds-sb-toggle)","runId":"odin-20260722-153451","skill":"odin","ts":"2026-07-22T13:39:21.954Z"}
+{"phase":"close","summary":"Docs created for fds-sb-toggle: Header, Control Props (5 rows), Anatomy (2 diagrams + 4 legend items), section--component (moved)","runId":"odin-20260722-153451","skill":"volundr","ts":"2026-07-22T14:03:39.021Z"}
+{"phase":"close","summary":"fds-sb-toggle documentation complete","runId":"odin-20260722-153451","skill":"odin","ts":"2026-07-22T14:03:39.109Z"}
+{"phase":"open","summary":"Correct fds-sb-toggle Anatomy Legend pairing per reference node 59:1179","runId":"odin-20260722-161742","skill":"odin","ts":"2026-07-22T14:17:51.669Z"}
+{"phase":"close","summary":"Updated anatomy-rules.md + page-template.md: Legend now paired per-Diagram (not one combined legend); rebuilt live section--anatomy to match node 59:1179","runId":"odin-20260722-161742","skill":"volundr","ts":"2026-07-22T14:17:58.364Z"}
+{"phase":"close","summary":"Anatomy Legend-pairing correction complete","runId":"odin-20260722-161742","skill":"odin","ts":"2026-07-22T14:17:58.446Z"}

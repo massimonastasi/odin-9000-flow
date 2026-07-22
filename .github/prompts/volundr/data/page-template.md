@@ -304,8 +304,11 @@ section--anatomy                           (gap 24, vertical)
   section-title                            "Anatomy"
   content--anatomy                         (gap 24, vertical)
     flag-optional                          (only if no bound tokens / no anatomy--item — "⚑ …")
-    Diagram — <variant label>  × 1 or more (reference instance + numbered pins)
-    Legend                                 (gap ~12, numbered items: num circle + txt)
+    Diagram — <variant label 1>            (reference instance + numbered pins)
+    Legend                                 (only this diagram's items: num circle + txt)
+    Diagram — <variant label 2>            (reference instance + numbered pins, continues numbering)
+    Legend                                 (only this diagram's items: num circle + txt)
+    ...repeat Diagram/Legend pair per annotated variant
 ```
 
 Full generation rules (which variants to annotate, token resolution table,
@@ -317,6 +320,14 @@ diagram background choice, pin/legend formatting) are authoritative in
 `anatomy--item` **is a real atom** (found `105:219`, see `doc-components.md`
 §9) — instance it for each legend row; only hand-build a row if this atom is
 missing in the current file, and flag that to the user.
+
+> **Corrected 2026-07-22** (confirmed live on node `59:1179`): `content--anatomy`
+> is a flat `Diagram, Legend, Diagram, Legend, …` sequence — **each `Diagram`
+> is immediately followed by its own paired `Legend`** holding only that
+> diagram's items. There is no longer a single combined `Legend` collecting
+> every diagram's items at the end, and no `Diagrams` wrapper frame grouping
+> the diagrams separately from the legends — see `anatomy-rules.md` for the
+> full rule (pin numbering still runs continuously across the whole section).
 
 ---
 

@@ -517,7 +517,25 @@ TS path format: `fds-stroke.fds-stroke-{tier}` (e.g. `fds-stroke.fds-stroke-150`
 | `borderWidthBottom` | `strokeBottomWeight`                                                                | Bottom only           |
 | `borderWidthLeft`   | `strokeLeftWeight`                                                                  | Left only             |
 | `borderWidthRight`  | `strokeRightWeight`                                                                 | Right only            |
+---
 
+## Collapsible — inner-node NV binding pass (confirmed 2026-06-17)
+
+`fds-collapsible` COMPONENT roots (fill, borderColor) are typically **TS+NV complete**, but the
+inner layer nodes are frequently **TS-only** (drafted but never bound):
+
+| Inner node                       | TS-only today | Required NV binding                                                     |
+| --------------------------------- | ------------- | ------------------------------------------------------------------------- |
+| Chevron `VECTOR` icons            | yes           | `fds-on-surface-m` (on-surface) / `fds-on-alternate-surface-low` (alt) |
+| Title `TEXT` nodes                | yes           | `fds-on-surface-hi` (on-surface) / `fds-on-alternate-surface-hi` (alt) + `Paragraphs/fds/*` text style |
+| Content-slot `INSTANCE` nodes     | yes           | `fds-surface-variant` (on-surface) / `fds-alternate-surface-variant` (alt) |
+
+**Known copy-paste artifact to fix first:** an `on-alternate-surface`, `Stroke=Hidden`,
+`Accordion-State=Open` content slot has been found carrying `fds-surface-variant` fill TS
+(the on-surface token) instead of `fds-alternate-surface-variant` — always diff Hidden/no-stroke
+variant token keys **across themes** before a bulk NV write; a border or fill token present on
+one theme's Hidden variant but absent (or wrong-theme) on the matching variant of another theme
+is a copy-paste artifact, not a real design difference — fix/strip it rather than binding NV to it.
 > **Note:** `setBoundVariable('strokeWeight', v)` silently maps to all 4 individual weight properties. `boundVariables.strokeWeight` does NOT appear in read-back — check the 4 individual props instead.
 
 ### Typical usage by component

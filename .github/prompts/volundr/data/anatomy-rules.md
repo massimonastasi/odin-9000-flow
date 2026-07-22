@@ -18,21 +18,36 @@ validate between steps).
 its content (~560px in the reference; not a fixed column width). One
 `section-title` ("Anatomy") + `content--anatomy` (gap 24, vertical):
 
+> **Corrected 2026-07-22** (confirmed live on `doc_fds-sb-toggle`, node
+> `59:1179`, file `WK1o7C9Dd2qm9yOvUKqVsU`): the Legend is **not** one single
+> block placed after every diagram. Each **`Diagram`** is immediately
+> followed by **its own paired `Legend`** frame inside `content--anatomy` —
+> `Diagram, Legend, Diagram, Legend, …` — one legend per diagram, not one
+> combined legend at the very end. This supersedes the earlier "one
+> continuous Legend after all diagrams" model below the ASCII diagram.
+
 ```
 Anatomy                                   (section label)
- ┌─ Diagrams row ─────────────────────────────────────────┐
- │  [ base instance + pins ]  [ Pre-built=Yes + pins ]     │
- │  [ Odds Up + pin ]         [ Odds Down + pin ]          │
- └────────────────────────────────────────────────────────┘
- Legend  (one continuous numbered list across all diagrams)
-   ① root            ⑦ Up Icon
-   ② Selection_…     ⑧ Down Icon
-   …
+content--anatomy                          (gap 24, vertical)
+ ┌─ Diagram — <variant label> ────────────┐
+ │  [ reference instance + numbered pins ] │
+ └──────────────────────────────────────────┘
+ Legend  (only the items for THIS diagram's pins)
+   ① root            ② Toggle
+ ┌─ Diagram — <next variant label> ───────┐
+ │  [ reference instance + numbered pins ] │
+ └──────────────────────────────────────────┘
+ Legend  (only the items for THIS diagram's pins)
+   ③ Switch           ④ switch-text
 ```
 
-- **Diagrams**: reference component **instances** with numbered **callout pins**.
-- **Legend**: one continuous numbered list; each item = pin number + node name +
-  its **token-bound** properties (token name only).
+- **Diagrams**: reference component **instances** with numbered **callout pins**,
+  each diagram is its own frame directly in `content--anatomy`.
+- **Legend**: one **`Legend`** frame per diagram, placed immediately after its
+  diagram (not batched at the end) — each item = pin number + node name +
+  its **token-bound** properties (token name only). Pin numbers still run
+  **continuously** across the whole section (see "Callout pins" below) — only
+  the legend's grouping/placement changed, not the numbering scheme.
 
 ---
 
@@ -142,12 +157,23 @@ the optional `flag-optional` frame — include it only when the component is
 untokenised. **The `Legend` frame itself has no background/fill** (confirmed
 2026-07-17) — it is a plain transparent vertical stack; never set a fill on it.
 
-- One continuous numbered list. Each item:
+> **Per-diagram pairing (corrected 2026-07-22, confirmed on node `59:1179`)**:
+> build **one `Legend` frame per `Diagram`**, placed immediately after that
+> diagram in `content--anatomy` — do **not** collect every diagram's items into
+> a single trailing `Legend`. Each `Legend` only holds the `anatomy--item`
+> instances for the pins shown in the diagram directly above it.
+
+- Numbering still runs **continuously** across the whole section (see
+  "Callout pins" above) — pins/legend items in the second diagram continue
+  from where the first diagram's legend left off (e.g. ①② in Legend 1, ③④ in
+  Legend 2), they are just split across separate `Legend` frames, not
+  renumbered per diagram. Each item:
   - `⟨n⟩  <NodeName>` — number badge + node name **Semi Bold**.
   - Under it, one **`<Property>: <token name>`** line per resolved property,
     Regular, muted, consistent left indent. **Token name only** (no resolved
     value in parentheses).
-- No category grouping — a flat property list per node, top-to-bottom.
+- No category grouping — a flat property list per node, top-to-bottom, within
+  each diagram's own `Legend`.
 - Keep legend text ≈13–14px; node name ≈14px Semi Bold; property lines ≈12–13px.
 - The Usage/abstract text elsewhere stays ≤ ~800px wide, line-height 150%.
 
@@ -159,11 +185,14 @@ untokenised. **The `Legend` frame itself has no background/fill** (confirmed
    hug width) if not present.
 2. Read the base instance subtree; for each annotated node resolve its tokens
    (table above) — **collect resolved lines only**.
-3. Build the **diagram(s)**: place instance(s) directly in `content--anatomy`
-   (wrap in a `Diagrams` frame only if more than one), add numbered pins.
-4. Build the **legend**: numbered items with their resolved property lines.
-5. `get_screenshot` → check pins align, no overlaps, no raw values leaked into
-   the legend. Fix before finishing.
+3. For each variant to annotate, in order: build its **`Diagram`** frame
+   (reference instance + numbered pins, numbering continues from the previous
+   diagram) directly in `content--anatomy`, then immediately build **its own
+   paired `Legend`** frame right after it (one `Legend` per `Diagram`, not one
+   combined legend at the end — corrected 2026-07-22).
+4. `get_screenshot` → check pins align, no overlaps, no raw values leaked into
+   any legend, and that each diagram is immediately followed by its own legend.
+   Fix before finishing.
 
 Return: column id, diagram instance ids, legend item count, and a list of any
 parts that resolved to **zero** tokens (surface these to the user — they may be

@@ -3,6 +3,10 @@
         "/^node \\.github/prompts/\\.hermes/hermes\\.mjs session read$/": {
             "approve": true,
             "matchCommandLine": true
+        },
+        "/^node \\.github/prompts/\\.hermes/hermes\\.mjs state read odin-20260722-153451$/": {
+            "approve": true,
+            "matchCommandLine": true
         }
     }
 }
