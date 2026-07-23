@@ -6,9 +6,11 @@ of each run (schema in `../volundr.prompt.md` → "Per-component archive").
 **Folder structure (2026-07-17)**: archives are split by classification —
 `component/` for atomic, single-purpose reusable components; `widget/` for
 components composed of multiple sub-components built for a specific
-purpose/context (see `../data/doc-components.md` for the exact criterion).
-When documenting a new component, ask the user and write the `.md` into
-the matching subfolder.
+purpose/context (see `../data/doc-components.md` for the definitions, used as
+guidance only). **The classification is never inferred** — Volundr always
+asks the user explicitly, for every component, with no exceptions (a past run
+misclassified a real component as a widget by inferring from structure) — and
+writes the `.md` into the subfolder matching the user's explicit answer.
 
 Purpose:
 

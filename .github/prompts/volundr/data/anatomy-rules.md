@@ -101,29 +101,32 @@ works for remote variables). Show the variable **`name`** as the token.
 
 ---
 
-## Diagram background — light vs. dark `artwork`
+## Diagram background — `#F7F7F7` vs. dark `artwork`
 
 Each diagram sits on its own background frame. Pick the background per reference
 variant so the component stays **visible**:
 
-- **Default: neutral light** background.
-- **Dark `artwork` background** when **either** holds:
-  1. the reference variant targets an **alternate / dark surface** — its variant
-     axes name an alternate surface (e.g. `Theme=on-alternate-surface`,
-     `Surface=Alternate`, `on-header`), **or**
-  2. the component itself is **very light** — its main fill/artwork luminance is
-     near-white (approx. relative luminance ≥ 0.85), so it would wash out on a
-     light background.
+- **Default: flat `#F7F7F7`** background (hardcoded hex — this is a page-chrome
+  convention like the root frame's white fill, not a token-bound property; do
+  not look up a variable for it).
+- **Dark `artwork` background** when **either** exception holds:
+  1. the reference variant explicitly uses **`fds-alternate-surface`** as its
+     background (or another named alternate/dark surface — e.g.
+     `Theme=on-alternate-surface`, `Surface=Alternate`, `on-header`), **or**
+  2. the component itself is **very bright** — its main fill/artwork luminance is
+     near-white (approx. relative luminance ≥ 0.85), so it would wash out on the
+     `#F7F7F7` background.
 
 Use the design system's **`artwork`** background variable for the dark case.
 First query **local variables** (`getLocalVariablesAsync('COLOR')`) for a name
 match (`artwork`, `fds-alternate-surface`, darkest surface) and **bind** it with
 `setBoundVariableForPaint` — do **not** hardcode a hex. Only if no such variable
-exists, fall back to a dark hex and flag it to the user. Likewise the light case
-binds `fds-surface` when a local variable exists.
+exists, fall back to a dark hex and flag it to the user. The default case is
+always the flat `#F7F7F7` hex — never bind a variable for it.
 
-> Decide per diagram: a light base variant → light background; the same
-> component's alternate-surface variant → dark `artwork` background.
+> Decide per diagram: a light/default base variant → flat `#F7F7F7`
+> background; the same component's `fds-alternate-surface` variant (or a
+> very bright component) → dark `artwork` background.
 
 ## Callout pins  (readability of the component)
 

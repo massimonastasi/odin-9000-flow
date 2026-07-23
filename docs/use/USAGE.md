@@ -173,12 +173,15 @@ deriving `--fds-*` CSS custom properties directly from native-variable bindings.
 **VOLUNDR — Documentation Generator.** Creates a `doc_[component-name]` documentation page directly on
 the component's own Figma page, by instancing a 9-atom doc-kit (spec in `data/doc-components.md`:
 `design-system-label`, `component-title`, `description`, `section-title`,
-`section-title--control-props`, `control-props--header/row`, `Anatomy--item`, etc.). Runs in 3
+`section-title--control-props`, `control-props--header/row`, `Anatomy--item`, etc.). Runs in 4
 phases: Phase 1 extracts the component's description, variant axes, exposed properties and
-sub-component dependencies; Phase 2 shows a text preview for user confirmation; Phase 3 builds
+sub-component dependencies; Phase 2 shows a text preview and asks a **mandatory Component/Widget
+question** (never inferred from structure — always ask); Phase 3 builds
 the page (Header, Purpose/Behavior/Dependencies/Icons/Control Props, Composition/Usage/Animation,
 Anatomy) and **moves** the original component into a `section--component` block at the bottom —
-no curated variant grid is built. Can be invoked directly or dispatched by ODIN.
+no curated variant grid is built; Phase 4 always shows a final end-of-task report (page, frame id,
+every block built, Control Props/Dependencies/Icons lists, archive path, Hermes runId) — Volundr
+never ends silently. Can be invoked directly or dispatched by ODIN.
 
 ---
 

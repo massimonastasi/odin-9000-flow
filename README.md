@@ -130,11 +130,11 @@ Code generation engine. Scaffolds semantic HTML + vanilla CSS + CSS Modules, **o
   ╚═══╝   ╚═════╝ ╚══════╝ ╚═════╝ ╚═╝  ╚═══╝╚═════╝ ╚═╝  ╚═╝
 ```
 
-FDS component documentation generator. Analyzes a Figma component's description and variant/property structure, then builds a `doc_[component-name]` page by instancing a doc-kit ( spec in `data/doc-components.md`) on the component's own page. The original component is **moved** into a `section--component` block at the bottom of the doc, as-is.
+FDS component documentation generator. Analyzes a Figma component's description and variant/property structure, then builds a `doc_[component-name]` page by instancing a doc-kit ( spec in `data/doc-components.md`) on the component's own page. The original component is **moved** into a `section--component` block at the bottom of the doc, as-is. Runs 4 phases (Analyse → Confirm → Generate → **Report**): Phase 2 always asks an explicit Component/Widget question (never inferred from structure), and Phase 4 always ends with a full summary report of everything built.
 
 **Invoke:** `/volundr`
 **Inputs:** Figma component URL or node id
-**Outputs:** A `doc_[component-name]` documentation page on the component's Figma page, with the original component moved into it
+**Outputs:** A `doc_[component-name]` documentation page on the component's Figma page, with the original component moved into it, plus a final end-of-task report (blocks built, Control Props, Dependencies, archive path, Hermes runId)
 **Use when:** A component needs FDS-style documentation generated or updated in Figma. Can be invoked directly or dispatched by ODIN when a documentation request is detected.
 
 ---
@@ -538,6 +538,24 @@ All three tools are pure Node.js/Python with zero dependencies — no build, no 
 ---
 
 ## Changelog
+
+### 2026-07-23
+
+- **Volundr — Phase 4 (Report)**: Volundr now always ends its task with a full end-of-task
+  report (page, frame id, every block built with counts, Control Props/Dependencies/Icons
+  lists, generic names renamed, new atoms proposed, archive path, Hermes runId) — it never
+  ends silently on the last `use_figma` call or archive write. See `volundr.prompt.md` §
+  "Phase 4: Report".
+- **Volundr — Component vs. Widget classification is never inferred anymore.** A structural
+  heuristic (e.g. "N sub-components → widget") misclassified a real component
+  (`fds-sb-showcase`) as a widget. Phase 2 now always asks the user explicitly, for every
+  component, with no exceptions — see the updated `page-template.md`, `volundr.agent.md`,
+  and `components/README.md`. The `fds-sb-showcase` archive and its Figma doc page were
+  corrected from widget to component.
+- **Anatomy diagram background** default changed from a vague "neutral light" description to
+  a fixed flat `#F7F7F7` hex; the dark `artwork` background exception now explicitly requires
+  either the variant using `fds-alternate-surface` (or another named alternate/dark surface)
+  or the component itself being very bright. See `anatomy-rules.md`.
 
 ### 2026-07-20
 

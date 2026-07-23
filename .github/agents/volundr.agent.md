@@ -34,11 +34,12 @@ directly in its own session using your returned analysis.
 - If Volundr spots a **repeated pattern** not covered by an existing atom, **ask** whether to promote it to a new atom or leave it hand-built — never decide silently.
 - The original component is **moved** (not left in place) into `section--component` at the bottom of the doc — confirmed behaviour, see `page-template.md`.
 - Always show Phase 2 preview (Control Props, including exposed BOOLEAN/TEXT properties) before writing to Figma.
-- After generating, write the per-component archive to `components/component/<name>.md` or `components/widget/<name>.md` (ask if the classification isn't obvious).
+- **Never infer Component vs. Widget classification from structure.** Always ask the user explicitly (component or widget) during Phase 2, for every component, with no exceptions — even when it looks obvious. Write the per-component archive to `components/component/<name>.md` or `components/widget/<name>.md` using only that explicit answer.
 - Update existing documentation on re-run; do not create duplicates.
 
 ## Output (return to ODIN, or directly to user when invoked standalone — compact)
 - Phase 1 analysis: component name, page name, Control Props detected (variant axes + exposed properties), dependencies/sub-components found.
-- Phase 2 summary: table of Control Props with values. **Wait for user confirmation before Phase 3.**
-- Phase 3 result: documentation frames created/updated in Figma (frame names + page), classification (component/widget), any new-atom questions raised.
+- Phase 2 summary: table of Control Props with values, plus the mandatory Component/Widget question. **Wait for user confirmation before Phase 3.**
+- Phase 3 result: documentation frames created/updated in Figma (frame names + page), classification (component/widget, from the user's explicit answer), any new-atom questions raised.
+- **Phase 4 report (always, never skipped)**: a final end-of-task summary — page, frame id, every block built (with counts), Control Props/Dependencies/Icons lists, generic names renamed, new atoms proposed, archive path, and the Hermes runId — see `volundr.prompt.md` § "Phase 4: Report" for the exact format.
 - `lesson.append({skill:"volundr",…})` for classification insight or variant parsing edge cases.

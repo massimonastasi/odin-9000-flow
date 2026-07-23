@@ -283,11 +283,17 @@ section--component                         (gap 24, vertical, full doc width)
   `surfaces--row`, per-Theme background binding) is **deprecated**. If the
   user wants a curated/annotated showcase instead of the raw component, ask
   before building one — don't default to it.
-- **Component vs. Widget** classification (confirmed with the user
-  2026-07-17): **Component** = atomic, systematic — a single reusable element.
+- **Component vs. Widget** classification (revised 2026-07-23 — no more
+  inference): **Component** = atomic, systematic — a single reusable element.
   **Widget** = composed of multiple components, usually built for one
-  specific purpose/context. Ask the user when a component's classification is
-  not obvious from its Figma structure.
+  specific purpose/context. These definitions are guidance only — Volundr
+  must **always ask the user** which one applies, for every component, no
+  exceptions. Never infer the classification from the Figma structure (e.g.
+  "it's made of N sub-components so it must be a widget") even when it looks
+  obvious — a past run misclassified a real component as a widget this way.
+  Ask during Phase 2 (Confirm) and use the user's explicit answer to build
+  `section--component`'s title and to choose the archive folder
+  (`components/component/` vs `components/widget/`).
 - Moving vs. copying the original component into this frame, and whether the
   component keeps a separate reference elsewhere on the page, is an
   **open question** — not yet settled for every case. Default to **moving**
@@ -391,7 +397,8 @@ discover the 8 doc-kit atoms → switch to the component's page → create the
 (`section--anatomy`, per `anatomy-rules.md`) → `section--component`
 (move/copy the original component in, titled "Component"/"Widget" + name) →
 `get_screenshot` → fix overlaps/clipping → **write the per-component `.md`**
-(see `volundr.prompt.md`) → report.
+(see `volundr.prompt.md`) → **show the Phase 4 end-of-task report** (always,
+never skipped — see `volundr.prompt.md` § "Phase 4: Report").
 
 `figma-use` before every `use_figma`; ≤10 ops per call; validate between steps.
 Return: page id, frames created, which sections reused the description

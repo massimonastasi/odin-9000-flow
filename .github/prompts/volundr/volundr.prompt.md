@@ -1,10 +1,11 @@
 # Volundr — FDS Component Documentation Generator
 
 ## Overview
-Volundr generates component documentation in Figma following the **`doc_[component-name]`** page layout (v2, 2026-07-17). It operates in 3 phases:
+Volundr generates component documentation in Figma following the **`doc_[component-name]`** page layout (v2, 2026-07-17). It operates in 4 phases:
 1. **Phase 1 (Analyse)**: Extract component metadata, description and variant/property information
-2. **Phase 2 (Confirm)**: Display text preview of documentation for user approval
+2. **Phase 2 (Confirm)**: Display text preview of documentation for user approval, and ask the mandatory Component/Widget classification question
 3. **Phase 3 (Generate)**: Build the page **incrementally** by **instancing the doc-kit atoms** (`data/doc-components.md` specs, `page-template.md` layout), then write a typed per-component `.md` archive
+4. **Phase 4 (Report)**: Always show the user a final end-of-task report summarizing exactly what was built (see "Phase 4: Report" below) — never end silently
 
 > **Hard rules:**
 > 1. Volundr **only creates documentation on the selected component's Figma
@@ -99,6 +100,11 @@ matrix (deprecated, see `page-template.md`); the component moves into
 6. Detect **repeated-pattern modules** not covered by an existing doc-kit atom
    (see the pattern-detection hard rule above) — flag them for Phase 2/3, do
    not silently hand-build or ignore them.
+7. **Never infer Component vs. Widget classification.** Do not use a
+   structural heuristic (e.g. "N sub-components → must be a widget") to
+   decide silently — a past run misclassified a real component this way. Always
+   ask the user explicitly which one applies (see Phase 2) for **every**
+   component, with no exceptions, even when it looks obvious.
 
 **Control Props Format**:
 ```json
@@ -137,10 +143,17 @@ the documentation, per the confirmed move behaviour.
 Any repeated pattern not covered by an existing doc-kit atom will be flagged
 here and asked about individually — never assumed.
 
+COMPONENT OR WIDGET? — please answer explicitly (component / widget); Volundr
+never infers this from structure, even when it looks obvious.
+
 Ready to generate documentation? (yes/no)
 ```
 
 **Logic**:
+- The **Component vs. Widget** answer is mandatory and separate from the yes/no
+  gate — do not proceed to Phase 3 without an explicit answer, and do not
+  default to either value if the user's reply only addresses the yes/no
+  question.
 - If user says NO → ask what to modify, return to Phase 1 with adjusted component/parameters
 - If user says YES → proceed to Phase 3
 
@@ -186,7 +199,7 @@ Ready to generate documentation? (yes/no)
    - Any **repeated-pattern module** spotted during the build that isn't covered by an atom → **ask the user** (promote to `doc-components.md` + `❖ volundr-components-doc`, or leave hand-built once) before continuing — never decide silently
 6. Build via **doc-kit atom instances** (`doc-components.md`): `design-system-label`, `component-title`, `description`, `description--bullet-points`, `section-title`, `section-title--control-props`, `control-props--header`, `control-props--row`, `anatomy--item`. `Header`/`doc-columns`/`section*`/`content--*` are plain composed frames, not instances (see `page-template.md`).
 7. `get_screenshot` the full page; fix overlaps/clipping; verify all frames use canonical names (no `Frame X`).
-8. **Write the per-component archive** to `components/component/<component-name>.md` or `components/widget/<component-name>.md` (ask the user for the classification if not obvious — see "Per-component archive" below) so future edits skip re-analysis.
+8. **Write the per-component archive** to `components/component/<component-name>.md` or `components/widget/<component-name>.md`, using the classification the user **explicitly gave** in Phase 2 — never re-derive or second-guess it here (see "Per-component archive" below) so future edits skip re-analysis.
 9. **Close Hermes run**:
    ```
    state.write(runId, { phase:"done", blocksCreated, classification, genericNamesFound })
@@ -194,14 +207,40 @@ Ready to generate documentation? (yes/no)
    lesson.append({ skill:"volundr", component:componentName, classification, propsCount })
    ```
 
-**Result**:
+## Phase 4: Report
+
+**Input**: everything produced in Phase 3 (frame ids, section list, counts, archive path, Hermes runId).
+
+Volundr always ends the task by showing this report to the user (in ODIN's own session when
+dispatched, or directly when invoked standalone) — never end silently on the last `use_figma`
+call or archive write:
+
 ```
+✅ Documentation generated — {ComponentName} ({component|widget})
+
 Page: [pageName]
-Blocks created: [list]
-Classification: component | widget
-Generic names found: [list or "none"]
-New atoms proposed (if any): [list, pending user confirmation]
+Frame: doc_[component-name]  (node [rootId])
+
+Blocks built:
+• Header — design-system-label + component-title + description
+• doc-column-1 — Purpose, Behavior[, Dependencies][, Icons], Control Props (N rows)
+• doc-column-2 — Composition, Usage[, Animation] (or "hidden — no distinct copy")
+• section--anatomy — N diagram(s), M legend item(s) (K parts with zero resolved tokens, if any)
+• section--component — original moved in, labeled "{Component|Widget}"
+
+Control Props: [list of prop names]
+Dependencies: [list or "none"]
+Icons: [list or "none"]
+Generic names found/renamed: [list or "none"]
+New doc-kit atoms proposed: [list or "none"]
+
+Archive written: components/{component|widget}/<component-name>.md
+Hermes run: <runId>  (open → close recorded)
 ```
+
+If any step deviated from the template (a hidden column, a skipped icon/dependency section, an
+unresolved-token flag, a declined new-atom proposal) call it out explicitly in the report rather
+than omitting it — the report is the audit trail the user reads, not just the archive file.
 
 ## Per-component archive (`components/`) & training loop
 
@@ -209,7 +248,9 @@ After each run, Volundr writes a compact record of the analysis to
 **`.github/prompts/volundr/components/component/<component-name>.md`** or
 **`.github/prompts/volundr/components/widget/<component-name>.md`** (create the
 folder if absent) — see `doc-components.md` for the component-vs-widget
-criterion; ask the user if the classification isn't obvious. This is the fast
+definitions, used only as guidance text. **Always ask the user for the
+classification, for every component, with no exceptions** — never infer it
+from the Figma structure, even when it looks obvious. This is the fast
 path for **editing** an existing doc later — read the archive instead of
 re-scanning Figma — and the corpus that feeds the optional training loop.
 
