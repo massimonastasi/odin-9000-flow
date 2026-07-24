@@ -82,6 +82,10 @@ def build_control_props_section(name_suffix, control_props, page_template):
         'op': 'createFrame',
         'name': cfg['sectionName'],
         'visible': True,
+        'layoutMode': 'VERTICAL',
+        'itemSpacing': 24,
+        'sizingHorizontal': 'HUG',
+        'sizingVertical': 'HUG',
         'children': children
     }
 
@@ -93,11 +97,19 @@ def build_bullet_section(section_name, title, items):
         'op': 'createFrame',
         'name': section_name,
         'visible': True,
+        'layoutMode': 'VERTICAL',
+        'itemSpacing': 24,
+        'sizingHorizontal': 'HUG',
+        'sizingVertical': 'HUG',
         'children': [
             {'op': 'instanceAtom', 'atom': 'section-title', 'text': title},
             {
                 'op': 'createFrame',
                 'name': 'content--bullet-point',
+                'layoutMode': 'VERTICAL',
+                'itemSpacing': 8,
+                'sizingHorizontal': 'HUG',
+                'sizingVertical': 'HUG',
                 'children': [
                     {'op': 'instanceAtom', 'atom': 'description--bullet-points', 'text': item}
                     for item in items
@@ -113,6 +125,10 @@ def build_generic_section(title, description):
         'op': 'createFrame',
         'name': title,
         'visible': visible,
+        'layoutMode': 'VERTICAL',
+        'itemSpacing': 8,
+        'sizingHorizontal': 'FILL',
+        'sizingVertical': 'HUG',
         'children': [
             {'op': 'instanceAtom', 'atom': 'section-title', 'text': title},
             {'op': 'instanceAtom', 'atom': 'description', 'text': description or ''}
@@ -129,8 +145,10 @@ def build_header(analysis, page_template):
     return {
         'op': 'createFrame',
         'name': page_template['header']['name'],
-        'visible': True,
-        'children': [
+        'visible': True,        'layoutMode': page_template['header'].get('layoutMode', 'VERTICAL'),
+        'itemSpacing': page_template['header'].get('itemSpacing', 24),
+        'sizingHorizontal': 'FILL',
+        'sizingVertical': 'HUG',        'children': [
             {'op': 'instanceAtom', 'atom': 'design-system-label'},
             {'op': 'instanceAtom', 'atom': 'component-title',
              'text': title_from_prefix(component['name'], component['prefix'])},
@@ -165,6 +183,11 @@ def build_doc_column_1(analysis, page_template):
         'op': 'createFrame',
         'name': page_template['docColumn1']['name'],
         'visible': True,
+        'layoutMode': 'VERTICAL',
+        'itemSpacing': page_template['docColumn1'].get('itemSpacing', 96),
+        'sizingHorizontal': 'FIXED',
+        'fixedWidth': page_template['docColumn1']['sizing'].get('referenceWidth', 851),
+        'sizingVertical': 'HUG',
         'children': children
     }
 
@@ -182,6 +205,11 @@ def build_doc_column_2(analysis, page_template):
         'op': 'createFrame',
         'name': page_template['docColumn2']['name'],
         'visible': not all_hidden,
+        'layoutMode': 'VERTICAL',
+        'itemSpacing': page_template['docColumn2'].get('itemSpacing', 96),
+        'sizingHorizontal': 'FIXED',
+        'fixedWidth': page_template['docColumn2']['sizing'].get('referenceWidth', 851) if not all_hidden else 0.01,
+        'sizingVertical': 'HUG',
         'children': sections
     }
 
@@ -194,6 +222,10 @@ def build_section_component(analysis, page_template):
         'op': 'createFrame',
         'name': cfg['name'],
         'visible': True,
+        'layoutMode': 'VERTICAL',
+        'itemSpacing': cfg.get('itemSpacing', 24),
+        'sizingHorizontal': 'FILL',
+        'sizingVertical': 'HUG',
         'children': [
             {
                 'op': 'instanceAtom',

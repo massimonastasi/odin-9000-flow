@@ -88,10 +88,17 @@ async function discoverAtoms(atomNames) {
   return { found, missing, collisions };
 }
 
-function setText(textNode, value) {
-  if (textNode && typeof value === 'string') {
-    textNode.characters = value;
+async function setText(textNode, value) {
+  if (!textNode || typeof value !== 'string') return;
+  // Canonical text-edit recipe: load the node's CURRENT font(s) before mutating —
+  // skipping this throws "Cannot write to node with unloaded font".
+  if (textNode.fontName && textNode.fontName !== figma.mixed) {
+    await figma.loadFontAsync(textNode.fontName);
+  } else {
+    const segments = textNode.getStyledTextSegments(['fontName']);
+    for (const seg of segments) await figma.loadFontAsync(seg.fontName);
   }
+  textNode.characters = value;
 }
 
 async function instanceAtom(atomIdMap, opNode) {
@@ -122,11 +129,26 @@ async function run(buildPlan) {
 
   let opsExecuted = 0;
   const sectionsBuilt = [];
+  const createdNodeIds = [];
+  const mutatedNodeIds = [];
+  // FILL sizing is deferred (see applyChildSizing) because Header is built
+  // before doc-columns in child order, so root/doc-columns don't have their
+  // final hug width yet when Header would otherwise apply FILL.
+  const deferredFills = [];
 
   function createFrame(spec) {
     const frame = figma.createFrame();
     frame.name = spec.name;
-    if (spec.layoutMode) frame.layoutMode = spec.layoutMode;
+    if (spec.layoutMode) {
+      frame.layoutMode = spec.layoutMode;
+      // Gotcha (found live 2026-07-24): a new auto-layout frame's
+      // primary/counterAxisSizingMode default to 'FIXED' at 100x100 even
+      // after setting layoutMode — they do NOT default to 'AUTO' (hug).
+      // Always hug both axes here; FILL/FIXED overrides are applied on the
+      // CHILD (via sizingHorizontal/fixedWidth) after it is appended below.
+      frame.primaryAxisSizingMode = 'AUTO';
+      frame.counterAxisSizingMode = 'AUTO';
+    }
     if (spec.itemSpacing !== undefined) frame.itemSpacing = spec.itemSpacing;
     if (spec.padding !== undefined) {
       frame.paddingTop = frame.paddingBottom = frame.paddingLeft = frame.paddingRight = spec.padding;
@@ -136,8 +158,25 @@ async function run(buildPlan) {
       frame.fills = [{ type: 'SOLID', color: { r: 1, g: 1, b: 1 } }];
     }
     if (spec.visible === false) frame.visible = false;
+    createdNodeIds.push(frame.id);
     opsExecuted++;
     return frame;
+  }
+
+  // Apply a child's sizing relative to ITS parent — must run AFTER appendChild
+  // (FILL/FIXED require the node to already be inside an auto-layout parent).
+  // FIXED-width columns can be sized immediately (they don't depend on a
+  // sibling being built later); FILL is deferred to the end of run() instead.
+  function applyChildSizing(node, spec) {
+    if (spec.sizingHorizontal === 'FIXED' && spec.fixedWidth !== undefined) {
+      node.layoutSizingHorizontal = 'FIXED';
+      node.resize(spec.fixedWidth, node.height);
+    } else if (spec.sizingHorizontal === 'FILL') {
+      deferredFills.push({ node, axis: 'horizontal' });
+    }
+    if (spec.sizingVertical === 'FILL') {
+      deferredFills.push({ node, axis: 'vertical' });
+    }
   }
 
   async function buildNode(spec, parent) {
@@ -150,6 +189,7 @@ async function run(buildPlan) {
       const node = await figma.getNodeByIdAsync(spec.nodeId);
       if (node && parent) {
         parent.appendChild(node); // appendChild BEFORE layoutSizing* (all-or-nothing gotcha)
+        mutatedNodeIds.push(node.id);
       }
       return;
     }
@@ -157,20 +197,29 @@ async function run(buildPlan) {
       const instance = await instanceAtom(atomIdMap, spec);
       if (!instance) return; // already flagged via needsUserInput if it was missing
       if (parent) parent.appendChild(instance);
+      createdNodeIds.push(instance.id);
       if (spec.text && typeof spec.text === 'string') {
         const textNode = instance.findOne ? instance.findOne(n => n.type === 'TEXT') : null;
-        setText(textNode, spec.text);
+        await setText(textNode, spec.text);
       } else if (spec.text && typeof spec.text === 'object') {
         // { label, suffix } style atoms (section-title--control-props)
         const textNodes = instance.findAll ? instance.findAll(n => n.type === 'TEXT') : [];
-        if (textNodes[0]) setText(textNodes[0], spec.text.label);
-        if (textNodes[1]) setText(textNodes[1], spec.text.suffix);
+        if (textNodes[0]) await setText(textNodes[0], spec.text.label);
+        if (textNodes[1]) await setText(textNodes[1], spec.text.suffix);
+      } else if (Array.isArray(spec.cells)) {
+        const textNodes = instance.findAll ? instance.findAll(n => n.type === 'TEXT') : [];
+        for (let i = 0; i < spec.cells.length && i < textNodes.length; i++) {
+          await setText(textNodes[i], spec.cells[i]);
+        }
       }
       return;
     }
     if (spec.op === 'createFrame') {
       const frame = createFrame(spec);
-      if (parent) parent.appendChild(frame);
+      if (parent) {
+        parent.appendChild(frame);
+        applyChildSizing(frame, spec);
+      }
       sectionsBuilt.push({ name: spec.name, visible: spec.visible !== false });
       for (const child of spec.children || []) {
         await buildNode(child, frame);
@@ -181,9 +230,50 @@ async function run(buildPlan) {
 
   const rootSpec = buildPlan.root;
   const rootFrame = createFrame(rootSpec);
-  if (page) page.appendChild(rootFrame);
+  if (page) {
+    page.appendChild(rootFrame);
+    // Position away from (0,0) — page-level nodes default there; place to the
+    // right of the rightmost existing top-level node (figma-use skill rule 13).
+    const siblings = page.children.filter(n => n.id !== rootFrame.id);
+    const rightmost = siblings.reduce((max, n) => Math.max(max, (n.x || 0) + (n.width || 0)), 0);
+    rootFrame.x = rightmost + 200;
+    rootFrame.y = 0;
+  }
   for (const child of rootSpec.children || []) {
     await buildNode(child, rootFrame);
+  }
+
+  // Post-build relayout pass. Root and doc-columns were sized top-down before
+  // their children existed, so their hug dimensions are stale — and calling
+  // resize(w,h) on an AUTO-height frame can pin it at whatever placeholder
+  // height was passed (confirmed live 2026-07-24: doc-columns' own
+  // counterAxisSizingMode must be explicitly 'AUTO' too, or it never grows
+  // past its 100px default even though its children are correct). Fix both,
+  // resize root to the now-final doc-columns width, THEN apply the deferred
+  // FILL sizings (Header/section--component etc. need root's width to be
+  // determinate first — applying FILL earlier, while root was still at its
+  // 100px placeholder, throws "FILL can only be set on children of
+  // auto-layout frames" because the available content width is negative).
+  const docColumnsFrame = rootFrame.findOne(n => n.name === 'doc-columns');
+  if (docColumnsFrame) docColumnsFrame.counterAxisSizingMode = 'AUTO';
+  if (page) {
+    const targetWidth = (docColumnsFrame ? docColumnsFrame.width : rootFrame.width) + (rootSpec.padding || 0) * 2;
+    rootFrame.resize(targetWidth, rootFrame.height);
+    rootFrame.primaryAxisSizingMode = 'FIXED';
+    rootFrame.primaryAxisSizingMode = 'AUTO';
+  }
+
+  for (const { node, axis } of deferredFills) {
+    if (axis === 'horizontal') node.layoutSizingHorizontal = 'FILL';
+    else node.layoutSizingVertical = 'FILL';
+  }
+
+  // Re-relayout once more — applying FILL can change a frame's own hug height
+  // (e.g. Header's description wrapping differently at full width), which can
+  // in turn change doc-columns'/root's own final height.
+  if (page) {
+    rootFrame.primaryAxisSizingMode = 'FIXED';
+    rootFrame.primaryAxisSizingMode = 'AUTO';
   }
 
   return {
@@ -193,10 +283,13 @@ async function run(buildPlan) {
     rootFrameName: rootFrame.name,
     sectionsBuilt,
     needsUserInput,
-    opsExecuted
+    opsExecuted,
+    createdNodeIds,
+    mutatedNodeIds
   };
 }
 
 // Entry point — `run(BUILD_PLAN)` is invoked by the agent after injecting
-// BUILD_PLAN at the top of this file's content, via use_figma.
-run(BUILD_PLAN);
+// BUILD_PLAN at the top of this file's content, via use_figma. Must be a
+// top-level `return` (not a bare call) so the harness sends the digest back.
+return await run(BUILD_PLAN);

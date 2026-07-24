@@ -1,0 +1,41 @@
+{
+  "component": {
+    "name": "fds-sb-prebuilt-odd",
+    "prefix": "fds-sb",
+    "description": "",
+    "fileKey": "WK1o7C9Dd2qm9yOvUKqVsU",
+    "pageName": "fds-sb-chain-list",
+    "nodeId": "2:240"
+  },
+  "classification": "component",
+  "controlProps": {
+    "Position": ["First", "Last", "Middle"],
+    "Active": ["No", "Yes"],
+    "selectionLabel": ["Selection label"]
+  },
+  "dependencies": [
+    { "name": "fds-sb-prebuilt.con-chain", "kind": "subComponent" }
+  ],
+  "subComponents": [
+    {
+      "name": "fds-sb-prebuilt.con-chain",
+      "controlProps": {
+        "AltSurface": ["False (boolean)", "True (boolean)"],
+        "Position": ["First", "Last", "Middle"],
+        "Size": ["Big", "Small"],
+        "State": ["Open"]
+      }
+    }
+  ],
+  "icons": [],
+  "patterns": [],
+  "anatomy": {
+    "parts": ["root", "con-chain", "Selection"],
+    "tokens": ["fds-spacing-const-ui-gap", "fds-on-surface-low", "fds-paragraphs-tiny", "on-surface-hi"]
+  },
+  "sectionComponent": { "action": "moved", "note": "none" },
+  "atomsUsed": ["design-system-label", "component-title", "description", "description--bullet-points", "section-title", "section-title--control-props", "control-props--header", "control-props--row", "anatomy--item"],
+  "newAtomsProposed": [],
+  "docsRoot": "92:313",
+  "generatedAt": "2026-07-24T17:00:43.000Z"
+}
