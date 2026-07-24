@@ -102,10 +102,16 @@
       "escalateTo": {
         "Claude Opus 4.8": "components with >100 variants or ambiguous variant naming"
       },
-      "scripts": [],
+      "scripts": [
+        ".github/prompts/volundr/scripts/build_plan.py",
+        ".github/prompts/volundr/scripts/run-build-plan.figma.js"
+      ],
       "data": [
         ".github/prompts/volundr/data/doc-components.md",
+        ".github/prompts/volundr/data/doc-components.json",
         ".github/prompts/volundr/data/page-template.md",
+        ".github/prompts/volundr/data/page-template.json",
+        ".github/prompts/volundr/data/analysis.schema.json",
         ".github/prompts/volundr/data/variant-parsing-rules.md",
         ".github/prompts/volundr/data/anatomy-rules.md"
       ],

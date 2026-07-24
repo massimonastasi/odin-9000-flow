@@ -1,0 +1,91 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "volundr/analysis.schema.json",
+  "title": "Volundr Phase 1 analysis output",
+  "description": "Authoritative shape of Volundr Phase 1 (Analyse). Replaces the prose 'Control Props Format' example previously inline in volundr.prompt.md. This JSON is what Volundr returns to ODIN (or holds internally when run standalone) after Phase 1, and is what build_plan.py consumes as input (together with page-template.json + doc-components.json) to produce build-plan.json.",
+  "type": "object",
+  "required": ["component", "controlProps", "classification"],
+  "properties": {
+    "component": {
+      "type": "object",
+      "required": ["name", "prefix", "fileKey", "pageName", "nodeId"],
+      "properties": {
+        "name": { "type": "string", "description": "Exact Figma component/component-set name, e.g. fds-sb-odds-button" },
+        "prefix": { "type": "string", "description": "Namespace prefix used in {prefix:name} title, e.g. fds-sb / fds" },
+        "description": { "type": "string", "description": "Full, untruncated Figma component description field. Empty string if none." },
+        "fileKey": { "type": "string" },
+        "pageName": { "type": "string", "description": "Name of the page the component lives on \u2014 docs are built on this same page." },
+        "nodeId": { "type": "string" }
+      }
+    },
+    "classification": {
+      "type": ["string", "null"],
+      "enum": ["component", "widget", null],
+      "description": "MUST come from an explicit user answer in Phase 2 \u2014 never inferred. Null only before Phase 2 confirmation."
+    },
+    "controlProps": {
+      "type": "object",
+      "description": "One entry per detected Control Prop. Key = property name, value = ordered list of possible values as display strings (booleans already formatted as 'True (boolean)', see variant-parsing-rules.md).",
+      "additionalProperties": {
+        "type": "array",
+        "items": { "type": "string" }
+      }
+    },
+    "dependencies": {
+      "type": "array",
+      "description": "INSTANCE_SWAP properties and/or [component-name].[block-name] sub-component instances found on the page.",
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": { "type": "string" },
+          "kind": { "type": "string", "enum": ["instanceSwapProperty", "subComponent"] }
+        }
+      }
+    },
+    "subComponents": {
+      "type": "array",
+      "description": "[component-name].[block-name] sub-components requiring their own duplicated section--control-props block.",
+      "items": {
+        "type": "object",
+        "required": ["name", "controlProps"],
+        "properties": {
+          "name": { "type": "string" },
+          "controlProps": {
+            "type": "object",
+            "additionalProperties": { "type": "array", "items": { "type": "string" } }
+          }
+        }
+      }
+    },
+    "icons": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "patterns": {
+      "type": "array",
+      "description": "Repeated-pattern modules detected that are not covered by an existing doc-kit atom \u2014 always surfaced to the user in Phase 2, never silently hand-built or promoted.",
+      "items": {
+        "type": "object",
+        "required": ["description"],
+        "properties": {
+          "description": { "type": "string" },
+          "decision": { "type": ["string", "null"], "enum": ["promoted", "hand-built", null] }
+        }
+      }
+    },
+    "anatomy": {
+      "type": "object",
+      "description": "Populated during Phase 3 build (anatomy-rules.md stays authoritative and prose/LLM-driven \u2014 not computed by build_plan.py in v1).",
+      "properties": {
+        "parts": { "type": "array", "items": { "type": "string" } },
+        "tokens": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "genericNamesFound": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Frame X style generic names discovered on the existing doc frame, if any (re-run/update case)."
+    }
+  }
+}

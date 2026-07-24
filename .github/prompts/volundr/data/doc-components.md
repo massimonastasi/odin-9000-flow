@@ -1,5 +1,10 @@
 # Volundr Doc-Kit — `doc-components.md`
 
+> **Machine-readable counterpart**: `doc-components.json` carries the exact
+> structural/sizing/typography values for `scripts/build_plan.py` — keep both
+> in sync if either changes. This file stays authoritative for narrative,
+> rationale and the Kit-extension/pattern-detection rule.
+
 Canonical spec of the **doc-kit atoms** used by Volundr to build the visual
 documentation of a Figma component, derived by analyzing via Figma MCP the
 real set already existing in the reference file.

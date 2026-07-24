@@ -1,0 +1,113 @@
+{
+  "_authoritative_for": "Exact numeric/layout values only. page-template.md stays authoritative for narrative, rationale, discovery rules and the hard 'never fabricate/never auto-publish' rules \u2014 this file is what build_plan.py reads to compute build-plan.json.",
+  "version": "2026-07-17",
+  "referenceFile": "RNbMGKPqYRz2vkANBdSJWx",
+  "referenceFrame": "doc_fds-sb-odds-button (120:1985)",
+  "root": {
+    "namePattern": "doc_{component-name}",
+    "background": "white",
+    "cornerRadius": 32,
+    "padding": 64,
+    "layoutMode": "VERTICAL",
+    "itemSpacing": 96,
+    "children": ["Header", "doc-columns", "section--component"]
+  },
+  "header": {
+    "name": "Header",
+    "layoutMode": "VERTICAL",
+    "itemSpacing": 24,
+    "children": [
+      { "atom": "design-system-label" },
+      { "atom": "component-title", "text": "{prefix:name}" },
+      { "atom": "description", "text": "{component.description}", "flagIfEmpty": "\u2691 TODO \u2014 component has no description in Figma", "alwaysVisible": true }
+    ]
+  },
+  "docColumns": {
+    "name": "doc-columns",
+    "layoutMode": "HORIZONTAL",
+    "itemSpacing": 96,
+    "counterAxisAlignItems": "MIN",
+    "columns": ["doc-column-1", "doc-column-2", "doc-column-3"]
+  },
+  "docColumn1": {
+    "name": "doc-column-1",
+    "layoutMode": "VERTICAL",
+    "itemSpacing": 96,
+    "sizing": { "width": "FIXED", "referenceWidth": 851 },
+    "sections": [
+      { "name": "Purpose", "kind": "section", "content": "description", "source": "component.description", "hideIfEmpty": true },
+      { "name": "Behavior", "kind": "section", "content": "description", "source": "component.description", "hideIfEmpty": true },
+      { "name": "section--dependencies", "kind": "bulletSection", "title": "Dependencies", "optional": true, "condition": "dependencies.length > 0" },
+      { "name": "section--icons", "kind": "bulletSection", "title": "Icons", "optional": true, "condition": "icons.length > 0" },
+      { "name": "section--control-props", "kind": "controlPropsTable", "alwaysVisible": true, "duplicatePerSubComponent": true }
+    ]
+  },
+  "docColumn2": {
+    "name": "doc-column-2",
+    "layoutMode": "VERTICAL",
+    "itemSpacing": 96,
+    "sizing": { "width": "FIXED", "referenceWidth": 851 },
+    "sections": [
+      { "name": "Composition", "kind": "section", "content": "description", "source": "component.description", "hideIfEmpty": true },
+      { "name": "Usage", "kind": "section", "content": "description", "source": "component.description", "hideIfEmpty": true },
+      { "name": "Animation", "kind": "section", "content": "description", "source": "component.description", "hideIfEmpty": true, "omitIfStatic": true }
+    ],
+    "hideColumnIfAllSectionsHidden": true
+  },
+  "docColumn3": {
+    "name": "section--anatomy",
+    "layoutMode": "VERTICAL",
+    "sizing": { "width": "HUG", "referenceWidth": 560 },
+    "note": "Full generation delegated to anatomy-rules.md \u2014 prose/LLM-driven in v1, not computed by build_plan.py."
+  },
+  "hideEmptySectionRule": {
+    "appliesTo": ["Purpose", "Behavior", "Composition", "Usage", "Animation"],
+    "neverHides": ["Header.description", "section--control-props"],
+    "cascadeRule": "If every section in a column is hidden, hide the column itself too."
+  },
+  "controlPropsTable": {
+    "sectionName": "section--control-props",
+    "titleAtom": "section-title--control-props",
+    "titleFixedLabel": "Control Props",
+    "titleSuffix": "{component.name | subComponent.name}",
+    "headerAtom": "control-props--header",
+    "rowAtom": "control-props--row",
+    "rowOrder": "variantAxes first (alphabetical key order), then exposed BOOLEAN/TEXT component properties appended after",
+    "excludeFromRows": ["INSTANCE_SWAP"]
+  },
+  "sectionComponent": {
+    "name": "section--component",
+    "layoutMode": "VERTICAL",
+    "itemSpacing": 24,
+    "fullWidth": true,
+    "titleAtom": "section-title--control-props",
+    "titleFixedLabel": "{classification === 'widget' ? 'Widget' : 'Component'}",
+    "titleSuffix": "{component.name}",
+    "bodyAction": "move",
+    "bodyActionNote": "Move (not copy) the original component/component-set in as-is \u2014 no grouping, no captions, no curated grid. Confirm with user before moving if the component has other pages/frames referencing its current position."
+  },
+  "namingMap": {
+    "Frame 4": "content--control-props",
+    "Frame 2": "control-props--header",
+    "Frame 3/5/7...": "control-props--row",
+    "Rectangle 2": "section"
+  },
+  "buildOrder": [
+    "discoverDocKitAtoms",
+    "switchToComponentPage",
+    "createRootFrame",
+    "buildHeader",
+    "buildDocColumn1",
+    "buildDocColumn2",
+    "buildDocColumn3Anatomy",
+    "buildSectionComponent",
+    "screenshotValidate",
+    "writeArchive",
+    "phase4Report"
+  ],
+  "constraints": {
+    "opsPerUseFigmaCall": 10,
+    "autoLayoutHeightGotcha": "Never resize(w,h) on an AUTO-height auto-layout frame before appending children \u2014 relayout after by toggling primaryAxisSizingMode off/on.",
+    "allOrNothingRollback": "A thrown error partway through a use_figma call rolls back every edit made earlier in that same call \u2014 appendChild before layoutSizingHorizontal/Vertical; write idempotent create-if-missing logic."
+  }
+}

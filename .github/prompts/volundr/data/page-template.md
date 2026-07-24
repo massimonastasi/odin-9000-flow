@@ -8,12 +8,16 @@
 > parallel, under colliding component names**, in the same Figma file. Only
 > one style is now canonical; see `doc-components.md` for why.
 
-Authoritative layout spec Volundr follows in Phase 3. Volundr builds this
-layout **incrementally** (`figma-use` before every `use_figma`, ≤10 ops per
-call, validate between steps) by **instancing the doc-kit atoms** from
-`doc-components.md` — it never hand-builds chrome it can instance, and it
-**never generates, writes, or emits a script of any kind**: Volundr only
-creates documentation directly on the selected component's Figma page.
+Authoritative layout spec Volundr follows in Phase 3. Its machine-readable
+counterpart, **`page-template.json`**, is what `scripts/build_plan.py` reads
+for exact numbers (padding, gaps, corner radius, build order) — keep both in
+sync if either changes; this file stays authoritative for narrative,
+rationale, naming, discovery and entry-check rules. Volundr builds this
+layout by **compiling** an approved analysis (see `analysis.schema.json`)
+with `build_plan.py` and **executing it once** via `run-build-plan.figma.js`
+(see `volundr.prompt.md` Phase 3) — it never hand-builds chrome it can
+instance, and never improvises an ad-hoc script beyond the two sanctioned
+ones.
 
 Volundr derives everything it can from the component's **description** and
 **variant strings** (Control Props, Dependencies, Icons). Sections that need

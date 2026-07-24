@@ -2,15 +2,18 @@
 
 ## Overview
 Volundr generates component documentation in Figma following the **`doc_[component-name]`** page layout (v2, 2026-07-17). It operates in 4 phases:
-1. **Phase 1 (Analyse)**: Extract component metadata, description and variant/property information
+1. **Phase 1 (Analyse)**: Extract component metadata, description and variant/property information — emitted as JSON conforming to `data/analysis.schema.json` (replaces the old prose "Control Props Format" write-up)
 2. **Phase 2 (Confirm)**: Display text preview of documentation for user approval, and ask the mandatory Component/Widget classification question
-3. **Phase 3 (Generate)**: Build the page **incrementally** by **instancing the doc-kit atoms** (`data/doc-components.md` specs, `page-template.md` layout), then write a typed per-component `.md` archive
+3. **Phase 3 (Generate)**: **Compile** the approved analysis JSON into a build-plan (`scripts/build_plan.py`, offline, no Figma access) and **execute it once** via the static `scripts/run-build-plan.figma.js` executor (see "Plugin API Scripts" below) — replaces the old incremental, prose-guided per-atom build. Then write a typed per-component `.json` archive.
 4. **Phase 4 (Report)**: Always show the user a final end-of-task report summarizing exactly what was built (see "Phase 4: Report" below) — never end silently
 
 > **Hard rules:**
 > 1. Volundr **only creates documentation on the selected component's Figma
->    page**. It **never generates, writes, or runs a script** (no `.js` file, no
->    plugin-console snippet) — it builds directly via `use_figma`.
+>    page**. It builds exclusively by (a) compiling the analysis JSON with the
+>    sanctioned `scripts/build_plan.py`, and (b) executing the sanctioned,
+>    static `scripts/run-build-plan.figma.js` via `use_figma` — never any
+>    ad-hoc hand-built chrome bypassing the doc-kit atom system, never a
+>    one-off script improvised mid-run, never a cross-file import.
 > 2. It builds by **instancing the 9 doc-kit atoms** from `data/doc-components.md`
 >    (discover them via the **`❖ volundr-components-doc`** page first, then
 >    elsewhere in the file; if a needed one is missing, **ask the user** whether
@@ -29,10 +32,13 @@ Volundr generates component documentation in Figma following the **`doc_[compone
 >    extension").
 
 > **Layout authority**: `data/page-template.md` is the single source of truth for
-> the page layout, naming, terminology, entry-checks and background rules;
-> `data/doc-components.md` is the single source of truth for each doc-kit
-> atom's build spec. Load both in Phase 3 and follow them — do not hardcode a
-> layout here.
+> the page layout's narrative, naming, terminology, entry-checks and
+> background rules; `data/doc-components.md` is the single source of truth
+> for each doc-kit atom's narrative build spec. Their machine-readable
+> counterparts — `data/page-template.json` and `data/doc-components.json` —
+> are what `scripts/build_plan.py` actually reads for exact numbers; keep the
+> `.md`/`.json` pairs in sync if either changes. Load both `.md` files in
+> Phase 1/2 for reasoning and rule context — do not hardcode a layout here.
 
 ## Hermes integration
 
@@ -106,7 +112,7 @@ matrix (deprecated, see `page-template.md`); the component moves into
    ask the user explicitly which one applies (see Phase 2) for **every**
    component, with no exceptions, even when it looks obvious.
 
-**Control Props Format**:
+**Analysis output**: emit JSON conforming to `data/analysis.schema.json` (the `controlProps` field shown below is just one part of the full shape — see the schema for `component`, `dependencies`, `subComponents`, `icons`, `patterns`, `classification`):
 ```json
 {
   "Direction": ["Horizontal", "Vertical"],
@@ -115,6 +121,7 @@ matrix (deprecated, see `page-template.md`); the component moves into
   "Handicap Value": ["+2"]
 }
 ```
+This full JSON object is what gets handed to `scripts/build_plan.py` in Phase 3 — no separate prose restatement is needed.
 
 ## Phase 2: Confirm
 
@@ -159,47 +166,42 @@ Ready to generate documentation? (yes/no)
 
 ## Phase 3: Generate
 
-**Input**: Approved Phase 1 analysis (Control Props + description + dependencies/patterns + page reference)
+**Input**: Approved Phase 1 analysis JSON (conforming to `data/analysis.schema.json`) + page reference
 
-**Reference**: Load `data/page-template.md` **and** `data/doc-components.md` before building any frame — together they are the authoritative layout + atom specs.
+**Reference**: `data/page-template.md` and `data/doc-components.md` stay the authoritative narrative/rationale (read them in Phase 1/2 for reasoning); their machine-readable counterparts `data/page-template.json` and `data/doc-components.json` are what `scripts/build_plan.py` actually consumes — no need to re-read the prose during Phase 3 itself.
 
 > **Execution context (MANDATORY):** `use_figma` only works in **ODIN's own session** — never in
 > a dispatched Volundr subagent (same constraint as MIMR/VALI/SAGA, see `mimr.prompt.md`). ODIN
-> dispatches Volundr for **Phase 1+2 only**; ODIN itself then runs every Phase 3 `use_figma` call
-> using the returned analysis — never re-dispatch a subagent just to attempt Phase 3.
+> dispatches Volundr for **Phase 1+2 only**; ODIN itself then runs the compile + execute steps
+> below using the returned analysis — never re-dispatch a subagent just to attempt Phase 3.
 >
-> **Performance:** atom discovery is cached per file (see "Hermes integration" step 4 above) —
-> skip the `findAllWithCriteria` tree walk on a cache hit, still `getNodeByIdAsync`-verify before
-> instancing. Batch `use_figma` ops per section, not per atom (e.g. all `control-props--row`
-> instances in one call); only `get_screenshot`/validate at section boundaries (Header, each
-> doc-column, `section--component`), not after every atom.
+> **Performance (why this is now a compile → execute-once flow, not per-atom calls):** the old
+> incremental, prose-guided build issued a `use_figma` call per section/atom and reasoned through
+> `page-template.md` + `doc-components.md` prose each time — the biggest token-cost driver,
+> scaling with variant count. Phase 3 now **compiles** the analysis JSON into a declarative
+> build-plan **offline** (`scripts/build_plan.py`, zero Figma access, deterministic layout math —
+> column composition, hide-empty-section rule, one `control-props--row` per detected value) and
+> **executes** that plan in one pass via the static `scripts/run-build-plan.figma.js` (mirrors
+> `mimr/scripts/audit-resolve-digest.figma.js`'s injected-constant + digest-return pattern).
 
-**Execution** (build incrementally — there is NO monolithic generator script):
+**Execution**:
 1. **Open Hermes run**:
    ```
    state.write(runId, { skill:"volundr", goal:"generate docs", componentName, pageName, phase:"Phase 3" })
    episode.append({ phase:"open", skill:"volundr", summary:`Generate documentation: ${componentName} on ${pageName}` })
    ```
-2. Run **Entry-point checks** (from `page-template.md`):
-   - **Resolve the component's page** (walk `node.parent` to the `PAGE`) and `await figma.setCurrentPageAsync(compPage)` — the docs MUST be built on the **same page as the selected component**. `figma.currentPage` resets to the first page each `use_figma` call, so appending blindly drops the docs on the wrong page.
-   - **Check for the `❖ volundr-components-doc` page** in the file. If present, discover the 9 doc-kit atoms there first (see `doc-components.md`); if not, fall back to searching the rest of the file (the older, pre-convention layout).
-   - If a needed atom is missing everywhere → **ask the user** whether to publish it on `❖ volundr-components-doc` per its `doc-components.md` spec — **never publish automatically**. If the user confirms and the file has **no `❖ volundr-components-doc` page yet**, create it, and also create an empty page named `---` immediately above it in the page list — a plain divider with no content, separating the doc-kit from the rest of the file's pages. If the user declines, hand-build that one section and flag it.
-   - If **two components share the same atom name with different specs** (a known past issue in this design system) → stop and ask which is canonical before instancing either.
-   - Scan the component's page for an existing `doc_[component-name]` frame; if found or generic `Frame X` names present, notify user and wait for answer (overwrite / update / skip).
-3. Check for **ODIN-forwarded metadata**: if `volundr_forwarded_metadata` is present in the run context, skip the `get_metadata` call — reuse it directly.
-4. If the user gave a **canonical reference node**, inspect it (`get_metadata` / `get_design_context`) and match its real measurements; otherwise use the defaults in `page-template.md`.
-5. Build the page **incrementally** in the `page-template.md` build order — `figma-use` before every `use_figma`, **≤10 ops per call**, validate between steps:
-   - create the `doc_[component-name]` root (white, 32px radius, 64px padding, gap 96) in empty canvas space near the component
-   - `Header` (gap 24): `design-system-label` + `component-title` (`{prefix:name}`) + `description` (**full** component description, both as the abstract and reused verbatim as Purpose's body)
-   - `doc-column-1`: **Purpose** ✎ + **Behavior** ✎ (description reused) + `section--dependencies` (only if sub-component instances were detected) + `section--icons` (only if named icons exist) + `section--control-props` ✎ (duplicated per detected `[component-name].[block-name]` sub-component)
-   - `doc-column-2`: **Composition** / **Usage** / **Animation** — generic `section` blocks reusing the description until the user supplies dedicated copy (omit Animation only for genuinely static components)
-   - **Hide empty sections** (confirmed 2026-07-17): a `section` with no real, distinct content (component description empty, nothing more specific for that angle) is still created but set `visible = false` — never shown as an inline `⚑ FLAG TODO` placeholder. If **every** section in `doc-column-2` ends up hidden, hide `doc-column-2` itself too (`doc-column-3` then sits directly next to `doc-column-1`). `section--control-props` always has content and is never hidden; the Header's abstract also always stays visible, flag and all.
-   - `doc-column-3`: `section--anatomy` — instance `anatomy--item` per legend row (it is a real atom, see `doc-components.md` §9); follow **`data/anatomy-rules.md`** (tokens only, never hardcoded)
-   - `section--component` (bottom, full width): reuse `section-title--control-props` with its label changed to **"Component"** or **"Widget"** (per the component/widget criterion) + the component name in italic; **move** (not copy) the original component/component-set in as-is — no grouping, no captions, no curated grid
-   - Any **repeated-pattern module** spotted during the build that isn't covered by an atom → **ask the user** (promote to `doc-components.md` + `❖ volundr-components-doc`, or leave hand-built once) before continuing — never decide silently
-6. Build via **doc-kit atom instances** (`doc-components.md`): `design-system-label`, `component-title`, `description`, `description--bullet-points`, `section-title`, `section-title--control-props`, `control-props--header`, `control-props--row`, `anatomy--item`. `Header`/`doc-columns`/`section*`/`content--*` are plain composed frames, not instances (see `page-template.md`).
-7. `get_screenshot` the full page; fix overlaps/clipping; verify all frames use canonical names (no `Frame X`).
-8. **Write the per-component archive** to `components/component/<component-name>.md` or `components/widget/<component-name>.md`, using the classification the user **explicitly gave** in Phase 2 — never re-derive or second-guess it here (see "Per-component archive" below) so future edits skip re-analysis.
+2. Check for **ODIN-forwarded metadata**: if `volundr_forwarded_metadata` is present in the run context, skip the `get_metadata` call — reuse it directly when assembling the analysis JSON.
+3. Run **Entry-point checks** (unchanged from before this refactor, see `page-template.md`): scan the component's page for an existing `doc_[component-name]` frame — if found, ask overwrite/update/skip; if generic `Frame X` names are present anywhere, notify the user and wait for an answer on renaming. Do this before compiling.
+4. **Compile**: run `python3 .github/prompts/volundr/scripts/build_plan.py <analysis.json> -o build-plan.json` — pure, offline, no Figma access. It reads `data/page-template.json` + `data/doc-components.json` alongside the analysis JSON and computes the full declarative frame/atom tree (see script docstring). If the user gave a **canonical reference node**, inspect it first (`get_metadata` / `get_design_context`) and override the relevant measurements in the analysis JSON before compiling — otherwise the FDS defaults baked into `page-template.json` apply.
+5. **Execute once**: inject the resulting `build-plan.json` as the `BUILD_PLAN` constant at the top of `scripts/run-build-plan.figma.js`, then run it via a single `use_figma` call (chunk into 2-3 calls — e.g. Header+doc-columns, then `section--component` — only if the plan is large enough to hit the `≤10 ops`/size convention; never per-atom). The executor:
+   - resolves + switches to the component's own page (`figma.setCurrentPageAsync`) — docs MUST land on the same page as the component;
+   - discovers the 9 doc-kit atoms (`❖ volundr-components-doc` first, then the rest of the file), using the cached `{atomName: nodeId}` map on a cache hit;
+   - returns `needsUserInput` entries instead of guessing whenever an atom is **missing** or **collides** with a different spec — **never** auto-publishes or auto-picks;
+   - builds every section from the compiled tree (Header, `doc-columns`, `section--component`), **moving** (not copying) the original component in;
+   - flags the `section--anatomy` column back as `deferredToAnatomyRules` — that column stays LLM-driven per `data/anatomy-rules.md` in v1 (not computed by `build_plan.py`), so build it directly with `use_figma` right after, following the existing anatomy rules unchanged.
+6. Resolve any `needsUserInput` entries the executor returned (ask the user per the existing missing-atom / collision / new-pattern rules — unchanged from before this refactor) before considering the build complete.
+7. `get_screenshot` the full page once; fix overlaps/clipping; verify all frames use canonical names (no `Frame X`).
+8. **Write the per-component archive** to `components/component/<component-name>.json` or `components/widget/<component-name>.json` (conforming to the analysis schema plus the fields in "Per-component archive" below), using the classification the user **explicitly gave** in Phase 2 — never re-derive or second-guess it here — so future edits skip re-analysis.
 9. **Close Hermes run**:
    ```
    state.write(runId, { phase:"done", blocksCreated, classification, genericNamesFound })
@@ -245,8 +247,8 @@ than omitting it — the report is the audit trail the user reads, not just the 
 ## Per-component archive (`components/`) & training loop
 
 After each run, Volundr writes a compact record of the analysis to
-**`.github/prompts/volundr/components/component/<component-name>.md`** or
-**`.github/prompts/volundr/components/widget/<component-name>.md`** (create the
+**`.github/prompts/volundr/components/component/<component-name>.json`** or
+**`.github/prompts/volundr/components/widget/<component-name>.json`** (create the
 folder if absent) — see `doc-components.md` for the component-vs-widget
 definitions, used only as guidance text. **Always ask the user for the
 classification, for every component, with no exceptions** — never infer it
@@ -254,48 +256,44 @@ from the Figma structure, even when it looks obvious. This is the fast
 path for **editing** an existing doc later — read the archive instead of
 re-scanning Figma — and the corpus that feeds the optional training loop.
 
+> **Legacy `.md` archives**: files written before this refactor
+> (`components/component|widget/*.md`) are left as-is, untouched — only new
+> runs write `.json`. There is no bulk-migration step.
+
 > **Filename collision check (found 2026-07-17 during live testing)**: the
 > component name alone is **not** a safe unique key — two different Figma
 > files can have a same-named component (confirmed: a test file's
 > `fds-sb-toggle` collided with the real archived one from another file).
-> Before writing `components/component|widget/<name>.md`, check whether a
+> Before writing `components/component|widget/<name>.json`, check whether a
 > file with that name already exists **and** belongs to a different
-> `fileKey`/`nodeId` in its frontmatter. If so, **ask the user** how to
-> disambiguate (e.g. suffix the filename with the fileKey) instead of
-> silently overwriting the existing archive.
+> `fileKey`/`nodeId`. If so, **ask the user** how to disambiguate (e.g. suffix
+> the filename with the fileKey) instead of silently overwriting the existing
+> archive.
 
-**Schema** (one file per component):
-```markdown
----
-component: fds-sb-toggle
-classification: component   # or: widget
-fileKey: <key>
-pageName: <page>
-nodeId: <id>
-generatedAt: <ISO>
-docsRoot: <id>
----
-## Abstract
-<full component description, or "(none — description empty)">
-## Control Props
-- Direction: Horizontal, Vertical            # variant axes
-- Show Handicap: True (boolean)              # exposed BOOLEAN/TEXT properties, appended after axes
-- Handicap Value: +2
-## Dependencies
-<sub-component instances found, e.g. `{prefix}.chain`, or "none">
-## Anatomy
-parts: root, Toggle, Switch — tokens: <resolved token names, or "none — untokenized">
-## section--component
-moved | copied — <note if the original component had other pages/frames referencing its prior position>
-## Doc-kit atoms used
-design-system-label, component-title, description, section-title, section-title--control-props, control-props--header/row, anatomy--item (missing: none)
-## New atoms proposed (if any)
-<pattern description + user's decision: promoted to doc-components.md | left hand-built>
+**Schema** (one file per component — extends `data/analysis.schema.json` with
+run metadata; `docsRoot`/`generatedAt`/`atomsUsed`/`newAtomsProposed` are
+archive-only fields not part of the Phase 1 analysis schema):
+```json
+{
+  "component": { "name": "fds-sb-toggle", "prefix": "fds-sb", "description": "...", "fileKey": "<key>", "pageName": "<page>", "nodeId": "<id>" },
+  "classification": "component",
+  "controlProps": { "Direction": ["Horizontal", "Vertical"], "Show Handicap": ["True (boolean)"], "Handicap Value": ["+2"] },
+  "dependencies": [],
+  "subComponents": [],
+  "icons": [],
+  "patterns": [],
+  "anatomy": { "parts": ["root", "Toggle", "Switch"], "tokens": ["..."] },
+  "sectionComponent": { "action": "moved", "note": "none" },
+  "atomsUsed": ["design-system-label", "component-title", "description", "section-title", "section-title--control-props", "control-props--header", "control-props--row", "anatomy--item"],
+  "newAtomsProposed": [],
+  "docsRoot": "<rootFrameId>",
+  "generatedAt": "<ISO>"
+}
 ```
 
 **Training loop (optional, on request):** when the user asks, review the
-accumulated `components/component/*.md` and `components/widget/*.md` and
-propose improvements to `page-template.md`, `doc-components.md`,
+accumulated `components/component/*.json` and `components/widget/*.json` and
+propose improvements to `page-template.md`/`.json`, `doc-components.md`/`.json`,
 `variant-parsing-rules.md`, and `anatomy-rules.md` — e.g. a recurring
 sub-component naming pattern, a repeated module worth promoting to an atom, or
 a token that is always missing. Surface the proposals as a **gated diff**
@@ -313,19 +311,17 @@ variable — **never a CSS-var string**.
 
 ## Data Files
 
-- `data/doc-components.md` — **Authoritative** build spec for each of the 9 doc-kit atoms (purpose, structure, alignment, sizing, padding, typography/color + proposed FDS token bindings), plus the pattern-detection/kit-extension rule
-- `data/page-template.md` — **Authoritative** `doc_[component-name]` page layout, container naming (`Header`/`doc-columns`/`section--component`/etc.), discovery, entry-checks
-- `data/variant-parsing-rules.md` — Rules for parsing variant names + exposed BOOLEAN/TEXT component properties (Control Props only — grid grouping is deprecated)
-- `data/anatomy-rules.md` — **Authoritative** Anatomy section spec (column 3): token-only legend via `anatomy--item`, callout pins, reference variants, dark `artwork` background rule
-- `components/component/<component-name>.md` / `components/widget/<component-name>.md` — **typed per-component archive** written after each run (fast-edit record + training-loop corpus)
+- `data/analysis.schema.json` — **Authoritative** JSON Schema for the Phase 1 output Volundr emits and `scripts/build_plan.py` consumes
+- `data/doc-components.md` / `data/doc-components.json` — **Authoritative** build spec for each of the 9 doc-kit atoms (`.md` = narrative purpose/rationale/kit-extension rule; `.json` = the exact structural/sizing/typography values `build_plan.py` reads)
+- `data/page-template.md` / `data/page-template.json` — **Authoritative** `doc_[component-name]` page layout, container naming, discovery, entry-checks (`.md` = narrative; `.json` = exact numbers/build order `build_plan.py` reads)
+- `data/variant-parsing-rules.md` — Rules for parsing variant names + exposed BOOLEAN/TEXT component properties (Control Props only — grid grouping is deprecated); stays prose/LLM-driven, feeds the Phase 1 analysis JSON
+- `data/anatomy-rules.md` — **Authoritative** Anatomy section spec (column 3): token-only legend via `anatomy--item`, callout pins, reference variants, dark `artwork` background rule; stays prose/LLM-driven in v1 (not computed by `build_plan.py`, needs visual judgment)
+- `components/component/<component-name>.json` / `components/widget/<component-name>.json` — **typed per-component archive** written after each run (fast-edit record + training-loop corpus); pre-refactor `.md` archives are left untouched
 
 ## Plugin API Scripts
 
-**None.** Volundr reads component structure via `get_metadata` +
-`get_design_context` and, inside `use_figma`, `component.variantProperties` /
-`node.boundVariables` directly — there is no scan script. The page is built
-incrementally with `use_figma` following `data/page-template.md` (`figma-use`
-first, ≤10 ops per call).
+- `scripts/build_plan.py` — **offline, no Figma/network access.** Compiles an approved Phase 1 analysis JSON + `data/page-template.json` + `data/doc-components.json` into a declarative `build-plan.json` (frame/atom tree) — deterministic layout math, replacing the LLM reasoning through prose per section/atom that the pre-refactor build did. Mirrors `mimr/scripts/token-lookup.py`'s standalone-CLI style.
+- `scripts/run-build-plan.figma.js` — **static, checked into the repo, never regenerated per run.** Reads an injected `BUILD_PLAN` constant (the compiled `build-plan.json`) and executes it via `use_figma` in one pass: discovers the 9 doc-kit atoms, instances/overrides them, moves the original component into `section--component`, and returns a compact digest — mirrors `mimr/scripts/audit-resolve-digest.figma.js`'s injected-constant + digest-return pattern. Never auto-publishes a missing atom or auto-picks a colliding one — it returns `needsUserInput` entries instead. The `section--anatomy` column is intentionally **not** built by this script (flagged back as `deferredToAnatomyRules`) — build it directly via `use_figma` following `data/anatomy-rules.md`, unchanged from before this refactor.
 
 ## Error Handling
 

@@ -1,0 +1,106 @@
+{
+  "_authoritative_for": "Exact structural/sizing/typography values per doc-kit atom. doc-components.md stays authoritative for narrative/rationale, the Kit-extension rule, and Set A/Set B collision history \u2014 this file is what build_plan.py + run-build-plan.figma.js read.",
+  "version": "2026-07-17",
+  "referenceFile": "RNbMGKPqYRz2vkANBdSJWx",
+  "atoms": [
+    {
+      "name": "design-system-label",
+      "sourceNode": "105:229",
+      "sizing": { "width": "HUG", "referenceWidth": 166, "height": "HUG" },
+      "layoutMode": "VERTICAL",
+      "itemSpacing": 0,
+      "overrides": [
+        { "row": 1, "default": "Fabric Foundations" },
+        { "row": 2, "default": "Components" }
+      ]
+    },
+    {
+      "name": "component-title",
+      "sourceNode": "105:230",
+      "sizing": { "width": "HUG", "referenceWidth": 352, "height": "HUG" },
+      "overrides": [
+        { "text": "{prefix:component-name}" }
+      ]
+    },
+    {
+      "name": "description",
+      "sourceNode": "105:231",
+      "sizing": { "width": "FILL", "height": "HUG" },
+      "overrides": [
+        { "text": "{full component description text}" }
+      ]
+    },
+    {
+      "name": "description--bullet-points",
+      "sourceNode": "108:2843",
+      "sizing": { "width": "FILL", "height": "HUG" },
+      "duplicatePerItem": true,
+      "overrides": [
+        { "text": "{one bullet item per dependency/icon}" }
+      ]
+    },
+    {
+      "name": "section-title",
+      "sourceNode": "108:2812",
+      "sizing": { "width": "HUG", "referenceWidth": 142, "height": "HUG" },
+      "overrides": [
+        { "text": "{section name, e.g. Purpose / Icons / Anatomy}" }
+      ]
+    },
+    {
+      "name": "section-title--control-props",
+      "sourceNode": "105:232",
+      "sizing": { "width": "HUG", "referenceWidth": 537, "height": "HUG" },
+      "layoutMode": "HORIZONTAL",
+      "itemSpacing": 8,
+      "overrides": [
+        { "textNode": "label", "default": "Control Props", "altUses": ["Component", "Widget"] },
+        { "textNode": "suffix", "text": "{(sub-)component name}" }
+      ],
+      "duplicationRule": "Duplicate the entire section--control-props block (title + header + N rows) once per [component-name].[block-name] sub-component detected."
+    },
+    {
+      "name": "control-props--header",
+      "sourceNode": "105:233",
+      "sizing": { "width": "FILL", "height": "HUG", "minHeight": 32 },
+      "layoutMode": "HORIZONTAL",
+      "static": true,
+      "cells": ["Name", "Control"],
+      "border": { "side": "bottom", "weight": 1 }
+    },
+    {
+      "name": "control-props--row",
+      "sourceNode": "105:234",
+      "sizing": { "width": "FILL", "height": "HUG", "minHeight": 32 },
+      "layoutMode": "HORIZONTAL",
+      "duplicatePerItem": true,
+      "cells": ["{prop name}", "{comma-separated values}"],
+      "border": { "side": "bottom", "weight": 1 },
+      "orderNote": "One instance per Control Prop \u2014 variant axes first, then exposed BOOLEAN/TEXT properties appended after."
+    },
+    {
+      "name": "anatomy--item",
+      "sourceNode": "105:219",
+      "sizing": { "width": "HUG", "referenceWidth": 340, "height": "HUG" },
+      "layoutMode": "HORIZONTAL",
+      "itemSpacing": 10,
+      "duplicatePerItem": true,
+      "structure": {
+        "num": { "size": 22, "shape": "circle" },
+        "txt": { "layoutMode": "VERTICAL", "itemSpacing": 2, "rows": ["{node name} ({node type})", "{resolved token(s) or \u2691 no bound token}"] }
+      },
+      "sizingGotcha": "Set layoutSizingVertical = 'HUG' on the instance itself (not just inner text textAutoResize) when overriding multi-line property/flag text, or the instance clips against the next Legend row.",
+      "note": "Full generation rules (which properties to show, resolution order) stay authoritative in anatomy-rules.md \u2014 not computed by build_plan.py in v1."
+    }
+  ],
+  "deprecatedAtoms": ["variants--cell", "surfaces--row", "Banner"],
+  "deprecatedNote": "Do not instance in new runs; do not clean up orphaned existing instances.",
+  "discovery": {
+    "cacheKey": "volundr-atoms-<fileKey>",
+    "cacheInvalidation": "file-version",
+    "preferredPage": "\u2756 volundr-components-doc",
+    "fallback": "search rest of file for a legacy pre-convention layout",
+    "missingAtomRule": "Ask the user before publishing \u2014 never automatically. Create \u2756 volundr-components-doc (+ empty --- divider page above it) only after confirmation, if the file has neither.",
+    "collisionRule": "If two components share an atom name with different specs, stop and ask which is canonical before instancing either."
+  }
+}
